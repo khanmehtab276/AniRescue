@@ -1,0 +1,61 @@
+# --- Stage 1: Build & Dependency Isolation Stage ---
+FROM python:3.10-slim AS builder
+
+WORKDIR /build
+
+# Create an isolated virtual environment 
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install necessary compilation utilities
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends \
+    gcc python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# 1. Install CPU-only PyTorch wheels explicitly
+RUN pip install --no-cache-dir torch torchvision \
+    --extra-index-url https://download.pytorch.org/whl/cpu
+
+# 2. Install Ultralytics WITHOUT heavy CUDA dependencies
+RUN pip install --no-cache-dir --no-deps ultralytics==8.4.90
+
+# 3. Install core microservice requirements & DB drivers
+RUN pip install --no-cache-dir \
+    pika==1.3.2 \
+    psycopg2-binary==2.9.9 \
+    requests==2.31.0 \
+    opencv-python-headless \
+    matplotlib \
+    scipy \
+    tqdm \
+    pandas \
+    psutil \
+    pyyaml
+
+# --- Stage 2: Final Lean Runtime Stage ---
+FROM python:3.10-slim AS runtime
+
+WORKDIR /app
+
+# Install GLib (for OpenCV) AND libgomp1 (critical for PyTorch CPU math execution)
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends \
+    libglib2.0-0 \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy isolated virtual environment
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy application source code
+COPY . .
+
+# Thread constraints to avoid RAM/CPU inflation
+ENV OMP_NUM_THREADS=1
+ENV MKL_NUM_THREADS=1
+ENV OPENBLAS_NUM_THREADS=1
+ENV VECLIB_MAXIMUM_THREADS=1
+ENV NUMEXPR_NUM_THREADS=1
+ENV PYTHONUNBUFFERED=1
+
+CMD ["python", "worker.py"]

@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # ---------------------------------------------------------------------------
+  # Message Broker
+  # ---------------------------------------------------------------------------
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: anirescue_rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"   # AMQP Protocol
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - anirescue_net
+
+  # ---------------------------------------------------------------------------
+  # Express Backend API
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile.backend
+    container_name: anirescue_backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - RABBITMQ_URL=${RABBITMQ_URL}
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - anirescue_net
+
+  # ---------------------------------------------------------------------------
+  # Python YOLO CPU Worker
+  # ---------------------------------------------------------------------------
+  yolo_worker:
+    build:
+      context: ./ai-async-worker
+      dockerfile: Dockerfile.worker
+    container_name: anirescue_yolo_worker
+    restart: unless-stopped
+    environment:
+      - RABBITMQ_URL=${RABBITMQ_URL}
+      - DATABASE_URL=${DATABASE_URL}
+      - OMP_NUM_THREADS=1
+      - MKL_NUM_THREADS=1
+      - OPENBLAS_NUM_THREADS=1
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.5'
+        reservations:
+          memory: 512M
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - anirescue_net
+
+networks:
+  anirescue_net:
+    driver: bridge
+
+volumes:
+  rabbitmq_data:
+  anirescue_uploads: # The shared bridge for your images

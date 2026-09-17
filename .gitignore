@@ -1,0 +1,40 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# React / Vite
+Frontend/dist/
+Frontend/.vite/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+ai-async-worker/.venv/
+
+# YOLO / ML generated files
+ai-async-worker/runs/
+ai-async-worker/runs/
+ai-async-worker/*.log
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Docker
+*.pid
+
+# Logs
+*.log
+logs/
+.firebase/

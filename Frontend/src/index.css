@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#e2e8f0] dark:bg-[#0f172a] text-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen m-0 p-0;
+  }
+  
+  /* --- BROWSER AUTOFILL FIXES --- */
+  
+  /* 1. Defeat Chrome's white autofill background in Light Mode */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus, 
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: inset 4px 4px 8px #cbd5e1, inset -4px -4px 8px #f8fafc, inset 0 0 0 1000px #e2e8f0 !important;
+    -webkit-text-fill-color: #1f2937 !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+
+  /* 2. Defeat Chrome's white autofill background in Dark Mode */
+  .dark input:-webkit-autofill,
+  .dark input:-webkit-autofill:hover, 
+  .dark input:-webkit-autofill:focus, 
+  .dark input:-webkit-autofill:active {
+    -webkit-box-shadow: inset 4px 4px 8px #070a13, inset -4px -4px 8px #172441, inset 0 0 0 1000px #0f172a !important;
+    -webkit-text-fill-color: #f3f4f6 !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+}

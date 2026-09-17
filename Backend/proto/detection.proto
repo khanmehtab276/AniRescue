@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package anirescue;
+
+service AnimalDetectionService {
+  rpc AnalyzeImage (ImageRequest) returns (DetectionResponse);
+}
+
+message ImageRequest {
+  string incident_id = 1;
+  string image_payload = 2; // Base64 or Cloudinary URL
+}
+
+message DetectionResponse {
+  bool animal_detected = 1;
+  float confidence = 2;
+  string detected_species = 3;
+}
