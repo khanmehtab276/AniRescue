@@ -120,6 +120,9 @@ export default function MapView() {
             <MapContainer
               center={defaultCenter}
               zoom={12}
+              minZoom={2}
+              maxBounds={[[-85, -180], [85, 180]]}
+              maxBoundsViscosity={1.0}
               className="w-full h-full"
             >
               <TileLayer

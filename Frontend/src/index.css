@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-[#e2e8f0] dark:bg-[#0f172a] text-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen m-0 p-0;
+    @apply bg-[#e2e8f0] dark:bg-[#0f172a] text-gray-900 dark:text-gray-100 min-h-screen m-0 p-0;
   }
   
   /* --- BROWSER AUTOFILL FIXES --- */

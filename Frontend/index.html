@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+  
   <head>
     <meta charset="UTF-8" />
 
@@ -18,6 +19,16 @@
     <meta name="theme-color" content="#059669" />
 
     <title>AniRescue</title>
+    <script>
+      (function () {
+        const theme = localStorage.getItem('anirescue_theme');
+        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        if (theme === 'dark' || (theme === 'system' && systemDark)) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
   </head>
 
   <body>

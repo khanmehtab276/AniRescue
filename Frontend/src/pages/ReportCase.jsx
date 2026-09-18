@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import useLocation from '../hooks/useLocation';
 import useOfflineSync from '../hooks/useOfflineSync';
+import { useToast } from '../contexts/ToastContext.jsx';
 import {
   MapContainer,
   TileLayer,
@@ -44,10 +45,12 @@ export default function ReportCase() {
   const [imagePreview, setImagePreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionResult, setSubmissionResult] = useState(null);
-
+  
   const [locationMode, setLocationMode] = useState('auto');
   const [manualAddress, setManualAddress] = useState('');
   const [pinnedLocation, setPinnedLocation] = useState(null);
+
+  const { showToast } = useToast();
 
   const {
     location,
@@ -89,14 +92,14 @@ export default function ReportCase() {
     }
 
     if (!file.type.startsWith('image/')) {
-      alert('⚠️ Please select a valid image.');
+      showToast('Please select a valid image.', 'error');
       return;
     }
 
     const maxSize = 10 * 1024 * 1024;
 
     if (file.size > maxSize) {
-      alert('⚠️ Please select an image smaller than 10 MB.');
+      showToast('Please select an image smaller than 10 MB.', 'warning');
       return;
     }
 
@@ -144,7 +147,6 @@ export default function ReportCase() {
     const finalLocation = getFinalLocation();
 
     if (!imageFile) {
-      alert('⚠️ Please provide a photo of the animal.');
       return;
     }
 
@@ -156,16 +158,7 @@ export default function ReportCase() {
       Boolean(finalLocation?.address?.trim());
 
     if (!hasCoordinates && !hasAddress) {
-      alert(
-        '⚠️ Please provide a valid GPS location, map pin, or landmark.'
-      );
-      return;
-    }
-
-    if (description.trim().length < 10) {
-      alert(
-        '⚠️ Please describe the animal condition in at least 10 characters.'
-      );
+      showToast('Please provide a valid GPS location, map pin, or landmark.', 'warning');
       return;
     }
 
@@ -177,10 +170,8 @@ export default function ReportCase() {
      * a URL that can safely be stored in the offline retry queue.
      */
     if (isOffline) {
-      alert(
-        '📴 You are currently offline. Please reconnect to the internet so the photo can be uploaded and the rescue report can be submitted.'
-      );
-      return;
+      showToast('You are currently offline. Please reconnect to the internet to submit the rescue report.', 'warning');
+        return;
     }
 
     setIsSubmitting(true);
@@ -260,18 +251,13 @@ export default function ReportCase() {
         );
       }
     } catch (err) {
-      console.error(
-        'Report submission failed:',
-        err
-      );
+  console.error('Report submission failed:', err);
 
-      alert(
-        `⚠️ ${
-          err.message ||
-          'Server error. Case could not be submitted.'
-        }`
-      );
-    } finally {
+  showToast(
+    err.message || 'Server error. Case could not be submitted.',
+    'error'
+  );
+} finally {
       setIsSubmitting(false);
     }
   };
@@ -349,7 +335,6 @@ export default function ReportCase() {
                 type="file"
                 id="cameraInput"
                 accept="image/*"
-                capture="environment"
                 className="hidden"
                 onChange={handleImageChange}
               />
@@ -451,7 +436,7 @@ export default function ReportCase() {
                       onChange={(e) =>
                         setManualAddress(e.target.value)
                       }
-                      placeholder="Optional landmark (e.g., Near City Mall gate 2)..."
+                      placeholder="Add a Landmark (optional)"
                       className="w-full p-4 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 outline-none border-none transition-all duration-300 bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441]"
                     />
 
@@ -513,7 +498,7 @@ export default function ReportCase() {
                       onChange={(e) =>
                         setManualAddress(e.target.value)
                       }
-                      placeholder="Add a landmark (e.g., Near City Mall gate 2)..."
+                      placeholder="Add a Landmark (optional)"
                       className="w-full p-4 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 outline-none border-none transition-all duration-300 bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441]"
                     />
 
@@ -525,7 +510,7 @@ export default function ReportCase() {
             {/* DESCRIPTION */}
             <div className="space-y-2">
               <label className="block text-xs uppercase tracking-wider font-bold text-gray-500 dark:text-gray-400 ml-2">
-                Description
+                Description (optional)
               </label>
 
               <textarea
