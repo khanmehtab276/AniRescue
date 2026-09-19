@@ -3,9 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import API from '../utils/api';
 
+const REGISTER_ROLES = [
+  { value: 'USER', label: 'Reporter', icon: '🐾' },
+  { value: 'VOLUNTEER', label: 'Volunteer', icon: '🦺' },
+  { value: 'NGO', label: 'NGO Partner', icon: '🏥' }
+];
+
 export default function Login() {
   const [isRegistering, setIsRegistering] = useState(false);
-  const [selectedRole, setSelectedRole] = useState(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -104,7 +109,7 @@ export default function Login() {
       } else if (role === 'volunteer') {
         navigate('/volunteer');
       } else {
-        navigate('/report');
+        navigate('/dashboard');
       }
 
     } catch (err) {
@@ -126,6 +131,13 @@ export default function Login() {
       } else if (err.response.status === 401) {
         setError(
           'Invalid email or password.'
+        );
+      } else if (
+        err.response.status === 403 &&
+        err.response.data?.account_status === 'PENDING'
+      ) {
+        setError(
+          'Your account is awaiting approval. Volunteer and NGO accounts must be activated before you can sign in.'
         );
       } else {
         setError(
@@ -194,6 +206,44 @@ export default function Login() {
                 placeholder="Rahul Sharma"
                 autoComplete="name"
               />
+            </div>
+          )}
+
+          {/* Role */}
+          {isRegistering && (
+            <div>
+              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-2 ml-1 uppercase tracking-wider">
+                I am a...
+              </label>
+
+              <div className="flex gap-1.5 p-1.5 rounded-xl bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441]">
+                {REGISTER_ROLES.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        role: option.value
+                      })
+                    }
+                    className={`flex-1 py-2.5 rounded-lg text-[11px] font-bold transition-all duration-300 flex flex-col items-center gap-1 ${
+                      formData.role === option.value
+                        ? 'bg-[#1a1f2e] dark:bg-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.3)]'
+                        : 'text-gray-500 dark:text-gray-400'
+                    }`}
+                  >
+                    <span className="text-base">{option.icon}</span>
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+
+              {formData.role !== 'USER' && (
+                <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400 font-medium ml-1">
+                  Volunteer and NGO accounts require approval before you can sign in.
+                </p>
+              )}
             </div>
           )}
 
@@ -274,7 +324,8 @@ export default function Login() {
                 setFormData({
                   name: '',
                   email: '',
-                  password: ''
+                  password: '',
+                  role: 'USER'
                 });
               }}
               className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline"

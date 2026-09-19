@@ -162,6 +162,11 @@ export default function ReportCase() {
       return;
     }
 
+    if (!description.trim()) {
+      showToast('Please describe the animal\'s condition or situation.', 'warning');
+      return;
+    }
+
     /*
      * A complete offline photo report is not supported by the
      * current Cloudinary + localStorage architecture.
@@ -247,7 +252,8 @@ export default function ReportCase() {
         saveForOfflineSync(reportData);
 
         throw new Error(
-          'The image was uploaded, but the rescue report could not reach the server. It has been saved for retry.'
+          'The image was uploaded, but the rescue report could not reach the server. It has been saved for retry.',
+          { cause: apiError }
         );
       }
     } catch (err) {

@@ -28,6 +28,10 @@ const ReportCase = lazy(
   () => import('./pages/ReportCase.jsx')
 );
 
+const UserDashboard = lazy(
+  () => import('./pages/UserDashboard.jsx')
+);
+
 const MapView = lazy(
   () => import('./pages/MapView.jsx')
 );
@@ -121,6 +125,28 @@ export default function App() {
                   <Route
                     path="/report"
                     element={<ReportCase />}
+                  />
+
+                </Route>
+
+                {/* =================================================
+                    USER PERSONAL DASHBOARD
+
+                    Reporting users get their own feed of
+                    reported cases and status tracking.
+                    ================================================= */}
+
+                <Route
+                  element={
+                    <ProtectedRoute
+                      allowedRoles={['user']}
+                    />
+                  }
+                >
+
+                  <Route
+                    path="/dashboard"
+                    element={<UserDashboard />}
                   />
 
                 </Route>

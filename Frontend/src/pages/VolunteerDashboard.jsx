@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { useToast } from '../contexts/ToastContext.jsx';
 import API from '../utils/api';
 
 export default function VolunteerDashboard() {
+  const { showToast } = useToast();
+
   const [activeTab, setActiveTab] = useState('available');
   const [cases, setCases] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,11 +60,14 @@ export default function VolunteerDashboard() {
 
       /*
        * Refresh from backend instead of manually guessing
-       * the new case state.
+       * the new case state. Both lists need refreshing since
+       * the claimed case moves from "available" into "myCases".
        */
-      await fetchCases();
+      await Promise.all([fetchCases(), fetchMyCases()]);
 
       setActiveTab('active');
+
+      showToast('Case claimed. It now appears under Active.', 'success');
     } catch (error) {
       console.error(
         'Failed to claim case:',
@@ -73,7 +79,7 @@ export default function VolunteerDashboard() {
         error.response?.data?.message ||
         'Failed to claim this rescue case. It may already have been claimed by another volunteer.';
 
-      alert(`⚠️ ${message}`);
+      showToast(message, 'error');
     } finally {
       setProcessingId(null);
     }
@@ -91,9 +97,11 @@ export default function VolunteerDashboard() {
         status: 'RESOLVED'
       });
 
-      await fetchCases();
+      await Promise.all([fetchCases(), fetchMyCases()]);
 
       setActiveTab('resolved');
+
+      showToast('Rescue marked as resolved. Thank you!', 'success');
     } catch (error) {
       console.error(
         'Failed to resolve case:',
@@ -105,7 +113,7 @@ export default function VolunteerDashboard() {
         error.response?.data?.message ||
         'Failed to mark the rescue as resolved.';
 
-      alert(`⚠️ ${message}`);
+      showToast(message, 'error');
     } finally {
       setProcessingId(null);
     }

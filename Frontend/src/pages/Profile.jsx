@@ -244,9 +244,49 @@ export default function Profile() {
                 ? 'Your volunteer information, availability and rescue activity will appear here.'
                 : role === 'admin'
                   ? 'Administrative account information and system management options will appear here.'
-                  : 'Your reported rescue cases and activity will appear here.'}
+                  : 'Track every case you\'ve reported and its rescue status.'}
 
           </p>
+
+          {role === 'user' && (
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard')}
+              className="mt-4 w-full py-3 rounded-xl text-sm font-bold bg-emerald-600 text-white shadow-lg hover:-translate-y-0.5 transition-all"
+            >
+              View My Reported Cases →
+            </button>
+          )}
+
+          {role === 'volunteer' && (
+            <button
+              type="button"
+              onClick={() => navigate('/volunteer')}
+              className="mt-4 w-full py-3 rounded-xl text-sm font-bold bg-[#1a1f2e] dark:bg-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.3)] hover:-translate-y-0.5 transition-all"
+            >
+              Open Volunteer Hub →
+            </button>
+          )}
+
+          {role === 'ngo' && (
+            <button
+              type="button"
+              onClick={() => navigate('/ngo')}
+              className="mt-4 w-full py-3 rounded-xl text-sm font-bold bg-[#1a1f2e] dark:bg-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.3)] hover:-translate-y-0.5 transition-all"
+            >
+              Open Command Center →
+            </button>
+          )}
+
+          {role === 'admin' && (
+            <button
+              type="button"
+              onClick={() => navigate('/admin')}
+              className="mt-4 w-full py-3 rounded-xl text-sm font-bold bg-purple-600 text-white shadow-lg hover:-translate-y-0.5 transition-all"
+            >
+              Open Admin Console →
+            </button>
+          )}
 
         </div>
 

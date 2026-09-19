@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import API from '../utils/api';
+import { useToast } from '../contexts/ToastContext.jsx';
 
 export default function NGODashboard() {
+  const { showToast } = useToast();
+
   const [cases, setCases] = useState([]);
   const [junkQueue, setJunkQueue] = useState([]);
   const [dispatchModal, setDispatchModal] = useState({
@@ -89,19 +92,22 @@ export default function NGODashboard() {
   // --------------------------------------------------
   const overrideJunk = async (id) => {
     try {
-      await API.put(`/cases/${id}/verify-junk`);
+      await API.put(`/cases/${id}/verify-junk`, { approved: true });
 
       setJunkQueue((previous) =>
         previous.filter((item) => item.id !== id)
       );
 
+      showToast('Case marked as valid and returned to the active queue.', 'success');
+
       await refreshCases();
     } catch (error) {
       console.error('Failed to override junk case:', error);
 
-      alert(
+      showToast(
         error.response?.data?.error ||
-        'Failed to override this case.'
+        'Failed to override this case.',
+        'error'
       );
     }
   };
@@ -127,9 +133,10 @@ export default function NGODashboard() {
     } catch (error) {
       console.error('Failed to find nearby volunteers:', error);
 
-      alert(
+      showToast(
         error.response?.data?.error ||
-        'Unable to find nearby volunteers.'
+        'Unable to find nearby volunteers.',
+        'error'
       );
     }
   };

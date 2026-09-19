@@ -49,7 +49,16 @@ export default function Navbar() {
    * Role-specific navigation
    */
 
-  if (userRole === 'admin') {
+  if (userRole === 'user') {
+
+    navLinks.splice(1, 0, {
+      name: 'Dashboard',
+      path: '/dashboard',
+      icon: '🐾',
+      color: 'bg-emerald-500'
+    });
+
+  } else if (userRole === 'admin') {
 
     navLinks.push({
       name: 'Admin',
