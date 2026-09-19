@@ -140,7 +140,8 @@ const login = async (req, res) => {
 const getCurrentUser = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, full_name, email, role, account_status
+      `SELECT id, full_name, email, role, account_status,
+              jurisdiction_lat, jurisdiction_lng, jurisdiction_radius_km
        FROM users
        WHERE id = $1`,
       [req.user.id],
@@ -162,4 +163,44 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
-module.exports = { register, login, getCurrentUser };
+// UPDATE NGO OPERATING JURISDICTION
+// Used to scope the NGO dashboard/verification-queue feeds to a
+// service radius instead of the unfiltered master case list.
+const updateJurisdiction = async (req, res) => {
+  const { lat, lng, radiusKm } = req.body;
+
+  if (typeof lat !== "number" || typeof lng !== "number") {
+    return res.status(400).json({
+      error: "A valid lat/lng pair is required.",
+    });
+  }
+
+  const normalizedRadius =
+    typeof radiusKm === "number" && radiusKm > 0 ? radiusKm : 15;
+
+  try {
+    const result = await pool.query(
+      `UPDATE users
+         SET jurisdiction_lat = $1,
+             jurisdiction_lng = $2,
+             jurisdiction_radius_km = $3
+       WHERE id = $4
+       RETURNING id, full_name, email, role, jurisdiction_lat, jurisdiction_lng, jurisdiction_radius_km`,
+      [lat, lng, normalizedRadius, req.user.id],
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    res.json({ success: true, user: result.rows[0] });
+  } catch (err) {
+    console.error("Update jurisdiction error:", err);
+
+    res.status(500).json({
+      error: "Failed to update operating jurisdiction.",
+    });
+  }
+};
+
+module.exports = { register, login, getCurrentUser, updateJurisdiction };
