@@ -470,12 +470,18 @@ def main():
 
                     db_conn.commit()
 
-                    publish_case_notification(
-                        channel=ch,
-                        report_id=report_id,
-                        is_valid=is_valid,
-                        species=species if is_valid else None,
-                    )
+                    try:
+                        publish_case_notification(
+                            channel=ch,
+                            report_id=report_id,
+                            is_valid=is_valid,
+                            species=species if is_valid else None,
+                        )
+                    except Exception as notify_err:
+                        print(
+                            f"⚠️ Notification failed for Case {report_id}: "
+                            f"{notify_err}"
+                        )
 
                     # ------------------------------------------
                     # SUCCESSFUL MESSAGE
