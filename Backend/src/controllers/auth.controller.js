@@ -202,7 +202,7 @@ const login = async (req, res) => {
 
     if (result.rows.length === 0) {
       return res.status(404).json({
-        error: "User account not found.",
+        error: "Invalid email or password.",
       });
     }
 
@@ -212,7 +212,7 @@ const login = async (req, res) => {
 
     if (!isValidPassword) {
       return res.status(401).json({
-        error: "Invalid password credentials.",
+        error: "Invalid email or password.",
       });
     }
 
