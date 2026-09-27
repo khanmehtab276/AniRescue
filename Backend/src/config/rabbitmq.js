@@ -27,7 +27,7 @@ const connectRabbitMQ = async () => {
 
       rabbitConnection = await amqp.connect(rabbitUrl);
 
-      rabbitChannel = await rabbitConnection.createChannel();
+      rabbitChannel = await rabbitConnection.createConfirmChannel();
 
       await rabbitChannel.assertQueue(QUEUE_NAME, { durable: true });
       await rabbitChannel.assertQueue(CASE_NOTIFICATION_QUEUE, { durable: true });

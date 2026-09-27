@@ -31,13 +31,19 @@ const reportCase = async (req, res) => {
   const descriptionText =
     typeof description === "string" ? description.trim() : "";
 
+  let client;
+
   try {
+    client = await pool.connect();
+
     const lat = location?.lat ?? null;
     const lng = location?.lng ?? null;
     const manualAddress = location?.address ?? null;
     const isCustom = location?.isCustom ?? location?.isManual ?? false;
 
-    const result = await pool.query(
+    await client.query("BEGIN");
+
+    const result = await client.query(
       `INSERT INTO rescue_cases
           (issue_description, latitude, longitude, manual_address, is_custom_location, image_payload, reporter_id, status)
          VALUES ($1,$2,$3,$4,$5,$6,$7,'PENDING_VALIDATION')
@@ -55,6 +61,31 @@ const reportCase = async (req, res) => {
 
     const savedCase = result.rows[0];
 
+    // A case must not be accepted unless RabbitMQ is ready
+    // to hand it to the AI worker.
+    const rabbitChannel = getChannel();
+
+    if (!rabbitChannel) {
+      throw new Error("RabbitMQ is currently unavailable.");
+    }
+
+    const messagePayload = JSON.stringify({
+      reportId: savedCase.id,
+      imageUrl: savedCase.image_payload,
+    });
+
+    rabbitChannel.sendToQueue(
+      QUEUE_NAME,
+      Buffer.from(messagePayload),
+      {
+        persistent: true,
+      },
+    );
+
+    await rabbitChannel.waitForConfirms();
+    
+    await client.query("COMMIT");
+
     apiCache.flushAll();
 
     await logCaseHistory({
@@ -65,33 +96,39 @@ const reportCase = async (req, res) => {
       toStatus: "PENDING_VALIDATION",
     });
 
-    // Send case to YOLO worker through RabbitMQ.
-    const rabbitChannel = getChannel();
+    console.log(
+      `📡 Case #${savedCase.id} queued for YOLO evaluation.`,
+    );
 
-    if (rabbitChannel) {
-      const messagePayload = JSON.stringify({
-        reportId: savedCase.id,
-        imageUrl: savedCase.image_payload,
-      });
-
-      rabbitChannel.sendToQueue(QUEUE_NAME, Buffer.from(messagePayload), {
-        persistent: true,
-      });
-
-      console.log(`📡 Case #${savedCase.id} queued for YOLO evaluation.`);
-    } else {
-      console.warn(
-        `⚠️ Case #${savedCase.id} saved, but RabbitMQ is currently unavailable.`,
+    res.status(201).json({
+      success: true,
+      case: savedCase,
+    });
+  } catch (err) {
+    try {
+      if (client) {
+        await client.query("ROLLBACK");
+      }
+    } catch (rollbackErr) {
+      console.error(
+        "Failed to rollback rescue case transaction:",
+        rollbackErr?.message || rollbackErr,
       );
     }
 
-    res.status(201).json({ success: true, case: savedCase });
-  } catch (err) {
-    console.error("Failed to report rescue case:", err?.stack || err);
+    console.error(
+      "Failed to report rescue case:",
+      err?.stack || err,
+    );
 
-    res.status(500).json({
-      error: "Failed to submit rescue case.",
+    res.status(503).json({
+      error:
+        "Rescue case could not be queued for AI processing. Please try again.",
     });
+  } finally {
+    if (client) {
+      client.release();
+    }
   }
 };
 
