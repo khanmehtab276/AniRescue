@@ -360,17 +360,6 @@ const updateJurisdiction = async (req, res) => {
       user: result.rows[0],
     });
 
-    if (availability === "AVAILABLE") {
-      notifyVolunteerAboutNearbyCases({
-        userId: req.user.id,
-      }).catch((error) => {
-        console.error(
-          "❌ Volunteer case catch-up error:",
-          error?.stack || error,
-        );
-      });
-    }
-
   } catch (err) {
     console.error("Update jurisdiction error:", err);
 
