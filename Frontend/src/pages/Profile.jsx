@@ -83,25 +83,25 @@ export default function Profile() {
 
         {/* Profile Header */}
 
-        <div className="p-8 rounded-[2rem] bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[10px_10px_20px_#cbd5e1,_-10px_-10px_20px_#f8fafc] dark:shadow-[10px_10px_20px_#070a13,_-10px_-10px_20px_#172441]">
+        <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
 
           <div className="flex flex-col items-center text-center">
 
             {/* Avatar */}
 
-            <div className="w-24 h-24 rounded-full flex items-center justify-center text-4xl bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[inset_5px_5px_10px_#cbd5e1,_inset_-5px_-5px_10px_#f8fafc] dark:shadow-[inset_5px_5px_10px_#070a13,_inset_-5px_-5px_10px_#172441]">
+            <div className="w-24 h-24 rounded-full flex items-center justify-center text-4xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
 
               {currentRole.icon}
 
             </div>
 
-            <h1 className="mt-5 text-2xl font-extrabold text-gray-800 dark:text-gray-100">
+            <h1 className="mt-5 text-2xl font-extrabold text-slate-800 dark:text-slate-100">
 
               {user.name || 'User'}
 
             </h1>
 
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
 
               {user.email}
 
@@ -109,7 +109,7 @@ export default function Profile() {
 
             <div className="flex flex-wrap justify-center gap-2 mt-4">
 
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
 
                 {currentRole.title}
 
@@ -128,7 +128,7 @@ export default function Profile() {
 
             </div>
 
-            <p className="mt-4 max-w-md text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-4 max-w-md text-sm text-slate-500 dark:text-slate-400">
 
               {currentRole.description}
 
@@ -141,9 +141,9 @@ export default function Profile() {
 
         {/* Account Information */}
 
-        <div className="mt-6 p-6 rounded-[2rem] bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[8px_8px_16px_#cbd5e1,_-8px_-8px_16px_#f8fafc] dark:shadow-[8px_8px_16px_#070a13,_-8px_-8px_16px_#172441]">
+        <div className="mt-6 p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
 
-          <h2 className="text-lg font-extrabold text-gray-800 dark:text-gray-100">
+          <h2 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">
 
             Account Information
 
@@ -153,13 +153,13 @@ export default function Profile() {
 
             <div>
 
-              <p className="text-xs font-bold uppercase tracking-wider text-gray-400">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
 
                 Full Name
 
               </p>
 
-              <p className="mt-1 font-semibold text-gray-800 dark:text-gray-100">
+              <p className="mt-1 font-semibold text-slate-800 dark:text-slate-100">
 
                 {user.name || 'Not available'}
 
@@ -169,13 +169,13 @@ export default function Profile() {
 
             <div>
 
-              <p className="text-xs font-bold uppercase tracking-wider text-gray-400">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
 
                 Email
 
               </p>
 
-              <p className="mt-1 font-semibold text-gray-800 dark:text-gray-100 break-all">
+              <p className="mt-1 font-semibold text-slate-800 dark:text-slate-100 break-all">
 
                 {user.email}
 
@@ -185,13 +185,13 @@ export default function Profile() {
 
             <div>
 
-              <p className="text-xs font-bold uppercase tracking-wider text-gray-400">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
 
                 Account Type
 
               </p>
 
-              <p className="mt-1 font-semibold text-gray-800 dark:text-gray-100">
+              <p className="mt-1 font-semibold text-slate-800 dark:text-slate-100">
 
                 {currentRole.title}
 
@@ -201,13 +201,13 @@ export default function Profile() {
 
             <div>
 
-              <p className="text-xs font-bold uppercase tracking-wider text-gray-400">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
 
                 Account Status
 
               </p>
 
-              <p className="mt-1 font-semibold text-gray-800 dark:text-gray-100">
+              <p className="mt-1 font-semibold text-slate-800 dark:text-slate-100">
 
                 {accountStatus}
 
@@ -222,9 +222,9 @@ export default function Profile() {
 
         {/* Role-specific section */}
 
-        <div className="mt-6 p-6 rounded-[2rem] bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[8px_8px_16px_#cbd5e1,_-8px_-8px_16px_#f8fafc] dark:shadow-[8px_8px_16px_#070a13,_-8px_-8px_16px_#172441]">
+        <div className="mt-6 p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
 
-          <h2 className="text-lg font-extrabold text-gray-800 dark:text-gray-100">
+          <h2 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">
 
             {role === 'ngo'
               ? 'Organization'
@@ -236,7 +236,7 @@ export default function Profile() {
 
           </h2>
 
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
 
             {role === 'ngo'
               ? 'Your NGO profile and organization information will appear here.'
@@ -282,7 +282,7 @@ export default function Profile() {
             <button
               type="button"
               onClick={() => navigate('/admin')}
-              className="mt-4 w-full py-3 rounded-xl text-sm font-bold bg-purple-600 text-white shadow-lg hover:-translate-y-0.5 transition-all"
+              className="mt-4 w-full py-3 rounded-xl text-sm font-bold bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 transition-colors"
             >
               Open Admin Console →
             </button>
@@ -295,7 +295,7 @@ export default function Profile() {
 
         <button
           onClick={handleLogout}
-          className="w-full mt-6 py-4 rounded-xl text-base font-bold text-rose-600 dark:text-rose-400 bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441] hover:text-rose-700 dark:hover:text-rose-300 active:scale-[0.99] transition-all"
+          className="w-full mt-6 py-4 rounded-xl text-base font-bold text-rose-600 dark:text-rose-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:text-rose-700 dark:hover:text-rose-300 active:scale-[0.99] transition-all"
         >
 
           🚪 Logout

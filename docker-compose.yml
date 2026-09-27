@@ -45,6 +45,8 @@ services:
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
       - FIREBASE_SERVICE_ACCOUNT_PATH=/run/secrets/firebase-service-account.json
+      - LOCATION_FRESHNESS_MINUTES=${LOCATION_FRESHNESS_MINUTES}
+      - NOTIFICATION_RADIUS_KM=${NOTIFICATION_RADIUS_KM}
     volumes:
       - /home/iamatomic/Downloads/anirescue-a5fd7-firebase-adminsdk-fbsvc-0e1408292f.json:/run/secrets/firebase-service-account.json:ro
     depends_on:

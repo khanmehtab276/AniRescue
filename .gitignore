@@ -41,3 +41,6 @@ logs/
 
 # Firebase service account keys
 *-firebase-adminsdk-*.json
+
+# Local test credentials
+token.txt

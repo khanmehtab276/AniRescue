@@ -4,8 +4,68 @@ import {
   useNavigate
 } from 'react-router-dom';
 
+import {
+  Leaf,
+  PawPrint,
+  Siren,
+  Map as MapIcon,
+  Shield,
+  Building2,
+  ClipboardList,
+  User,
+  LogIn,
+  LogOut,
+  Sun,
+  Moon,
+  Monitor,
+} from 'lucide-react';
+
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
+
+/*
+ * Role-specific navigation CONTENT — but every role renders through
+ * the exact same markup/classes below, so the visual language never
+ * changes between roles. No role gets its own accent color.
+ */
+function getNavLinksForRole(userRole) {
+  if (!userRole) {
+    return [{ name: 'Home', path: '/', Icon: Leaf }];
+  }
+
+  if (userRole === 'user') {
+    return [
+      { name: 'Dashboard', path: '/dashboard', Icon: PawPrint },
+      { name: 'Report', path: '/report', Icon: Siren },
+      { name: 'Map', path: '/map', Icon: MapIcon },
+    ];
+  }
+
+  if (userRole === 'volunteer') {
+    return [
+      { name: 'Dashboard', path: '/volunteer', Icon: PawPrint },
+      { name: 'Map', path: '/map', Icon: MapIcon },
+    ];
+  }
+
+  if (userRole === 'ngo') {
+    return [
+      { name: 'Dashboard', path: '/ngo', Icon: Building2 },
+      { name: 'Verify', path: '/verification', Icon: ClipboardList },
+      { name: 'Map', path: '/map', Icon: MapIcon },
+    ];
+  }
+
+  if (userRole === 'admin') {
+    return [
+      { name: 'Dashboard', path: '/admin', Icon: Shield },
+      { name: 'Verify', path: '/verification', Icon: ClipboardList },
+      { name: 'Map', path: '/map', Icon: MapIcon },
+    ];
+  }
+
+  return [{ name: 'Dashboard', path: '/', Icon: Leaf }];
+}
 
 export default function Navbar() {
 
@@ -22,80 +82,9 @@ export default function Navbar() {
 
   const userRole = (user?.role || '').toLowerCase();
 
-  const navLinks = [
-    {
-      name: 'Home',
-      path: '/',
-      icon: '🍃',
-      color: 'bg-emerald-500'
-    },
+  const navLinks = getNavLinksForRole(user ? userRole : null);
 
-    {
-      name: 'Report',
-      path: '/report',
-      icon: '🚨',
-      color: 'bg-rose-500'
-    },
-
-    {
-      name: 'Map',
-      path: '/map',
-      icon: '🗺️',
-      color: 'bg-blue-500'
-    }
-  ];
-
-  /*
-   * Role-specific navigation
-   */
-
-  if (userRole === 'user') {
-
-    navLinks.splice(1, 0, {
-      name: 'Dashboard',
-      path: '/dashboard',
-      icon: '🐾',
-      color: 'bg-emerald-500'
-    });
-
-  } else if (userRole === 'admin') {
-
-    navLinks.push({
-      name: 'Admin',
-      path: '/admin',
-      icon: '🛡️',
-      color: 'bg-purple-500'
-    });
-
-  } else if (userRole === 'ngo') {
-
-    navLinks.push({
-      name: 'NGO',
-      path: '/ngo',
-      icon: '🏥',
-      color: 'bg-indigo-500'
-    });
-
-  } else if (userRole === 'volunteer') {
-
-    navLinks.push({
-      name: 'Hub',
-      path: '/volunteer',
-      icon: '🦺',
-      color: 'bg-amber-500'
-    });
-
-  }
-
-  const getThemeIcon = () => {
-
-    if (theme === 'light') return '☀️';
-
-    if (theme === 'dark') return '🌙';
-
-    return '💻';
-
-  };
+  const ThemeIcon = theme === 'light' ? Sun : theme === 'dark' ? Moon : Monitor;
 
   return (
 
@@ -105,84 +94,61 @@ export default function Navbar() {
 
         {/* Navigation */}
 
-        <nav className="flex-1 flex items-center gap-1 p-2 rounded-full bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441] overflow-x-auto no-scrollbar">
+        <nav className="flex-1 flex items-center gap-1 p-1.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto no-scrollbar">
 
           {navLinks.map((link) => {
 
-            const isActive =
-              location.pathname === link.path;
+            const isActive = location.pathname === link.path;
+            const isUrgent = link.path === '/report';
 
             return (
 
               <Link
                 key={link.name}
                 to={link.path}
-                className="relative flex-shrink-0"
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors duration-150 ${
+                  isActive
+                    ? isUrgent
+                      ? 'bg-amber-500 text-white'
+                      : 'bg-emerald-600 text-white'
+                    : isUrgent
+                      ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                      : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
               >
-
-                {isActive && (
-
-                  <div
-                    className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-2/3 h-3 ${link.color} blur-md rounded-full opacity-80`}
-                  />
-
-                )}
-
-                <div
-                  className={`relative z-10 flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all duration-300 active:scale-95 ${
-                    isActive
-                      ? 'bg-[#1a1f2e] dark:bg-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.3)]'
-                      : 'text-gray-500 dark:text-gray-400'
-                  }`}
-                >
-
-                  <span>
-                    {link.icon}
-                  </span>
-
-                  <span>
-                    {link.name}
-                  </span>
-
-                </div>
-
+                <link.Icon size={15} strokeWidth={2.5} />
+                <span>{link.name}</span>
               </Link>
 
             );
 
           })}
 
-          <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-1 flex-shrink-0" />
+          <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 mx-1 flex-shrink-0" />
 
           {user ? (
-
-            <Link
-              to="/profile"
-              className={`flex-shrink-0 px-3 py-2 rounded-full text-xs font-bold transition-all duration-300 active:scale-95 ${
-                location.pathname === '/profile'
-                  ? 'bg-[#1a1f2e] dark:bg-black text-white'
-                  : 'text-gray-500 dark:text-gray-400'
-              }`}
-              aria-label="Profile"
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex-shrink-0 p-2 rounded-xl text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+              aria-label="Log out"
+              title="Log out"
             >
-              👤
-            </Link>
+              <LogOut size={16} strokeWidth={2.5} />
+            </button>
+          ) : null}
 
-          ) : (
-
-            <Link
-              to="/login"
-              className={`flex-shrink-0 px-3 py-2 rounded-full text-xs font-bold ${
-                location.pathname === '/login'
-                  ? 'bg-[#1a1f2e] dark:bg-black text-white'
-                  : 'text-gray-500'
-              }`}
-              aria-label="Login"
-            >
-              👤
-            </Link>
-
-          )}
+          <Link
+            to={user ? '/profile' : '/login'}
+            className={`flex-shrink-0 p-2 rounded-xl transition-colors duration-150 ${
+              location.pathname === (user ? '/profile' : '/login')
+                ? 'bg-emerald-600 text-white'
+                : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+            aria-label={user ? 'Profile' : 'Login'}
+          >
+            {user ? <User size={16} strokeWidth={2.5} /> : <LogIn size={16} strokeWidth={2.5} />}
+          </Link>
 
         </nav>
 
@@ -191,12 +157,10 @@ export default function Navbar() {
 
         <button
           onClick={cycleTheme}
-          className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full text-lg bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441] active:scale-95"
+          className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm text-slate-500 dark:text-slate-400"
           aria-label="Toggle Theme"
         >
-
-          {getThemeIcon()}
-
+          <ThemeIcon size={17} strokeWidth={2.5} />
         </button>
 
       </div>

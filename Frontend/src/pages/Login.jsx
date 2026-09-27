@@ -151,26 +151,26 @@ export default function Login() {
   };
 
   const inputCSS =
-    'w-full px-4 py-3 rounded-xl bg-[#e2e8f0] dark:bg-[#0f172a] text-gray-800 dark:text-gray-100 outline-none transition-all duration-300 shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441] focus:ring-2 focus:ring-emerald-500/50';
+    'w-full px-4 py-3 rounded-xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none transition-all duration-300 border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-emerald-500/50';
 
   return (
     <div className="flex items-center justify-center min-h-[75vh] px-4 transition-colors duration-300">
 
-      <div className="w-full max-w-md p-8 md:p-10 rounded-[2rem] bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[10px_10px_20px_#cbd5e1,_-10px_-10px_20px_#f8fafc] dark:shadow-[10px_10px_20px_#070a13,_-10px_-10px_20px_#172441]">
+      <div className="w-full max-w-md p-8 md:p-10 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
 
         {/* Icon */}
-        <div className="w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center text-3xl bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441]">
+        <div className="w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center text-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
           {isRegistering ? '🐾' : '👤'}
         </div>
 
         {/* Heading */}
-        <h2 className="text-2xl font-extrabold text-center text-gray-800 dark:text-gray-100 mb-2">
+        <h2 className="text-2xl font-extrabold text-center text-slate-800 dark:text-slate-100 mb-2">
           {isRegistering
             ? 'Create Account'
             : 'System Access'}
         </h2>
 
-        <p className="text-sm font-medium text-center text-gray-500 dark:text-gray-400 mb-8">
+        <p className="text-sm font-medium text-center text-slate-500 dark:text-slate-400 mb-8">
           {isRegistering
             ? 'Create your AniRescue user account'
             : 'Sign in to access your AniRescue account'}
@@ -192,7 +192,7 @@ export default function Login() {
           {/* Name */}
           {isRegistering && (
             <div>
-              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-2 ml-1 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 ml-1 uppercase tracking-wider">
                 Full Name
               </label>
 
@@ -212,11 +212,11 @@ export default function Login() {
           {/* Role */}
           {isRegistering && (
             <div>
-              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-2 ml-1 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 ml-1 uppercase tracking-wider">
                 I am a...
               </label>
 
-              <div className="flex gap-1.5 p-1.5 rounded-xl bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441]">
+              <div className="flex gap-1.5 p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
                 {REGISTER_ROLES.map((option) => (
                   <button
                     key={option.value}
@@ -230,7 +230,7 @@ export default function Login() {
                     className={`flex-1 py-2.5 rounded-lg text-[11px] font-bold transition-all duration-300 flex flex-col items-center gap-1 ${
                       formData.role === option.value
                         ? 'bg-[#1a1f2e] dark:bg-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.3)]'
-                        : 'text-gray-500 dark:text-gray-400'
+                        : 'text-slate-500 dark:text-slate-400'
                     }`}
                   >
                     <span className="text-base">{option.icon}</span>
@@ -249,7 +249,7 @@ export default function Login() {
 
           {/* Email */}
           <div>
-            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-2 ml-1 uppercase tracking-wider">
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 ml-1 uppercase tracking-wider">
               Email Address
             </label>
 
@@ -267,7 +267,7 @@ export default function Login() {
 
           {/* Password */}
           <div>
-            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-2 ml-1 uppercase tracking-wider">
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 ml-1 uppercase tracking-wider">
               Password
             </label>
 
@@ -306,7 +306,7 @@ export default function Login() {
         {/* Register / Login switch */}
         <div className="mt-8 text-center">
 
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
 
             {isRegistering
               ? 'Already have an account? '

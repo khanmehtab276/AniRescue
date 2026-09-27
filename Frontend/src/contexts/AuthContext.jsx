@@ -77,7 +77,11 @@ export function AuthProvider({ children }) {
             (userData.role || '').toLowerCase(),
 
           account_status:
-              userData.account_status || 'ACTIVE'
+              userData.account_status || 'ACTIVE',
+
+          jurisdiction_lat: userData.jurisdiction_lat ?? null,
+          jurisdiction_lng: userData.jurisdiction_lng ?? null,
+          jurisdiction_radius_km: userData.jurisdiction_radius_km ?? null,
 
           };
 
@@ -186,6 +190,38 @@ export function AuthProvider({ children }) {
   };
 
 
+  /*
+   * Re-fetches /auth/me and updates the cached user object. Used
+   * after a backend change to the user's own record — e.g. an NGO
+   * saving their jurisdiction — that isn't reflected in the token.
+   */
+  const refreshUser = async () => {
+    try {
+      const response = await API.get('/auth/me');
+      const userData = response.data?.user || response.data;
+
+      const normalizedUser = {
+        id: userData.id,
+        email: userData.email,
+        name: userData.full_name || userData.name || 'User',
+        role: (userData.role || '').toLowerCase(),
+        account_status: userData.account_status || 'ACTIVE',
+        jurisdiction_lat: userData.jurisdiction_lat ?? null,
+        jurisdiction_lng: userData.jurisdiction_lng ?? null,
+        jurisdiction_radius_km: userData.jurisdiction_radius_km ?? null,
+      };
+
+      setUser(normalizedUser);
+      localStorage.setItem('anirescue_user', JSON.stringify(normalizedUser));
+
+      return normalizedUser;
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+      return null;
+    }
+  };
+
+
   return (
 
     <AuthContext.Provider
@@ -193,6 +229,7 @@ export function AuthProvider({ children }) {
         user,
         login,
         logout,
+        refreshUser,
         isInitializing
       }}
     >

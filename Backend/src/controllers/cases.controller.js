@@ -28,11 +28,8 @@ const reportCase = async (req, res) => {
 
   const reporterId = req.user.id;
 
-  if (!description) {
-    return res.status(400).json({
-      error: "Rescue case description is required.",
-    });
-  }
+  const descriptionText =
+    typeof description === "string" ? description.trim() : "";
 
   try {
     const lat = location?.lat ?? null;
@@ -46,7 +43,7 @@ const reportCase = async (req, res) => {
          VALUES ($1,$2,$3,$4,$5,$6,$7,'PENDING_VALIDATION')
          RETURNING id, status, priority, image_payload, created_at`,
       [
-        description.trim(),
+        descriptionText,
         lat,
         lng,
         manualAddress,
@@ -642,6 +639,9 @@ const submitRescueEvidence = async (req, res) => {
     }
 
     const currentCase = caseResult.rows[0];
+
+    const isAssignedToCaller =
+      currentCase.assigned_volunteer_id === req.user.id;
 
     if (
       !canSubmitEvidence({

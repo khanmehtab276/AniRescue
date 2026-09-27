@@ -1,22 +1,47 @@
 import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapPin, AlertTriangle } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
 import API from '../utils/api.js';
+import { getStatusConfig, TONE_CLASSES } from '../utils/statusConfig.js';
 
-// Fix Leaflet default marker icons in Vite
-delete L.Icon.Default.prototype._getIconUrl;
+function LegendItem({ color, label }) {
+  return (
+    <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+      <span
+        className="w-2.5 h-2.5 rounded-full shrink-0"
+        style={{ backgroundColor: color }}
+      />
+      {label}
+    </div>
+  );
+}
 
-L.Icon.Default.mergeOptions({
-  iconUrl: markerIcon,
-  iconRetinaUrl: markerIcon2x,
-  shadowUrl: markerShadow,
-});
+// Color-coded pins by urgency instead of Leaflet's default blue marker —
+// red/unassigned needs a volunteer now, amber/in-progress is being
+// handled, emerald/awaiting-verification is nearly resolved.
+const MARKER_HEX = {
+  info: '#64748b',    // slate — still in AI validation
+  success: '#059669', // emerald — verified/nearly resolved
+  warning: '#f59e0b', // amber — rescue in progress
+  danger: '#e11d48',  // rose — rejected (shouldn't normally appear on map)
+  neutral: '#64748b',
+};
+
+function buildMarkerIcon(status) {
+  const { tone } = getStatusConfig(status);
+  const color = MARKER_HEX[tone] || MARKER_HEX.neutral;
+
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:18px;height:18px;border-radius:9999px;background:${color};border:3px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4);"></div>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+    popupAnchor: [0, -9],
+  });
+}
 
 export default function MapView() {
   const [mapCases, setMapCases] = useState([]);
@@ -70,30 +95,38 @@ export default function MapView() {
     <div className="p-4 md:p-8 max-w-6xl mx-auto mb-20 md:mb-0 transition-colors duration-300">
 
       {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <div className="w-12 h-12 rounded-full flex items-center justify-center text-2xl bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[4px_4px_8px_#cbd5e1,_-4px_-4px_8px_#f8fafc] dark:shadow-[4px_4px_8px_#070a13,_-4px_-4px_8px_#172441]">
-          🗺️
+      <div className="flex items-center gap-4 mb-6">
+        <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm text-emerald-600 dark:text-emerald-400">
+          <MapPin size={22} strokeWidth={2.2} />
         </div>
 
         <div>
-          <h2 className="text-2xl font-extrabold text-gray-800 dark:text-gray-100">
+          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">
             Live Rescue Map
           </h2>
 
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
             Active rescue cases with available location data.
           </p>
         </div>
       </div>
 
-      {/* Map Container */}
-      <div className="rounded-[2rem] p-4 md:p-6 transition-colors duration-300 bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[10px_10px_20px_#cbd5e1,_-10px_-10px_20px_#f8fafc] dark:shadow-[10px_10px_20px_#070a13,_-10px_-10px_20px_#172441]">
+      {/* Legend */}
+      <div className="flex flex-wrap items-center gap-4 mb-4 px-1">
+        <LegendItem color="#64748b" label="Pending AI review" />
+        <LegendItem color="#e11d48" label="Verified — needs a volunteer" />
+        <LegendItem color="#f59e0b" label="Rescue in progress" />
+        <LegendItem color="#059669" label="Awaiting verification" />
+      </div>
 
-        <div className="rounded-2xl overflow-hidden h-[60vh] md:h-[70vh] relative shadow-[inset_6px_6px_12px_#cbd5e1,inset_-6px_-6px_12px_#f8fafc] dark:shadow-[inset_6px_6px_12px_#070a13,inset_-6px_-6px_12px_#172441] border border-gray-300/50 dark:border-white/5 z-0">
+      {/* Map Container */}
+      <div className="rounded-2xl p-4 md:p-6 transition-colors duration-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+
+        <div className="rounded-2xl overflow-hidden h-[60vh] md:h-[70vh] relative border border-slate-200 dark:border-slate-800 z-0">
 
           {/* Loading */}
           {isLoading && (
-            <div className="flex h-full items-center justify-center font-bold text-gray-500 dark:text-gray-400">
+            <div className="flex h-full items-center justify-center font-bold text-slate-500 dark:text-slate-400">
               Loading rescue cases...
             </div>
           )}
@@ -102,13 +135,13 @@ export default function MapView() {
           {!isLoading && error && (
             <div className="flex h-full items-center justify-center px-6 text-center">
               <div>
-                <div className="text-4xl mb-3">⚠️</div>
+                <AlertTriangle size={36} className="mx-auto mb-3 text-amber-500" strokeWidth={2} />
 
-                <p className="font-bold text-gray-700 dark:text-gray-200">
+                <p className="font-bold text-slate-700 dark:text-slate-200">
                   {error}
                 </p>
 
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
                   Please try again later.
                 </p>
               </div>
@@ -138,26 +171,27 @@ export default function MapView() {
                   <Marker
                     key={caseItem.id}
                     position={[latitude, longitude]}
+                    icon={buildMarkerIcon(caseItem.status)}
                   >
                     <Popup className="rounded-xl overflow-hidden shadow-lg">
                       <div className="p-1 min-w-[180px]">
 
-                        <h4 className="font-bold text-gray-800 text-sm mb-1">
+                        <h4 className="font-bold text-slate-800 text-sm mb-1">
                           {caseItem.species || 'Unknown Animal'}
                         </h4>
 
-                        <p className="text-xs text-gray-600 mb-3">
-                          {caseItem.issue_description || 'No description available.'}
-                        </p>
-
                         <div className="flex items-center justify-between gap-2">
-                          <span className="inline-block px-2 py-1 bg-rose-100 text-rose-600 text-[10px] font-bold rounded-full">
-                            {caseItem.priority || 'Normal'} Priority
+                          <span
+                            className={`inline-block px-2 py-1 text-[10px] font-bold rounded-full ${TONE_CLASSES[getStatusConfig(caseItem.status).tone]}`}
+                          >
+                            {getStatusConfig(caseItem.status).shortLabel}
                           </span>
 
-                          <span className="text-[10px] font-semibold text-gray-500">
-                            {caseItem.status || 'Active'}
-                          </span>
+                          {caseItem.priority && caseItem.priority !== 'STANDARD' && (
+                            <span className="text-[10px] font-semibold text-rose-600">
+                              {caseItem.priority}
+                            </span>
+                          )}
                         </div>
 
                       </div>
@@ -173,7 +207,7 @@ export default function MapView() {
         {/* Empty State */}
         {!isLoading && !error && mapCases.length === 0 && (
           <div className="text-center py-5">
-            <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">
+            <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
               No active rescue cases with valid locations.
             </p>
           </div>

@@ -162,11 +162,6 @@ export default function ReportCase() {
       return;
     }
 
-    if (!description.trim()) {
-      showToast('Please describe the animal\'s condition or situation.', 'warning');
-      return;
-    }
-
     /*
      * A complete offline photo report is not supported by the
      * current Cloudinary + localStorage architecture.
@@ -286,9 +281,9 @@ export default function ReportCase() {
 
   return (
     <div className="p-4 md:p-8 max-w-lg mx-auto mb-20 md:mb-0 transition-colors duration-300">
-      <div className="rounded-[2rem] p-6 md:p-8 relative transition-colors duration-300 bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[10px_10px_20px_#cbd5e1,_-10px_-10px_20px_#f8fafc] dark:shadow-[10px_10px_20px_#070a13,_-10px_-10px_20px_#172441]">
+      <div className="rounded-2xl p-6 md:p-8 relative transition-colors duration-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
 
-        <h2 className="text-2xl font-extrabold mb-6 text-gray-800 dark:text-gray-100 text-center">
+        <h2 className="text-2xl font-extrabold mb-6 text-slate-800 dark:text-slate-100 text-center">
           Emergency Report
         </h2>
 
@@ -306,16 +301,16 @@ export default function ReportCase() {
             </div>
 
             <div>
-              <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">
+              <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200">
                 Rescue Report Submitted
               </h3>
 
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
                 Your report has been received and is being processed for AI validation.
               </p>
 
               {submissionResult.reportId && (
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">
                   Report ID: {submissionResult.reportId}
                 </p>
               )}
@@ -347,10 +342,10 @@ export default function ReportCase() {
 
               <label
                 htmlFor="cameraInput"
-                className={`block overflow-hidden transition-all duration-300 cursor-pointer rounded-2xl bg-[#e2e8f0] dark:bg-[#0f172a] ${
+                className={`block overflow-hidden transition-all duration-300 cursor-pointer rounded-2xl bg-white dark:bg-slate-900 ${
                   imagePreview
-                    ? 'shadow-[4px_4px_10px_#cbd5e1,_-4px_-4px_10px_#f8fafc] dark:shadow-[4px_4px_10px_#070a13,_-4px_-4px_10px_#172441] border-2 border-emerald-500/50'
-                    : 'shadow-[inset_6px_6px_12px_#cbd5e1,inset_-6px_-6px_12px_#f8fafc] dark:shadow-[inset_6px_6px_12px_#070a13,inset_-6px_-6px_12px_#172441]'
+                    ? 'border border-slate-200 dark:border-slate-800 shadow-sm border-2 border-emerald-500/50'
+                    : 'border border-slate-200 dark:border-slate-800'
                 }`}
               >
                 {imagePreview ? (
@@ -361,11 +356,11 @@ export default function ReportCase() {
                   />
                 ) : (
                   <div className="p-10 flex flex-col items-center justify-center h-56">
-                    <div className="w-16 h-16 rounded-full flex items-center justify-center text-3xl mb-4 bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[4px_4px_10px_#cbd5e1,_-4px_-4px_10px_#f8fafc] dark:shadow-[4px_4px_10px_#070a13,_-4px_-4px_10px_#172441]">
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center text-3xl mb-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
                       📸
                     </div>
 
-                    <p className="text-sm text-gray-500 font-bold">
+                    <p className="text-sm text-slate-500 font-bold">
                       Tap to take or select a photo
                     </p>
                   </div>
@@ -375,11 +370,11 @@ export default function ReportCase() {
 
             {/* LOCATION */}
             <div>
-              <label className="block text-xs uppercase tracking-wider font-bold text-gray-500 dark:text-gray-400 mb-2 ml-2">
+              <label className="block text-xs uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400 mb-2 ml-2">
                 Location
               </label>
 
-              <div className="flex gap-1 mb-4 p-1.5 rounded-xl bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441]">
+              <div className="flex gap-1 mb-4 p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
 
                 <button
                   type="button"
@@ -393,7 +388,7 @@ export default function ReportCase() {
                   className={`flex-1 py-2.5 rounded-lg text-xs uppercase tracking-wide font-bold transition-all duration-300 ${
                     locationMode === 'auto'
                       ? 'bg-[#1a1f2e] dark:bg-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.3)]'
-                      : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/5'
+                      : 'text-slate-500 hover:bg-black/5 dark:hover:bg-white/5'
                   }`}
                 >
                   Auto GPS
@@ -407,7 +402,7 @@ export default function ReportCase() {
                   className={`flex-1 py-2.5 rounded-lg text-xs uppercase tracking-wide font-bold transition-all duration-300 ${
                     locationMode === 'custom'
                       ? 'bg-[#1a1f2e] dark:bg-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.3)]'
-                      : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/5'
+                      : 'text-slate-500 hover:bg-black/5 dark:hover:bg-white/5'
                   }`}
                 >
                   Pin & Describe
@@ -429,11 +424,11 @@ export default function ReportCase() {
                             ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`
                             : 'Location unavailable'
                       }
-                      className={`w-full p-4 rounded-xl text-sm font-bold outline-none border-none transition-all duration-300 bg-[#e2e8f0] dark:bg-[#0f172a] ${
+                      className={`w-full p-4 rounded-xl text-sm font-bold outline-none border-none transition-all duration-300 bg-white dark:bg-slate-900 ${
                         location
                           ? 'text-emerald-600 dark:text-emerald-400'
-                          : 'text-gray-400'
-                      } shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441]`}
+                          : 'text-slate-400'
+                      } border border-slate-200 dark:border-slate-800`}
                     />
 
                     <input
@@ -443,7 +438,7 @@ export default function ReportCase() {
                         setManualAddress(e.target.value)
                       }
                       placeholder="Add a Landmark (optional)"
-                      className="w-full p-4 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 outline-none border-none transition-all duration-300 bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441]"
+                      className="w-full p-4 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-200 outline-none border-none transition-all duration-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
                     />
 
                   </div>
@@ -451,7 +446,7 @@ export default function ReportCase() {
                   <div className="space-y-4">
 
                     {!isOffline ? (
-                      <div className="rounded-2xl overflow-hidden h-48 shadow-[inset_6px_6px_12px_#cbd5e1,inset_-6px_-6px_12px_#f8fafc] dark:shadow-[inset_6px_6px_12px_#070a13,inset_-6px_-6px_12px_#172441] border border-gray-300/50 dark:border-white/5 relative z-0">
+                      <div className="rounded-2xl overflow-hidden h-48 border border-slate-200 dark:border-slate-800 border border-slate-300/50 dark:border-white/5 relative z-0">
 
                         <MapContainer
                           center={
@@ -481,17 +476,17 @@ export default function ReportCase() {
 
                       </div>
                     ) : (
-                      <div className="rounded-2xl h-32 flex flex-col items-center justify-center text-center p-4 shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441] bg-[#e2e8f0] dark:bg-[#0f172a]">
+                      <div className="rounded-2xl h-32 flex flex-col items-center justify-center text-center p-4 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
 
                         <span className="text-3xl mb-2 grayscale opacity-50">
                           🗺️
                         </span>
 
-                        <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                           Map offline
                         </p>
 
-                        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 font-medium">
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-medium">
                           Please provide a descriptive landmark below.
                         </p>
 
@@ -505,7 +500,7 @@ export default function ReportCase() {
                         setManualAddress(e.target.value)
                       }
                       placeholder="Add a Landmark (optional)"
-                      className="w-full p-4 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 outline-none border-none transition-all duration-300 bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441]"
+                      className="w-full p-4 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-200 outline-none border-none transition-all duration-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
                     />
 
                   </div>
@@ -515,7 +510,7 @@ export default function ReportCase() {
 
             {/* DESCRIPTION */}
             <div className="space-y-2">
-              <label className="block text-xs uppercase tracking-wider font-bold text-gray-500 dark:text-gray-400 ml-2">
+              <label className="block text-xs uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400 ml-2">
                 Description (optional)
               </label>
 
@@ -525,10 +520,10 @@ export default function ReportCase() {
                   setDescription(e.target.value)
                 }
                 placeholder="Describe the animal's condition, injury, or situation..."
-                className="w-full p-4 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 outline-none border-none transition-all duration-300 bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441] h-24 resize-none"
+                className="w-full p-4 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-200 outline-none border-none transition-all duration-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 h-24 resize-none"
               />
 
-              <p className="text-[11px] text-gray-400 dark:text-gray-500 ml-2">
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 ml-2">
                 Example: "Dog has an injured back leg and is unable to walk."
               </p>
             </div>

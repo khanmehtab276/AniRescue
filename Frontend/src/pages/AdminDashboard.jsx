@@ -1,5 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  ClipboardList,
+  Bot,
+  Siren,
+  Ambulance,
+  CheckCircle2,
+  Ban,
+  PawPrint,
+  Shield,
+  Map as MapIcon,
+} from 'lucide-react';
 import API from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -166,32 +177,32 @@ export default function AdminDashboard() {
     {
       label: 'Total Cases',
       value: statistics.total,
-      icon: '📋'
+      Icon: ClipboardList
     },
     {
       label: 'AI Review',
       value: statistics.pending,
-      icon: '🤖'
+      Icon: Bot
     },
     {
       label: 'Available',
       value: statistics.available,
-      icon: '🆘'
+      Icon: Siren
     },
     {
       label: 'Active',
       value: statistics.active,
-      icon: '🚑'
+      Icon: Ambulance
     },
     {
       label: 'Resolved',
       value: statistics.resolved,
-      icon: '✅'
+      Icon: CheckCircle2
     },
     {
       label: 'Rejected',
       value: statistics.rejected,
-      icon: '🚫'
+      Icon: Ban
     }
   ];
 
@@ -204,21 +215,30 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between gap-3">
 
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+              <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                 Administration
               </p>
 
-              <h1 className="text-2xl font-extrabold text-gray-800 dark:text-gray-100">
+              <h1 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">
                 Rescue Control Center
               </h1>
 
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 Welcome, {user?.name || 'Administrator'}
               </p>
             </div>
 
-            <div className="w-14 h-14 shrink-0 rounded-2xl flex items-center justify-center text-2xl bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441]">
-              🛡️
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate('/verification')}
+                className="h-11 px-3 shrink-0 rounded-2xl flex items-center justify-center gap-1.5 text-xs font-bold bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 shadow-sm"
+              >
+                <ClipboardList size={14} strokeWidth={2.5} /> Verify
+              </button>
+
+              <div className="w-14 h-14 shrink-0 rounded-2xl flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm text-emerald-600 dark:text-emerald-400">
+                <Shield size={24} strokeWidth={2} />
+              </div>
             </div>
 
           </div>
@@ -244,8 +264,8 @@ export default function AdminDashboard() {
               onClick={() => setActiveTab(value)}
               className={`shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
                 activeTab === value
-                  ? 'bg-purple-600 text-white shadow-lg'
-                  : 'bg-[#e2e8f0] dark:bg-[#0f172a] text-gray-600 dark:text-gray-300 shadow-[4px_4px_8px_#cbd5e1,_-4px_-4px_8px_#f8fafc] dark:shadow-[4px_4px_8px_#070a13,_-4px_-4px_8px_#172441]'
+                  ? 'bg-[#1a1f2e] dark:bg-black text-white shadow-lg'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 shadow-sm'
               }`}
             >
               {label}
@@ -256,11 +276,9 @@ export default function AdminDashboard() {
 
         {isLoading ? (
           <div className="py-20 text-center">
-            <div className="text-4xl mb-3 animate-pulse">
-              🐾
-            </div>
+            <PawPrint size={36} className="mx-auto mb-3 text-emerald-600 dark:text-emerald-400 animate-pulse" strokeWidth={2} />
 
-            <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
               Loading rescue operations...
             </p>
           </div>
@@ -270,23 +288,21 @@ export default function AdminDashboard() {
             {activeTab === 'overview' && (
               <div className="space-y-6">
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {stats.map((stat) => (
                     <div
                       key={stat.label}
-                      className="p-4 rounded-2xl bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441]"
+                      className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm"
                     >
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-xl">
-                          {stat.icon}
-                        </span>
+                        <stat.Icon size={18} className="text-emerald-600 dark:text-emerald-400" strokeWidth={2.2} />
 
-                        <span className="text-2xl font-extrabold text-gray-800 dark:text-gray-100">
+                        <span className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">
                           {stat.value}
                         </span>
                       </div>
 
-                      <p className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                      <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
                         {stat.label}
                       </p>
                     </div>
@@ -295,7 +311,7 @@ export default function AdminDashboard() {
 
                 {/* Quick Actions */}
                 <section>
-                  <h2 className="mb-3 text-lg font-extrabold text-gray-800 dark:text-gray-100">
+                  <h2 className="mb-3 text-lg font-extrabold text-slate-800 dark:text-slate-100">
                     Quick Actions
                   </h2>
 
@@ -303,53 +319,47 @@ export default function AdminDashboard() {
 
                     <button
                       onClick={() => setActiveTab('cases')}
-                      className="p-4 rounded-2xl text-left bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441] hover:-translate-y-0.5 transition-all"
+                      className="p-4 rounded-2xl text-left bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:-translate-y-0.5 transition-all"
                     >
-                      <div className="text-2xl mb-2">
-                        📋
-                      </div>
+                      <ClipboardList size={22} className="mb-2 text-emerald-600 dark:text-emerald-400" strokeWidth={2} />
 
-                      <p className="font-bold text-gray-800 dark:text-gray-100">
+                      <p className="font-bold text-slate-800 dark:text-slate-100">
                         Manage Cases
                       </p>
 
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                         View and update rescue cases
                       </p>
                     </button>
 
                     <button
                       onClick={() => setActiveTab('review')}
-                      className="p-4 rounded-2xl text-left bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441] hover:-translate-y-0.5 transition-all"
+                      className="p-4 rounded-2xl text-left bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:-translate-y-0.5 transition-all"
                     >
-                      <div className="text-2xl mb-2">
-                        🤖
-                      </div>
+                      <Bot size={22} className="mb-2 text-emerald-600 dark:text-emerald-400" strokeWidth={2} />
 
-                      <p className="font-bold text-gray-800 dark:text-gray-100">
+                      <p className="font-bold text-slate-800 dark:text-slate-100">
                         AI Review Queue
                       </p>
 
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                         Review cases flagged as junk
                       </p>
                     </button>
 
                     <button
                       onClick={() => navigate('/map')}
-                      className="col-span-2 p-4 rounded-2xl text-left bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441] hover:-translate-y-0.5 transition-all"
+                      className="col-span-2 p-4 rounded-2xl text-left bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:-translate-y-0.5 transition-all"
                     >
                       <div className="flex items-center gap-3">
-                        <span className="text-2xl">
-                          🗺️
-                        </span>
+                        <MapIcon size={22} className="text-emerald-600 dark:text-emerald-400" strokeWidth={2} />
 
                         <div>
-                          <p className="font-bold text-gray-800 dark:text-gray-100">
+                          <p className="font-bold text-slate-800 dark:text-slate-100">
                             Live Rescue Map
                           </p>
 
-                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                             View active rescue locations
                           </p>
                         </div>
@@ -362,13 +372,13 @@ export default function AdminDashboard() {
                 {/* Recent Cases */}
                 <section>
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-lg font-extrabold text-gray-800 dark:text-gray-100">
+                    <h2 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">
                       Recent Cases
                     </h2>
 
                     <button
                       onClick={() => setActiveTab('cases')}
-                      className="text-xs font-bold text-purple-600 dark:text-purple-400"
+                      className="text-xs font-bold text-blue-600 dark:text-blue-400"
                     >
                       View all
                     </button>
@@ -401,11 +411,11 @@ export default function AdminDashboard() {
             {activeTab === 'cases' && (
               <section>
                 <div className="mb-4">
-                  <h2 className="text-xl font-extrabold text-gray-800 dark:text-gray-100">
+                  <h2 className="text-xl font-extrabold text-slate-800 dark:text-slate-100">
                     Rescue Cases
                   </h2>
 
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     Monitor and manage reported rescue operations.
                   </p>
                 </div>
@@ -435,11 +445,11 @@ export default function AdminDashboard() {
             {activeTab === 'review' && (
               <section>
                 <div className="mb-4">
-                  <h2 className="text-xl font-extrabold text-gray-800 dark:text-gray-100">
+                  <h2 className="text-xl font-extrabold text-slate-800 dark:text-slate-100">
                     AI Review Queue
                   </h2>
 
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     Cases currently marked as rejected by validation.
                   </p>
                 </div>
@@ -508,7 +518,7 @@ function AdminCaseCard({
     : 'Unknown time';
 
   return (
-    <div className="rounded-2xl p-4 bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441]">
+    <div className="rounded-2xl p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
 
       {image_payload && (
         <div className="mb-4 overflow-hidden rounded-xl">
@@ -524,11 +534,11 @@ function AdminCaseCard({
       <div className="flex items-start justify-between gap-3">
 
         <div className="min-w-0">
-          <h3 className="font-extrabold text-gray-800 dark:text-gray-100 truncate">
+          <h3 className="font-extrabold text-slate-800 dark:text-slate-100 truncate">
             {species || 'Animal Rescue Case'}
           </h3>
 
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             Case #{id}
           </p>
         </div>
@@ -537,12 +547,12 @@ function AdminCaseCard({
       </div>
 
       {issue_description && (
-        <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+        <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
           {issue_description}
         </p>
       )}
 
-      <div className="mt-4 space-y-2 text-xs text-gray-500 dark:text-gray-400">
+      <div className="mt-4 space-y-2 text-xs text-slate-500 dark:text-slate-400">
 
         {priority && (
           <div>
@@ -648,7 +658,7 @@ function AdminCaseCard({
         )}
 
         {status === 'CANCELLED' && (
-          <div className="rounded-xl bg-gray-200 dark:bg-gray-800 px-4 py-3 text-center text-sm font-bold text-gray-600 dark:text-gray-400">
+          <div className="rounded-xl bg-slate-200 dark:bg-slate-800 px-4 py-3 text-center text-sm font-bold text-slate-600 dark:text-slate-400">
             Cancelled
           </div>
         )}
@@ -682,7 +692,7 @@ function JunkReviewCard({
   const isProcessing = processingId === id;
 
   return (
-    <div className="rounded-2xl p-4 bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441]">
+    <div className="rounded-2xl p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
 
       {image_payload && (
         <div className="mb-4 overflow-hidden rounded-xl">
@@ -698,11 +708,11 @@ function JunkReviewCard({
       <div className="flex items-start justify-between gap-3">
 
         <div>
-          <h3 className="font-extrabold text-gray-800 dark:text-gray-100">
+          <h3 className="font-extrabold text-slate-800 dark:text-slate-100">
             {species || 'Animal Case'}
           </h3>
 
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             Case #{id}
           </p>
         </div>
@@ -711,12 +721,12 @@ function JunkReviewCard({
       </div>
 
       {issue_description && (
-        <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+        <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
           {issue_description}
         </p>
       )}
 
-      <div className="mt-3 space-y-1 text-xs text-gray-500 dark:text-gray-400">
+      <div className="mt-3 space-y-1 text-xs text-slate-500 dark:text-slate-400">
 
         {priority && (
           <p>
@@ -814,7 +824,7 @@ function StatusBadge({ status }) {
     CANCELLED: {
       label: 'Cancelled',
       className:
-        'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+        'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
     }
   };
 
@@ -822,7 +832,7 @@ function StatusBadge({ status }) {
     config[status] || {
       label: status || 'Unknown',
       className:
-        'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+        'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
     };
 
   return (
@@ -845,17 +855,17 @@ function EmptyState({
   message
 }) {
   return (
-    <div className="rounded-2xl p-8 text-center bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441]">
+    <div className="rounded-2xl p-8 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
 
       <div className="text-4xl mb-3">
         {icon}
       </div>
 
-      <h3 className="font-extrabold text-gray-800 dark:text-gray-100">
+      <h3 className="font-extrabold text-slate-800 dark:text-slate-100">
         {title}
       </h3>
 
-      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         {message}
       </p>
 

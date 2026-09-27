@@ -3,29 +3,31 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply bg-[#e2e8f0] dark:bg-[#0f172a] text-gray-900 dark:text-gray-100 min-h-screen m-0 p-0;
+  html {
+    font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
   }
-  
-  /* --- BROWSER AUTOFILL FIXES --- */
-  
-  /* 1. Defeat Chrome's white autofill background in Light Mode */
+
+  body {
+    @apply bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen m-0 p-0;
+  }
+
+  /* Autofill: match the new flat surface instead of the old
+     neumorphic inset shadow. */
   input:-webkit-autofill,
-  input:-webkit-autofill:hover, 
-  input:-webkit-autofill:focus, 
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
   input:-webkit-autofill:active {
-    -webkit-box-shadow: inset 4px 4px 8px #cbd5e1, inset -4px -4px 8px #f8fafc, inset 0 0 0 1000px #e2e8f0 !important;
-    -webkit-text-fill-color: #1f2937 !important;
+    -webkit-box-shadow: 0 0 0 1000px theme('colors.white') inset !important;
+    -webkit-text-fill-color: theme('colors.slate.900') !important;
     transition: background-color 5000s ease-in-out 0s;
   }
 
-  /* 2. Defeat Chrome's white autofill background in Dark Mode */
   .dark input:-webkit-autofill,
-  .dark input:-webkit-autofill:hover, 
-  .dark input:-webkit-autofill:focus, 
+  .dark input:-webkit-autofill:hover,
+  .dark input:-webkit-autofill:focus,
   .dark input:-webkit-autofill:active {
-    -webkit-box-shadow: inset 4px 4px 8px #070a13, inset -4px -4px 8px #172441, inset 0 0 0 1000px #0f172a !important;
-    -webkit-text-fill-color: #f3f4f6 !important;
+    -webkit-box-shadow: 0 0 0 1000px theme('colors.slate.900') inset !important;
+    -webkit-text-fill-color: theme('colors.slate.100') !important;
     transition: background-color 5000s ease-in-out 0s;
   }
 }

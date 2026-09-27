@@ -2,8 +2,10 @@ const { getChannel, CASE_NOTIFICATION_QUEUE } = require("../config/rabbitmq");
 const { pool } = require("../config/db");
 const { createNotification } = require("../utils/notifications");
 const { sendPushNotification } = require("../utils/pushNotifications");
-
-const NOTIFICATION_RADIUS_KM = 5;
+const {
+  NOTIFICATION_RADIUS_KM,
+  LOCATION_FRESHNESS_MINUTES,
+} = require("../utils/caseNotifications");
 
 const startCaseNotificationConsumer = async () => {
   const channel = getChannel();
@@ -124,6 +126,7 @@ const startCaseNotificationConsumer = async () => {
             rescueCase.latitude,
             rescueCase.longitude,
             NOTIFICATION_RADIUS_KM,
+            LOCATION_FRESHNESS_MINUTES,
           ],
         );
 

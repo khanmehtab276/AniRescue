@@ -2,6 +2,9 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { pool } = require("../config/db");
 const { normalizeEnum } = require("../utils/helpers");
+const {
+  notifyVolunteerAboutNearbyCases,
+} = require("../utils/caseNotifications");
 
 // REGISTER
 const register = async (req, res) => {
@@ -356,6 +359,18 @@ const updateJurisdiction = async (req, res) => {
       success: true,
       user: result.rows[0],
     });
+
+    if (availability === "AVAILABLE") {
+      notifyVolunteerAboutNearbyCases({
+        userId: req.user.id,
+      }).catch((error) => {
+        console.error(
+          "❌ Volunteer case catch-up error:",
+          error?.stack || error,
+        );
+      });
+    }
+
   } catch (err) {
     console.error("Update jurisdiction error:", err);
 
@@ -460,6 +475,18 @@ const updateLocation = async (req, res) => {
       success: true,
       location: result.rows[0],
     });
+
+    if (result.rows[0].availability_status === "AVAILABLE") {
+      notifyVolunteerAboutNearbyCases({
+        userId: req.user.id,
+      }).catch((error) => {
+        console.error(
+          "❌ Volunteer location catch-up error:",
+          error?.stack || error,
+        );
+      });
+    }
+
   } catch (err) {
     console.error("Update location error:", err);
 

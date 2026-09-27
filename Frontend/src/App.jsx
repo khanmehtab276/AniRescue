@@ -52,6 +52,14 @@ const Profile = lazy(
   () => import('./pages/Profile.jsx')
 );
 
+const CaseDetail = lazy(
+  () => import('./pages/CaseDetail.jsx')
+);
+
+const VerificationQueue = lazy(
+  () => import('./pages/VerificationQueue.jsx')
+);
+
 /* =========================================================
    APP
    ========================================================= */
@@ -249,6 +257,51 @@ export default function App() {
 
                 </Route>
 
+
+                {/* =================================================
+                    CASE DETAIL — shared across every authenticated
+                    role. Backend enforces per-case authorization;
+                    this route just needs "is logged in".
+                    ================================================= */}
+
+                <Route
+                  element={
+                    <ProtectedRoute
+                      allowedRoles={[
+                        'user',
+                        'volunteer',
+                        'ngo',
+                        'admin'
+                      ]}
+                    />
+                  }
+                >
+
+                  <Route
+                    path="/cases/:id"
+                    element={<CaseDetail />}
+                  />
+
+                </Route>
+
+                {/* =================================================
+                    VERIFICATION QUEUE — NGO + ADMIN
+                    ================================================= */}
+
+                <Route
+                  element={
+                    <ProtectedRoute
+                      allowedRoles={['ngo', 'admin']}
+                    />
+                  }
+                >
+
+                  <Route
+                    path="/verification"
+                    element={<VerificationQueue />}
+                  />
+
+                </Route>
 
                 {/* =================================================
                     FALLBACK
