@@ -4,6 +4,8 @@ const apiCache = require("../utils/cache");
 const { normalizeEnum } = require("../utils/helpers");
 const { logCaseHistory } = require("../utils/caseHistory");
 const { haversineKm } = require("../utils/geo");
+const { createNotification } = require("../utils/notifications");
+const { sendPushNotification } = require("../utils/pushNotifications");
 const {
   canCancel,
   canSubmitEvidence,
@@ -98,13 +100,75 @@ const reportCase = async (req, res) => {
 
 // 2. FETCH REJECTED JUNK QUEUE
 const getJunkQueue = async (req, res) => {
+  const role = (req.user.role || "").toUpperCase();
+
   try {
-    const result = await pool.query(
-      `SELECT id, species, issue_description, priority, latitude, longitude, image_payload, created_at
+    // ADMIN can review rejected cases across the entire system.
+    if (role === "ADMIN") {
+      const result = await pool.query(
+        `SELECT id, species, issue_description, priority,
+                latitude, longitude, image_payload, created_at
          FROM rescue_cases
          WHERE status = 'REJECTED_JUNK'
          ORDER BY created_at DESC`,
+      );
+
+      return res.json(result.rows);
+    }
+
+    // NGO can review only rejected cases within its registered
+    // operating jurisdiction.
+    const ngoResult = await pool.query(
+      `SELECT jurisdiction_lat, jurisdiction_lng, jurisdiction_radius_km
+       FROM users
+       WHERE id = $1`,
+      [req.user.id],
     );
+
+    const ngo = ngoResult.rows[0];
+
+    // No configured jurisdiction means no accessible junk cases.
+    if (
+      !ngo ||
+      ngo.jurisdiction_lat === null ||
+      ngo.jurisdiction_lng === null
+    ) {
+      return res.json([]);
+    }
+
+    const result = await pool.query(
+    `SELECT id, species, issue_description, priority,
+            latitude, longitude, image_payload, created_at
+    FROM (
+      SELECT
+        id,
+        species,
+        issue_description,
+        priority,
+        latitude,
+        longitude,
+        image_payload,
+        created_at,
+        (6371 * acos(LEAST(1, GREATEST(-1,
+          cos(radians($1)) *
+          cos(radians(latitude)) *
+          cos(radians(longitude) - radians($2)) +
+          sin(radians($1)) *
+          sin(radians(latitude))
+        )))) AS distance_km
+      FROM rescue_cases
+      WHERE status = 'REJECTED_JUNK'
+        AND latitude IS NOT NULL
+        AND longitude IS NOT NULL
+    ) AS nearby
+    WHERE distance_km <= $3
+    ORDER BY created_at DESC`,
+    [
+      ngo.jurisdiction_lat,
+      ngo.jurisdiction_lng,
+      ngo.jurisdiction_radius_km ?? 15,
+    ],
+  );
 
     res.json(result.rows);
   } catch (err) {
@@ -130,13 +194,34 @@ const verifyJunkCase = async (req, res) => {
   const newStatus = approved ? "VALIDATION_PASSED" : "REJECTED_JUNK";
 
   try {
+    // A junk-review override is only valid for cases that are
+    // currently in REJECTED_JUNK.
     const result = await pool.query(
-      `UPDATE rescue_cases SET status = $1 WHERE id = $2 RETURNING *`,
+      `UPDATE rescue_cases
+       SET status = $1
+       WHERE id = $2
+         AND status = 'REJECTED_JUNK'
+       RETURNING *`,
       [newStatus, id],
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Case not found." });
+      const caseResult = await pool.query(
+        `SELECT id, status
+         FROM rescue_cases
+         WHERE id = $1`,
+        [id],
+      );
+
+      if (caseResult.rows.length === 0) {
+        return res.status(404).json({
+          error: "Case not found.",
+        });
+      }
+
+      return res.status(409).json({
+        error: `Case cannot be reviewed because its current status is ${caseResult.rows[0].status}.`,
+      });
     }
 
     apiCache.flushAll();
@@ -146,10 +231,14 @@ const verifyJunkCase = async (req, res) => {
       actorId: req.user.id,
       actorRole: req.user.role,
       action: "JUNK_REVIEW_OVERRIDE",
+      fromStatus: "REJECTED_JUNK",
       toStatus: newStatus,
     });
 
-    res.json({ success: true, case: result.rows[0] });
+    res.json({
+      success: true,
+      case: result.rows[0],
+    });
   } catch (err) {
     console.error("Junk verification override error:", err);
 
@@ -159,13 +248,15 @@ const verifyJunkCase = async (req, res) => {
   }
 };
 
-// 4. HAVERSINE 5KM NEARBY VOLUNTEERS (NGO/ADMIN dispatch tool)
+// 4. HAVERSINE NEARBY VOLUNTEERS (NGO/ADMIN dispatch tool)
 const getNearbyVolunteers = async (req, res) => {
   const { id } = req.params;
 
   try {
     const caseResult = await pool.query(
-      `SELECT latitude, longitude FROM rescue_cases WHERE id = $1`,
+      `SELECT latitude, longitude
+       FROM rescue_cases
+       WHERE id = $1`,
       [id],
     );
 
@@ -184,25 +275,74 @@ const getNearbyVolunteers = async (req, res) => {
       return res.status(400).json({ error: "Case lacks GPS coordinates." });
     }
 
+    let searchRadiusKm = 5;
+
+    // NGO dispatch searches within its configured operating jurisdiction.
+    if (req.user.role === "NGO") {
+      const jurisdictionResult = await pool.query(
+        `SELECT jurisdiction_radius_km
+         FROM users
+         WHERE id = $1
+           AND role = 'NGO'`,
+        [req.user.id],
+      );
+
+      if (jurisdictionResult.rows.length === 0) {
+        return res.status(404).json({
+          error: "NGO account not found.",
+        });
+      }
+
+      const jurisdictionRadius = Number(
+        jurisdictionResult.rows[0].jurisdiction_radius_km,
+      );
+
+      if (!Number.isFinite(jurisdictionRadius) || jurisdictionRadius <= 0) {
+        return res.status(400).json({
+          error: "NGO operating jurisdiction is not configured.",
+        });
+      }
+
+      searchRadiusKm = jurisdictionRadius;
+    }
+
     const volunteers = await pool.query(
       `SELECT * FROM (
-           SELECT id, full_name, email,
-             (6371 * acos(LEAST(1, GREATEST(-1,
-               cos(radians($1)) * cos(radians(latitude)) * cos(radians(longitude) - radians($2))
-               + sin(radians($1)) * sin(radians(latitude))
-             )))) AS distance_km
-           FROM users
-           WHERE LOWER(role) = 'volunteer'
-             AND latitude IS NOT NULL
-             AND longitude IS NOT NULL
-         ) AS nearby
-         WHERE distance_km <= 5.0
-         ORDER BY distance_km ASC`,
-      [latitude, longitude],
+          SELECT
+            id,
+            full_name,
+            email,
+            (6371 * acos(LEAST(1, GREATEST(-1,
+              cos(radians($1)) * cos(radians(latitude)) *
+              cos(radians(longitude) - radians($2))
+              + sin(radians($1)) * sin(radians(latitude))
+            )))) AS distance_km
+            FROM users
+            WHERE role = 'VOLUNTEER'
+              AND account_status = 'ACTIVE'
+              AND availability_status = 'AVAILABLE'
+              AND latitude IS NOT NULL
+              AND longitude IS NOT NULL
+              AND location_updated_at IS NOT NULL
+              AND location_updated_at >= CURRENT_TIMESTAMP - INTERVAL '5 minutes'
+              AND (
+                $4 = 'ADMIN'
+                OR EXISTS (
+                  SELECT 1
+                  FROM ngo_volunteers nv
+                  WHERE nv.ngo_id = $5
+                    AND nv.volunteer_id = users.id
+                )
+              )
+        ) AS nearby
+        WHERE distance_km <= $3
+        ORDER BY distance_km ASC`,
+      [latitude, longitude, searchRadiusKm, req.user.role, req.user.id],
     );
 
     res.json({
       caseId: id,
+      searchRadiusKm,
       totalNearby: volunteers.rows.length,
       volunteers: volunteers.rows,
     });
@@ -210,7 +350,7 @@ const getNearbyVolunteers = async (req, res) => {
     console.error("Haversine search error:", err);
 
     res.status(500).json({
-      error: "Failed to find nearby volunteers within 5km radius.",
+      error: "Failed to find nearby volunteers.",
     });
   }
 };
@@ -263,18 +403,46 @@ const getMyCases = async (req, res) => {
   }
 };
 
-// 7. ATOMIC CLAIM CASE (VOLUNTEER, ADMIN only — NGO dispatches, doesn't claim personally)
+// 7. ATOMIC CLAIM CASE (VOLUNTEER, NGO within jurisdiction, ADMIN)
 const claimCase = async (req, res) => {
   const caseId = req.params.id;
-  const volunteerId = req.user.id;
+  const claimantID = req.user.id;
+  const role = (req.user.role || "").toUpperCase();
 
   try {
+    // NGO can claim only cases inside its jurisdiction.
+    if (role === "NGO") {
+      const caseResult = await pool.query(
+        `SELECT * FROM rescue_cases WHERE id = $1`,
+        [caseId],
+      );
+
+      if (caseResult.rows.length === 0) {
+        return res.status(404).json({
+          error: "Case not found.",
+        });
+      }
+
+      const currentCase = caseResult.rows[0];
+
+      const withinJurisdiction = await isCaseWithinNgoJurisdiction(
+        claimantID,
+        currentCase,
+      );
+
+      if (!withinJurisdiction) {
+        return res.status(403).json({
+          error: "This case is outside your NGO jurisdiction.",
+        });
+      }
+    }
+
     const result = await pool.query(
       `UPDATE rescue_cases
          SET status = 'IN_PROGRESS', assigned_volunteer_id = $1
          WHERE id = $2 AND status = 'VALIDATION_PASSED' AND assigned_volunteer_id IS NULL
          RETURNING *`,
-      [volunteerId, caseId],
+      [claimantID, caseId],
     );
 
     if (result.rows.length === 0) {
@@ -283,11 +451,87 @@ const claimCase = async (req, res) => {
       });
     }
 
+    if (role === "VOLUNTEER") {
+      await pool.query(
+        `UPDATE users
+        SET availability_status = 'ON_RESCUE'
+        WHERE id = $1
+          AND role = 'VOLUNTEER'
+          AND account_status = 'ACTIVE'`,
+        [claimantID],
+      );
+    }
+
+    const notification = await createNotification({
+      userId: claimantID,
+      caseId,
+      notificationType: "CASE_CLAIMED",
+      title: "Rescue Case Claimed",
+      message: `You have claimed Rescue Case #${caseId}.`,
+    });
+
+    if (notification) {
+      const tokenResult = await pool.query(
+        `
+        SELECT token
+        FROM device_tokens
+        WHERE user_id = $1
+          AND is_active = TRUE
+        `,
+        [claimantID],
+      );
+
+      for (const device of tokenResult.rows) {
+        try {
+          await sendPushNotification({
+            token: device.token,
+            title: notification.title,
+            body: notification.message,
+            data: {
+              caseId,
+              notificationType: "CASE_CLAIMED",
+            },
+          });
+
+          console.log(
+            `📲 Claim push notification sent to User #${claimantID}.`,
+          );
+        } catch (pushError) {
+          const errorCode = pushError?.errorInfo?.code;
+
+          console.error(
+            `⚠️ Claim push failed for User #${claimantID}:`,
+            pushError?.message || pushError,
+          );
+
+          if (
+            errorCode === "messaging/registration-token-not-registered" ||
+            errorCode === "messaging/invalid-registration-token"
+          ) {
+            await pool.query(
+              `
+              UPDATE device_tokens
+              SET
+                is_active = FALSE,
+                updated_at = CURRENT_TIMESTAMP
+              WHERE token = $1
+              `,
+              [device.token],
+            );
+
+            console.log(
+              `🧹 Deactivated invalid FCM token for User #${claimantID}.`,
+            );
+          }
+        }
+      }
+    }
+
     apiCache.flushAll();
 
     await logCaseHistory({
       caseId,
-      actorId: volunteerId,
+      actorId: claimantID,
       actorRole: req.user.role,
       action: "CASE_CLAIMED",
       fromStatus: "VALIDATION_PASSED",
@@ -323,12 +567,9 @@ const cancelCase = async (req, res) => {
     const isAssignedToCaller =
       currentCase.assigned_volunteer_id === req.user.id;
 
-    if (
-      (role || "").toUpperCase() !== "ADMIN" &&
-      !isAssignedToCaller
-    ) {
+    if ((role || "").toUpperCase() !== "ADMIN") {
       return res.status(403).json({
-        error: "You can only cancel a case assigned to you.",
+        error: "Only an admin can permanently cancel a case.",
       });
     }
 
@@ -345,6 +586,18 @@ const cancelCase = async (req, res) => {
          RETURNING *`,
       [reason || null, id],
     );
+
+    if (currentCase.assigned_volunteer_id) {
+      await pool.query(
+        `UPDATE users
+         SET availability_status = 'AVAILABLE'
+         WHERE id = $1
+           AND role = 'VOLUNTEER'
+           AND account_status = 'ACTIVE'
+           AND availability_status = 'ON_RESCUE'`,
+        [currentCase.assigned_volunteer_id],
+      );
+    }
 
     apiCache.flushAll();
 
@@ -390,9 +643,6 @@ const submitRescueEvidence = async (req, res) => {
 
     const currentCase = caseResult.rows[0];
 
-    const isAssignedToCaller =
-      currentCase.assigned_volunteer_id === req.user.id;
-
     if (
       !canSubmitEvidence({
         role,
@@ -416,6 +666,18 @@ const submitRescueEvidence = async (req, res) => {
          RETURNING *`,
       [evidenceImageUrl, notes || null, id],
     );
+
+    // The assigned volunteer has finished the rescue.
+    // Make them available for another case.
+    if (currentCase.assigned_volunteer_id) {
+      await pool.query(
+        `UPDATE users
+         SET availability_status = 'AVAILABLE'
+         WHERE id = $1
+           AND availability_status = 'ON_RESCUE'`,
+        [currentCase.assigned_volunteer_id],
+      );
+    }
 
     apiCache.flushAll();
 
@@ -467,7 +729,309 @@ const isCaseWithinNgoJurisdiction = async (ngoUserId, caseRow) => {
   return distance <= (ngo.jurisdiction_radius_km ?? 15);
 };
 
-// 10. VERIFY RESCUE COMPLETION (RESCUE_COMPLETED -> RESOLVED, or reject -> IN_PROGRESS)
+// 10. ASSIGN CASE TO A VOLUNTEER (NGO/ADMIN)
+const assignCase = async (req, res) => {
+  const caseId = req.params.id;
+  const { volunteerId } = req.body;
+  const role = (req.user.role || "").toUpperCase();
+
+  if (!volunteerId) {
+    return res.status(400).json({
+      error: "Volunteer ID is required.",
+    });
+  }
+
+  try {
+    // Check that the case exists and is still available for assignment.
+    const caseResult = await pool.query(
+      `SELECT * FROM rescue_cases
+       WHERE id = $1`,
+      [caseId],
+    );
+
+    if (caseResult.rows.length === 0) {
+      return res.status(404).json({
+        error: "Case not found.",
+      });
+    }
+
+    const currentCase = caseResult.rows[0];
+
+    if (currentCase.status !== "VALIDATION_PASSED") {
+      return res.status(409).json({
+        error: "Only validated cases can be assigned.",
+      });
+    }
+
+    if (currentCase.assigned_volunteer_id !== null) {
+      return res.status(409).json({
+        error: "Case is already assigned.",
+      });
+    }
+
+    // The selected account must be an active volunteer.
+    const volunteerResult = await pool.query(
+      `SELECT id
+        FROM users
+        WHERE id = $1
+          AND role = 'VOLUNTEER'
+          AND account_status = 'ACTIVE'
+          AND availability_status = 'AVAILABLE'`,
+        [volunteerId],
+    );
+
+    if (volunteerResult.rows.length === 0) {
+      return res.status(400).json({
+        error: "Selected user is not an active volunteer.",
+      });
+    }
+
+    // NGO can assign only inside its own jurisdiction and
+    // only to a volunteer associated with that NGO.
+    if (role === "NGO") {
+      const withinJurisdiction = await isCaseWithinNgoJurisdiction(
+        req.user.id,
+        currentCase,
+      );
+
+      if (!withinJurisdiction) {
+        return res.status(403).json({
+          error: "This case is outside your NGO jurisdiction.",
+        });
+      }
+
+      const associationResult = await pool.query(
+        `SELECT 1
+         FROM ngo_volunteers
+         WHERE ngo_id = $1
+           AND volunteer_id = $2`,
+        [req.user.id, volunteerId],
+      );
+
+      if (associationResult.rows.length === 0) {
+        return res.status(403).json({
+          error: "This volunteer is not associated with your NGO.",
+        });
+      }
+    }
+
+    // ADMIN can assign globally.
+    // NGO authorization was fully checked above.
+    if (role !== "ADMIN" && role !== "NGO") {
+      return res.status(403).json({
+        error: "You are not authorized to assign cases.",
+      });
+    }
+
+    // Atomic update prevents two admins/NGOs from assigning
+    // the same case at the same time.
+    const result = await pool.query(
+      `UPDATE rescue_cases
+       SET status = 'IN_PROGRESS',
+           assigned_volunteer_id = $1
+       WHERE id = $2
+         AND status = 'VALIDATION_PASSED'
+         AND assigned_volunteer_id IS NULL
+       RETURNING *`,
+      [volunteerId, caseId],
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(409).json({
+        error: "Case was already assigned or is no longer available.",
+      });
+    }
+
+    await pool.query(
+      `UPDATE users
+      SET availability_status = 'ON_RESCUE'
+      WHERE id = $1
+        AND role = 'VOLUNTEER'
+        AND account_status = 'ACTIVE'`,
+      [volunteerId],
+    );
+
+    const notification = await createNotification({
+      userId: volunteerId,
+      caseId,
+      notificationType: "CASE_ASSIGNED",
+      title: "Rescue Case Assigned",
+      message: `You have been assigned Rescue Case #${caseId}.`,
+    });
+
+    if (notification) {
+      const tokenResult = await pool.query(
+        `
+        SELECT token
+        FROM device_tokens
+        WHERE user_id = $1
+          AND is_active = TRUE
+        `,
+        [volunteerId],
+      );
+
+      for (const device of tokenResult.rows) {
+        try {
+          await sendPushNotification({
+            token: device.token,
+            title: notification.title,
+            body: notification.message,
+            data: {
+              caseId,
+              notificationType: "CASE_ASSIGNED",
+            },
+          });
+
+          console.log(
+            `📲 Assignment push notification sent to Volunteer #${volunteerId}.`,
+          );
+        } catch (pushError) {
+          const errorCode = pushError?.errorInfo?.code;
+
+          console.error(
+            `⚠️ Assignment push failed for Volunteer #${volunteerId}:`,
+            pushError?.message || pushError,
+          );
+
+          if (
+            errorCode === "messaging/registration-token-not-registered" ||
+            errorCode === "messaging/invalid-registration-token"
+          ) {
+            await pool.query(
+              `
+              UPDATE device_tokens
+              SET
+                is_active = FALSE,
+                updated_at = CURRENT_TIMESTAMP
+              WHERE token = $1
+              `,
+              [device.token],
+            );
+
+            console.log(
+              `🧹 Deactivated invalid FCM token for Volunteer #${volunteerId}.`,
+            );
+          }
+        }
+      }
+    }
+
+    apiCache.flushAll();
+
+    await logCaseHistory({
+      caseId,
+      actorId: req.user.id,
+      actorRole: role,
+      action: "CASE_ASSIGNED",
+      fromStatus: "VALIDATION_PASSED",
+      toStatus: "IN_PROGRESS",
+      notes: `Assigned to volunteer ${volunteerId}.`,
+    });
+
+    return res.json({
+      success: true,
+      case: result.rows[0],
+    });
+  } catch (err) {
+    console.error("Assign case error:", err);
+
+    return res.status(500).json({
+      error: "Failed to assign case.",
+    });
+  }
+};
+
+// 11. RELEASE CASE (IN_PROGRESS -> VALIDATION_PASSED)
+const releaseCase = async (req, res) => {
+  const { id } = req.params;
+  const role = (req.user.role || "").toUpperCase();
+
+  try {
+    const caseResult = await pool.query(
+      `SELECT status, assigned_volunteer_id
+       FROM rescue_cases
+       WHERE id = $1`,
+      [id],
+    );
+
+    if (caseResult.rows.length === 0) {
+      return res.status(404).json({
+        error: "Case not found.",
+      });
+    }
+
+    const currentCase = caseResult.rows[0];
+
+    if (currentCase.status !== "IN_PROGRESS") {
+      return res.status(409).json({
+        error: "Only cases currently in progress can be released.",
+      });
+    }
+
+    const isAssignedToCaller =
+      currentCase.assigned_volunteer_id === req.user.id;
+
+    if (!isAssignedToCaller) {
+      return res.status(403).json({
+        error: "You can only release a case assigned to you.",
+      });
+    }
+
+    const result = await pool.query(
+      `UPDATE rescue_cases
+       SET status = 'VALIDATION_PASSED',
+           assigned_volunteer_id = NULL
+       WHERE id = $1
+         AND status = 'IN_PROGRESS'
+         AND assigned_volunteer_id = $2
+       RETURNING *`,
+      [id, req.user.id],
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(409).json({
+        error: "Case was already changed or released.",
+      });
+    }
+
+    if (role === "VOLUNTEER") {
+      await pool.query(
+        `UPDATE users
+         SET availability_status = 'AVAILABLE'
+         WHERE id = $1
+           AND role = 'VOLUNTEER'
+           AND account_status = 'ACTIVE'
+           AND availability_status = 'ON_RESCUE'`,
+        [req.user.id],
+      );
+    }
+
+    apiCache.flushAll();
+
+    await logCaseHistory({
+      caseId: id,
+      actorId: req.user.id,
+      actorRole: role,
+      action: "CASE_RELEASED",
+      fromStatus: "IN_PROGRESS",
+      toStatus: "VALIDATION_PASSED",
+      notes: "Case released by assigned volunteer.",
+    });
+
+    return res.json({
+      success: true,
+      case: result.rows[0],
+    });
+  } catch (err) {
+    console.error("Release case error:", err);
+
+    return res.status(500).json({
+      error: "Failed to release case.",
+    });
+  }
+};
+
+// 12. VERIFY RESCUE COMPLETION (RESCUE_COMPLETED -> RESOLVED, or reject -> IN_PROGRESS)
 const verifyCompletion = async (req, res) => {
   const { id } = req.params;
   const { approved, reason } = req.body;
@@ -522,6 +1086,17 @@ const verifyCompletion = async (req, res) => {
            RETURNING *`,
         [req.user.id, id],
       );
+
+      await pool.query(
+        `UPDATE users
+        SET availability_status = 'AVAILABLE'
+        WHERE id = $1
+          AND role = 'VOLUNTEER'
+          AND account_status = 'ACTIVE'
+          AND availability_status = 'ON_RESCUE'`,
+        [currentCase.assigned_volunteer_id],
+      );
+
     } else {
       if (!reason) {
         return res.status(400).json({
@@ -536,6 +1111,88 @@ const verifyCompletion = async (req, res) => {
            RETURNING *`,
         [reason, id],
       );
+
+      await pool.query(
+        `UPDATE users
+        SET availability_status = 'ON_RESCUE'
+        WHERE id = $1
+          AND role = 'VOLUNTEER'
+          AND account_status = 'ACTIVE'`,
+        [currentCase.assigned_volunteer_id],
+      );
+    }
+
+    const notification = await createNotification({
+      userId: currentCase.assigned_volunteer_id,
+      caseId: id,
+      notificationType: approved
+        ? "COMPLETION_VERIFIED"
+        : "COMPLETION_REJECTED",
+      title: approved
+        ? "Rescue Completion Verified"
+        : "Rescue Completion Rejected",
+      message: approved
+        ? `Your rescue for Case #${id} has been verified successfully.`
+        : `Your rescue completion for Case #${id} was rejected. Reason: ${reason}`,
+    });
+
+    if (notification) {
+      const tokenResult = await pool.query(
+        `
+        SELECT token
+        FROM device_tokens
+        WHERE user_id = $1
+          AND is_active = TRUE
+        `,
+        [currentCase.assigned_volunteer_id],
+      );
+
+      for (const device of tokenResult.rows) {
+        try {
+          await sendPushNotification({
+            token: device.token,
+            title: notification.title,
+            body: notification.message,
+            data: {
+              caseId: id,
+              notificationType: approved
+                ? "COMPLETION_VERIFIED"
+                : "COMPLETION_REJECTED",
+            },
+          });
+
+          console.log(
+            `📲 Completion ${approved ? "verification" : "rejection"} push sent to Volunteer #${currentCase.assigned_volunteer_id}.`,
+          );
+        } catch (pushError) {
+          const errorCode = pushError?.errorInfo?.code;
+
+          console.error(
+            `⚠️ Completion push failed for Volunteer #${currentCase.assigned_volunteer_id}:`,
+            pushError?.message || pushError,
+          );
+
+          if (
+            errorCode === "messaging/registration-token-not-registered" ||
+            errorCode === "messaging/invalid-registration-token"
+          ) {
+            await pool.query(
+              `
+              UPDATE device_tokens
+              SET
+                is_active = FALSE,
+                updated_at = CURRENT_TIMESTAMP
+              WHERE token = $1
+              `,
+              [device.token],
+            );
+
+            console.log(
+              `🧹 Deactivated invalid FCM token for Volunteer #${currentCase.assigned_volunteer_id}.`,
+            );
+          }
+        }
+      }
     }
 
     apiCache.flushAll();
@@ -558,7 +1215,7 @@ const verifyCompletion = async (req, res) => {
   }
 };
 
-// 11. SET PRIORITY (ADMIN always; NGO within their jurisdiction)
+// 13. SET PRIORITY (ADMIN always; NGO within their jurisdiction)
 const setPriority = async (req, res) => {
   const { id } = req.params;
   const normalizedPriority = normalizeEnum(req.body.priority);
@@ -622,7 +1279,7 @@ const setPriority = async (req, res) => {
   }
 };
 
-// 12. MAP DATA (public — minimal fields only, no description text)
+// 14. MAP DATA (public — minimal fields only, no description text)
 const getMapData = async (req, res) => {
   try {
     if (apiCache.has("map_data")) {
@@ -648,7 +1305,7 @@ const getMapData = async (req, res) => {
   }
 };
 
-// 13. CASE DETAIL — role-aware single source of truth for one case
+// 15. CASE DETAIL — role-aware single source of truth for one case
 const getCaseDetail = async (req, res) => {
   const { id } = req.params;
   const role = (req.user.role || "").toUpperCase();
@@ -705,7 +1362,7 @@ const getCaseDetail = async (req, res) => {
   }
 };
 
-// 14. VERIFICATION QUEUE (RESCUE_COMPLETED cases awaiting admin/NGO sign-off)
+// 16. VERIFICATION QUEUE (RESCUE_COMPLETED cases awaiting admin/NGO sign-off)
 const getVerificationQueue = async (req, res) => {
   const role = (req.user.role || "").toUpperCase();
 
@@ -758,7 +1415,7 @@ const getVerificationQueue = async (req, res) => {
   }
 };
 
-// 15. ROLE-AWARE DASHBOARD FEED
+// 17. ROLE-AWARE DASHBOARD FEED
 // Fixes the previously-shared master list: each operational role now
 // gets a genuinely different, permission-scoped query. Cache key is
 // role+user-scoped for VOLUNTEER/NGO since their data now differs
@@ -824,9 +1481,17 @@ const getDashboardCases = async (req, res) => {
                    cos(radians($1)) * cos(radians(latitude)) * cos(radians(longitude) - radians($2))
                    + sin(radians($1)) * sin(radians(latitude))
                  )))) AS distance_km
-               FROM rescue_cases
-               WHERE latitude IS NOT NULL AND longitude IS NOT NULL
-                 AND status != 'CANCELLED'
+                FROM rescue_cases
+                WHERE latitude IS NOT NULL 
+                  AND longitude IS NOT NULL
+                  AND status != 'CANCELLED'
+                  AND (
+                    assigned_volunteer_id = $4
+                    OR (
+                      status = 'VALIDATION_PASSED'
+                      AND assigned_volunteer_id IS NULL
+                    )
+                  )
              ) AS nearby
              WHERE distance_km <= $3
              ORDER BY created_at DESC
@@ -835,6 +1500,7 @@ const getDashboardCases = async (req, res) => {
             ngo.jurisdiction_lat,
             ngo.jurisdiction_lng,
             ngo.jurisdiction_radius_km ?? 15,
+            req.user.id,
           ],
         );
 
@@ -867,6 +1533,8 @@ module.exports = {
   getAvailableCasesForVolunteers,
   getMyCases,
   claimCase,
+  assignCase,
+  releaseCase,
   cancelCase,
   submitRescueEvidence,
   verifyCompletion,

@@ -16,6 +16,10 @@ if (!process.env.DATABASE_URL) {
 const app = require("./src/app");
 const { pool, ensureDbConnection, startKeepalive } = require("./src/config/db");
 const { connectRabbitMQ, closeRabbitMQ } = require("./src/config/rabbitmq");
+const {
+  startCaseNotificationConsumer,
+} = require("./src/services/caseNotificationConsumer");
+const { Server } = require("socket.io");
 
 const port = process.env.PORT || 3000;
 
@@ -28,9 +32,11 @@ ensureDbConnection().catch((err) =>
 
 startKeepalive();
 
-connectRabbitMQ().catch((err) =>
-  console.error("RabbitMQ initialization error:", err),
-);
+connectRabbitMQ()
+  .then(() => startCaseNotificationConsumer())
+  .catch((err) =>
+    console.error("RabbitMQ initialization error:", err),
+  );
 
 // --------------------------------------------------
 // START SERVER
@@ -38,6 +44,12 @@ connectRabbitMQ().catch((err) =>
 const server = app.listen(port, "0.0.0.0", () =>
   console.log(`🚀 AniRescue API server listening on port ${port}`),
 );
+
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+  },
+});
 
 // --------------------------------------------------
 // GRACEFUL SHUTDOWN

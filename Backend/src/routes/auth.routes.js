@@ -8,6 +8,9 @@ const {
   login,
   getCurrentUser,
   updateJurisdiction,
+  updateAvailability,
+  updateLocation,
+  registerDeviceToken,
 } = require("../controllers/auth.controller");
 
 router.post("/register", authLimiter, register);
@@ -19,6 +22,26 @@ router.put(
   verifyToken,
   authorizeRoles("NGO"),
   updateJurisdiction,
+);
+
+router.put(
+  "/availability",
+  verifyToken,
+  authorizeRoles("VOLUNTEER"),
+  updateAvailability,
+);
+
+router.put(
+  "/location",
+  verifyToken,
+  authorizeRoles("VOLUNTEER"),
+  updateLocation,
+);
+
+router.post(
+  "/device-token",
+  verifyToken,
+  registerDeviceToken,
 );
 
 module.exports = router;

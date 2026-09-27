@@ -9,4 +9,4 @@ __pycache__
 .dockerignore
 Dockerfile*
 docker-compose*.yml
-README.md
+README.md   

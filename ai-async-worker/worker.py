@@ -47,6 +47,7 @@ if not DATABASE_URL:
 # --------------------------------------------------
 
 QUEUE_NAME = "yolo_processing_queue"
+CASE_NOTIFICATION_QUEUE = "case_notification_queue"
 
 MAX_RETRIES = 3
 
@@ -78,6 +79,43 @@ def get_db_connection(existing_conn):
 
     return psycopg2.connect(DATABASE_URL)
 
+
+# --------------------------------------------------
+# CASE NOTIFICATION
+# --------------------------------------------------
+
+
+def publish_case_notification(
+    channel,
+    report_id,
+    is_valid,
+    species=None
+):
+    payload = {
+        "reportId": report_id,
+        "validationPassed": is_valid,
+        "species": species,
+    }
+
+    channel.queue_declare(
+        queue=CASE_NOTIFICATION_QUEUE,
+        durable=True,
+    )
+
+    channel.basic_publish(
+        exchange="",
+        routing_key=CASE_NOTIFICATION_QUEUE,
+        body=json.dumps(payload).encode(),
+        properties=pika.BasicProperties(
+            delivery_mode=2,
+            content_type="application/json",
+        ),
+    )
+
+    print(
+        f"📢 Case {report_id} notification event published: "
+        f"{'PASSED' if is_valid else 'REJECTED'}"
+    )
 
 # --------------------------------------------------
 # IMAGE DOWNLOAD
@@ -405,6 +443,13 @@ def main():
                         )
 
                     db_conn.commit()
+
+                    publish_case_notification(
+                        channel=ch,
+                        report_id=report_id,
+                        is_valid=is_valid,
+                        species=species if is_valid else None,
+                    )
 
                     # ------------------------------------------
                     # SUCCESSFUL MESSAGE
