@@ -11,6 +11,7 @@ import psycopg2
 import requests
 from PIL import Image
 from pathlib import Path
+from urllib.parse import urlparse
 
 # --------------------------------------------------
 # WORKER PATH CONFIGURATION
@@ -52,6 +53,9 @@ CASE_NOTIFICATION_QUEUE = "case_notification_queue"
 MAX_RETRIES = 3
 
 IMAGE_DOWNLOAD_TIMEOUT = 15
+
+CLOUDINARY_DELIVERY_HOST = "res.cloudinary.com"
+CLOUDINARY_CLOUD_NAME = "tsacc3bn"
 
 # --------------------------------------------------
 # DATABASE CONNECTION
@@ -140,11 +144,32 @@ def resolve_image_input(image_source):
             "Image source must be a string URL."
         )
 
-    if not image_source.startswith(
-        ("http://", "https://")
-    ):
+    try:
+        parsed_url = urlparse(image_source)
+    except ValueError:
         raise ValueError(
-            "Only HTTP/HTTPS image URLs are supported."
+            "Invalid image URL."
+        )
+
+    if parsed_url.scheme != "https":
+        raise ValueError(
+            "Only HTTPS Cloudinary image URLs are supported."
+        )
+
+    if parsed_url.hostname != CLOUDINARY_DELIVERY_HOST:
+        raise ValueError(
+            "Image URL must use the approved Cloudinary delivery host."
+        )
+
+    expected_prefix = f"/{CLOUDINARY_CLOUD_NAME}/"
+    if not parsed_url.path.startswith(expected_prefix):
+        raise ValueError(
+            "Image URL does not belong to the approved Cloudinary cloud."
+        )
+
+    if parsed_url.username or parsed_url.password:
+        raise ValueError(
+            "Image URL credentials are not allowed."
         )
 
     temp_path = None
@@ -157,7 +182,8 @@ def resolve_image_input(image_source):
         response = requests.get(
             image_source,
             headers=headers,
-            timeout=IMAGE_DOWNLOAD_TIMEOUT
+            timeout=IMAGE_DOWNLOAD_TIMEOUT,
+            allow_redirects=False,
         )
 
         response.raise_for_status()
