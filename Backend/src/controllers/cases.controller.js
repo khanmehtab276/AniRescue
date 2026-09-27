@@ -191,6 +191,41 @@ const verifyJunkCase = async (req, res) => {
   const newStatus = approved ? "VALIDATION_PASSED" : "REJECTED_JUNK";
 
   try {
+    // NGOs may review only cases inside their operating jurisdiction.
+    if ((req.user.role || "").toUpperCase() === "NGO") {
+      const caseResult = await pool.query(
+        `SELECT id, status, latitude, longitude
+         FROM rescue_cases
+         WHERE id = $1`,
+        [id],
+      );
+
+      if (caseResult.rows.length === 0) {
+        return res.status(404).json({
+          error: "Case not found.",
+        });
+      }
+
+      const currentCase = caseResult.rows[0];
+
+      if (currentCase.status !== "REJECTED_JUNK") {
+        return res.status(409).json({
+          error: `Case cannot be reviewed because its current status is ${currentCase.status}.`,
+        });
+      }
+
+      const withinJurisdiction = await isCaseWithinNgoJurisdiction(
+        req.user.id,
+        currentCase,
+      );
+
+      if (!withinJurisdiction) {
+        return res.status(403).json({
+          error: "This case is outside your NGO jurisdiction.",
+        });
+      }
+    }
+
     // A junk-review override is only valid for cases that are
     // currently in REJECTED_JUNK.
     const result = await pool.query(
