@@ -30,6 +30,10 @@ export default function CaseDetail() {
   const [evidenceNotes, setEvidenceNotes] = useState('');
   const [showEvidenceForm, setShowEvidenceForm] = useState(false);
 
+  // Dispatch (NGO/ADMIN): nearby-volunteer lookup for the assign action
+  const [nearby, setNearby] = useState(null);
+  const [isLoadingNearby, setIsLoadingNearby] = useState(false);
+
   // Rejection reason (verifier)
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
@@ -127,6 +131,58 @@ export default function CaseDetail() {
       await fetchCase();
     } catch (err) {
       showToast(err.response?.data?.error || 'Failed to record verification.', 'error');
+    } finally {
+      setIsActing(false);
+    }
+  };
+
+  const handleRelease = async () => {
+    if (!window.confirm('Release this case? It will return to the available pool for other volunteers.')) return;
+
+    setIsActing(true);
+
+    try {
+      await API.put(`/cases/${id}/release`);
+      showToast('Case released back to the available pool.', 'success');
+      await fetchCase();
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Failed to release case.', 'error');
+    } finally {
+      setIsActing(false);
+    }
+  };
+
+  const loadNearbyVolunteers = async () => {
+    setIsLoadingNearby(true);
+
+    try {
+      const { data } = await API.get(`/cases/${id}/nearby-volunteers`);
+      setNearby({
+        volunteers: Array.isArray(data.volunteers) ? data.volunteers : [],
+        radiusKm: data.searchRadiusKm,
+      });
+    } catch (err) {
+      showToast(
+        err.response?.data?.error || 'Unable to look up nearby volunteers.',
+        'error'
+      );
+    } finally {
+      setIsLoadingNearby(false);
+    }
+  };
+
+  const handleAssign = async (volunteer) => {
+    if (!window.confirm(`Assign this case to ${volunteer.full_name || 'this volunteer'}?`)) return;
+
+    setIsActing(true);
+
+    try {
+      await API.put(`/cases/${id}/assign`, { volunteerId: volunteer.id });
+      showToast('Volunteer assigned. They have been notified.', 'success');
+      setNearby(null);
+      await fetchCase();
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Failed to assign volunteer.', 'error');
     } finally {
       setIsActing(false);
     }
@@ -265,8 +321,8 @@ export default function CaseDetail() {
           Actions
         </p>
 
-        {/* VOLUNTEER: claim */}
-        {role === 'VOLUNTEER' &&
+        {/* VOLUNTEER / NGO / ADMIN: claim (backend enforces NGO jurisdiction) */}
+        {['VOLUNTEER', 'NGO', 'ADMIN'].includes(role) &&
           caseItem.status === 'VALIDATION_PASSED' &&
           !caseItem.assigned_volunteer_id && (
             <Button onClick={handleClaim} disabled={isActing} className="w-full">
@@ -274,8 +330,68 @@ export default function CaseDetail() {
             </Button>
           )}
 
+        {/* NGO / ADMIN: dispatch to a specific volunteer */}
+        {(role === 'NGO' || role === 'ADMIN') &&
+          caseItem.status === 'VALIDATION_PASSED' &&
+          !caseItem.assigned_volunteer_id && (
+            <div className="space-y-2">
+              <Button
+                variant="secondary"
+                onClick={loadNearbyVolunteers}
+                disabled={isLoadingNearby || isActing}
+                className="w-full"
+              >
+                {isLoadingNearby ? 'Searching...' : 'Assign a Volunteer'}
+              </Button>
+
+              {nearby && (
+                nearby.volunteers.length === 0 ? (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    No available volunteers with a recent location were found within {nearby.radiusKm} km
+                    {role === 'NGO' ? ' on your volunteer roster' : ''}.
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {nearby.volunteers.map((volunteer) => (
+                      <li
+                        key={volunteer.id}
+                        className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-100 dark:bg-slate-800"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                            {volunteer.full_name || 'Volunteer'}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {Number(volunteer.distance_km).toFixed(1)} km away
+                          </p>
+                        </div>
+
+                        <Button
+                          size="sm"
+                          onClick={() => handleAssign(volunteer)}
+                          disabled={isActing}
+                        >
+                          Assign
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )
+              )}
+            </div>
+          )}
+
+        {/* VOLUNTEER: hand a claimed case back */}
+        {role === 'VOLUNTEER' &&
+          caseItem.status === 'IN_PROGRESS' &&
+          isAssignedToMe && (
+            <Button variant="outline" onClick={handleRelease} disabled={isActing} className="w-full">
+              Release This Case
+            </Button>
+          )}
+
         {/* VOLUNTEER/ADMIN: submit evidence */}
-        {(role === 'VOLUNTEER' || role === 'ADMIN') &&
+        {['VOLUNTEER', 'NGO', 'ADMIN'].includes(role) &&
           caseItem.status === 'IN_PROGRESS' &&
           (role === 'ADMIN' || isAssignedToMe) && (
             <>
@@ -313,15 +429,6 @@ export default function CaseDetail() {
                 </form>
               )}
             </>
-          )}
-
-        {/* VOLUNTEER/ADMIN: cancel */}
-        {(role === 'VOLUNTEER' || role === 'ADMIN') &&
-          ['VALIDATION_PASSED', 'IN_PROGRESS'].includes(caseItem.status) &&
-          (role === 'ADMIN' || isAssignedToMe) && (
-            <Button variant="outline" onClick={handleCancel} disabled={isActing} className="w-full">
-              Cancel Case
-            </Button>
           )}
 
         {/* NGO/ADMIN: verify completion */}
@@ -395,7 +502,6 @@ export default function CaseDetail() {
 
         {/* ADMIN: cancel from any active state */}
         {role === 'ADMIN' &&
-          !['VALIDATION_PASSED', 'IN_PROGRESS'].includes(caseItem.status) &&
           !['RESOLVED', 'CANCELLED'].includes(caseItem.status) && (
             <Button variant="outline" onClick={handleCancel} disabled={isActing} className="w-full">
               Cancel Case

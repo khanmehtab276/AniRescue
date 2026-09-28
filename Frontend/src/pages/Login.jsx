@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import API from '../utils/api';
+import useLocation from '../hooks/useLocation.js';
 
 const REGISTER_ROLES = [
   { value: 'USER', label: 'Reporter', icon: '🐾' },
@@ -9,15 +10,24 @@ const REGISTER_ROLES = [
   { value: 'NGO', label: 'NGO Partner', icon: '🏥' }
 ];
 
+const EMPTY_FORM = {
+  name: '',
+  email: '',
+  password: '',
+  role: 'USER',
+  phone: '',
+  address: '',
+  organizationName: '',
+  contactPerson: '',
+  maximumCoverageRadiusKm: ''
+};
+
 export default function Login() {
   const [isRegistering, setIsRegistering] = useState(false);
 
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'USER'
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
+
+  const { location: detectedLocation, getLocation, isLoading: isLocating } = useLocation();
 
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,16 +46,66 @@ export default function Login() {
     e.preventDefault();
 
     setError(null);
+
+    if (isRegistering && formData.role === 'VOLUNTEER' && !formData.phone.trim()) {
+      setError('Phone number is required for volunteer registration.');
+      return;
+    }
+
+    if (isRegistering && formData.role === 'NGO') {
+      if (
+        !formData.organizationName.trim() ||
+        !formData.contactPerson.trim() ||
+        !formData.phone.trim() ||
+        !formData.address.trim()
+      ) {
+        setError('Organization name, contact person, phone, and address are required for NGO registration.');
+        return;
+      }
+
+      if (!detectedLocation) {
+        setError('Please detect your organization\'s location before continuing.');
+        return;
+      }
+
+      if (!formData.maximumCoverageRadiusKm || Number(formData.maximumCoverageRadiusKm) <= 0) {
+        setError('Please enter a maximum coverage radius greater than 0.');
+        return;
+      }
+    }
+
     setIsLoading(true);
 
     const endpoint = isRegistering
       ? '/auth/register'
       : '/auth/login';
 
+    const payload = isRegistering
+      ? {
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role,
+          ...(formData.role === 'VOLUNTEER' && {
+            phone: formData.phone,
+            address: formData.address || undefined,
+          }),
+          ...(formData.role === 'NGO' && {
+            organizationName: formData.organizationName,
+            contactPerson: formData.contactPerson,
+            phone: formData.phone,
+            address: formData.address,
+            latitude: detectedLocation.lat,
+            longitude: detectedLocation.lng,
+            maximumCoverageRadiusKm: Number(formData.maximumCoverageRadiusKm),
+          }),
+        }
+      : { email: formData.email, password: formData.password };
+
     try {
       const response = await API.post(
         endpoint,
-        formData
+        payload
       );
 
       const data = response.data;
@@ -247,6 +307,139 @@ export default function Login() {
             </div>
           )}
 
+          {/* VOLUNTEER fields */}
+          {isRegistering && formData.role === 'VOLUNTEER' && (
+            <>
+              <Field label="Phone Number">
+                <input
+                  type="tel"
+                  name="phone"
+                  required
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className={inputCSS}
+                  placeholder="+91 98765 43210"
+                  autoComplete="tel"
+                />
+              </Field>
+
+              <Field label="Address (optional)">
+                <input
+                  type="text"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  className={inputCSS}
+                  placeholder="Neighborhood, city"
+                  autoComplete="street-address"
+                />
+              </Field>
+            </>
+          )}
+
+          {/* NGO fields */}
+          {isRegistering && formData.role === 'NGO' && (
+            <>
+              <Field label="Organization Name">
+                <input
+                  type="text"
+                  name="organizationName"
+                  required
+                  value={formData.organizationName}
+                  onChange={handleInputChange}
+                  className={inputCSS}
+                  placeholder="Happy Paws Rescue Trust"
+                />
+              </Field>
+
+              <Field label="Contact Person">
+                <input
+                  type="text"
+                  name="contactPerson"
+                  required
+                  value={formData.contactPerson}
+                  onChange={handleInputChange}
+                  className={inputCSS}
+                  placeholder="Full name"
+                  autoComplete="name"
+                />
+              </Field>
+
+              <Field label="Phone Number">
+                <input
+                  type="tel"
+                  name="phone"
+                  required
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className={inputCSS}
+                  placeholder="+91 98765 43210"
+                  autoComplete="tel"
+                />
+              </Field>
+
+              <Field label="Address">
+                <input
+                  type="text"
+                  name="address"
+                  required
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  className={inputCSS}
+                  placeholder="Registered organization address"
+                  autoComplete="street-address"
+                />
+              </Field>
+
+              <Field label="Maximum Coverage Radius (km)">
+                <input
+                  type="number"
+                  name="maximumCoverageRadiusKm"
+                  required
+                  min="1"
+                  step="0.5"
+                  value={formData.maximumCoverageRadiusKm}
+                  onChange={handleInputChange}
+                  className={inputCSS}
+                  placeholder="15"
+                />
+              </Field>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 ml-1 uppercase tracking-wider">
+                  Organization Location
+                </label>
+
+                {detectedLocation ? (
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                    <span>
+                      Location detected ({detectedLocation.lat.toFixed(4)}, {detectedLocation.lng.toFixed(4)})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={getLocation}
+                      className="text-xs underline"
+                    >
+                      Re-detect
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      getLocation();
+                    }}
+                    disabled={isLocating}
+                    className="w-full py-3 rounded-xl text-sm font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 disabled:opacity-50"
+                  >
+                    {isLocating ? 'Detecting...' : 'Use My Current Location'}
+                  </button>
+                )}
+
+              </div>
+            </>
+          )}
+
           {/* Email */}
           <div>
             <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 ml-1 uppercase tracking-wider">
@@ -321,12 +514,7 @@ export default function Login() {
 
                 setError(null);
 
-                setFormData({
-                  name: '',
-                  email: '',
-                  password: '',
-                  role: 'USER'
-                });
+                setFormData(EMPTY_FORM);
               }}
               className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
             >
@@ -340,6 +528,23 @@ export default function Login() {
         </div>
 
       </div>
+    </div>
+  );
+}
+
+
+/* =========================================================
+   FIELD (label + input wrapper)
+========================================================= */
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 ml-1 uppercase tracking-wider">
+        {label}
+      </label>
+
+      {children}
     </div>
   );
 }

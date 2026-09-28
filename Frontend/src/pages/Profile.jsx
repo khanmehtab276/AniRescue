@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import NotificationSettings from '../components/NotificationSettings.jsx';
 
 export default function Profile() {
 
@@ -219,6 +220,8 @@ export default function Profile() {
 
         </div>
 
+
+        <NotificationSettings />
 
         {/* Role-specific section */}
 

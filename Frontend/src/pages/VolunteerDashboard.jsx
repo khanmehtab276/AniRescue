@@ -6,6 +6,8 @@ import API from '../utils/api';
 import Surface from '../components/ui/Surface.jsx';
 import Button from '../components/ui/Button.jsx';
 import CaseCard from '../components/ui/CaseCard.jsx';
+import AvailabilityToggle from '../components/AvailabilityToggle.jsx';
+import useVolunteerPresence from '../hooks/useVolunteerPresence.js';
 import EmptyState from '../components/ui/EmptyState.jsx';
 import { CaseListSkeleton } from '../components/ui/LoadingState.jsx';
 
@@ -25,6 +27,8 @@ export default function VolunteerDashboard() {
   const [processingId, setProcessingId] = useState(null);
 
   const volunteerId = user?.id;
+
+  const presence = useVolunteerPresence();
 
   // Single role-aware fetch: the backend now returns this volunteer's
   // assignments (any status) PLUS eligible-to-claim cases in one call.
@@ -92,6 +96,12 @@ export default function VolunteerDashboard() {
         ? activeCases
         : resolvedCases;
 
+  const isOnRescue = cases.some(
+    (c) =>
+      String(c.assigned_volunteer_id) === String(volunteerId) &&
+      c.status === 'IN_PROGRESS',
+  );
+
   const tabCounts = {
     available: availableCases.length,
     active: activeCases.length,
@@ -120,6 +130,14 @@ export default function VolunteerDashboard() {
           Refresh
         </button>
       </div>
+
+      <AvailabilityToggle
+        status={presence.status}
+        isUpdating={presence.isUpdating}
+        error={presence.error}
+        onChange={presence.setAvailability}
+        onRescue={isOnRescue}
+      />
 
       <Surface className="p-2 mb-6">
         <div className="flex gap-1">

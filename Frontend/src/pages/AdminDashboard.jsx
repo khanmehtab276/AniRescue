@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   ClipboardList,
   Bot,
@@ -10,6 +10,7 @@ import {
   PawPrint,
   Shield,
   Map as MapIcon,
+  Loader2,
 } from 'lucide-react';
 import API from '../utils/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -121,32 +122,9 @@ export default function AdminDashboard() {
     [cases]
   );
 
-  const handleStatusChange = async (caseId, status) => {
-    setProcessingId(caseId);
-    setError('');
-
-    try {
-      await API.put(
-        `/cases/${caseId}/status`,
-        { status }
-      );
-
-      await loadDashboard();
-    } catch (err) {
-      console.error(
-        'Case status update error:',
-        err
-      );
-
-      setError(
-        err.response?.data?.error ||
-        'Unable to update case status.'
-      );
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
+  // /verify-junk is the human override for a case the AI already
+  // rejected (REJECTED_JUNK) — the backend refuses it for any other
+  // status. It is only wired to the AI Review tab below.
   const handleVerifyJunk = async (caseId, approved) => {
     setProcessingId(caseId);
     setError('');
@@ -396,8 +374,6 @@ export default function AdminDashboard() {
                         <AdminCaseCard
                           key={item.id}
                           caseData={item}
-                          processingId={processingId}
-                          onStatusChange={handleStatusChange}
                         />
                       ))}
                     </div>
@@ -432,8 +408,6 @@ export default function AdminDashboard() {
                       <AdminCaseCard
                         key={item.id}
                         caseData={item}
-                        processingId={processingId}
-                        onStatusChange={handleStatusChange}
                       />
                     ))}
                   </div>
@@ -493,9 +467,7 @@ export default function AdminDashboard() {
 ========================================================= */
 
 function AdminCaseCard({
-  caseData,
-  processingId,
-  onStatusChange
+  caseData
 }) {
   const {
     id,
@@ -510,8 +482,6 @@ function AdminCaseCard({
     created_at,
     image_payload
   } = caseData;
-
-  const isProcessing = processingId === id;
 
   const formattedDate = created_at
     ? new Date(created_at).toLocaleString()
@@ -605,21 +575,28 @@ function AdminCaseCard({
 
       <div className="mt-4">
 
-        {status === 'PENDING_VALIDATION' && (
-          <button
-            disabled={isProcessing}
-            onClick={() =>
-              onStatusChange(
-                id,
-                'VALIDATION_PASSED'
-              )
-            }
-            className="w-full rounded-xl px-4 py-3 text-sm font-bold bg-emerald-600 text-white disabled:opacity-50 transition-all"
+        {/*
+         * AI validation runs in the background and moves a case to
+         * VALIDATION_PASSED or REJECTED_JUNK on its own. There is no
+         * manual approve for a case that hasn't finished analysis, so
+         * this is deliberately not an action.
+         */}
+        {(status === 'PENDING_VALIDATION' ||
+          status === 'PROCESSING_ANALYSIS') && (
+          <div
+            role="status"
+            className="flex items-center justify-center gap-2 rounded-xl bg-blue-100 dark:bg-blue-900/20 px-4 py-3 text-center text-sm font-bold text-blue-700 dark:text-blue-400"
           >
-            {isProcessing
-              ? 'Processing...'
-              : 'Approve Case'}
-          </button>
+            <Loader2
+              size={16}
+              strokeWidth={2.5}
+              className="animate-spin"
+              aria-hidden="true"
+            />
+            {status === 'PROCESSING_ANALYSIS'
+              ? 'AI analysis in progress'
+              : 'Waiting for AI validation'}
+          </div>
         )}
 
         {status === 'VALIDATION_PASSED' && (
@@ -628,21 +605,29 @@ function AdminCaseCard({
           </div>
         )}
 
+        {/*
+         * Resolving a case now requires the volunteer's photo evidence
+         * plus a separate verification step (RESCUE_COMPLETED ->
+         * RESOLVED) — there is no longer a one-click "mark resolved"
+         * from IN_PROGRESS. Both the evidence form and the cancel
+         * action live on the case detail page.
+         */}
         {status === 'IN_PROGRESS' && (
-          <button
-            disabled={isProcessing}
-            onClick={() =>
-              onStatusChange(
-                id,
-                'RESOLVED'
-              )
-            }
-            className="w-full rounded-xl px-4 py-3 text-sm font-bold bg-emerald-600 text-white disabled:opacity-50 transition-all"
+          <Link
+            to={`/cases/${id}`}
+            className="block w-full rounded-xl px-4 py-3 text-center text-sm font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700"
           >
-            {isProcessing
-              ? 'Updating...'
-              : 'Mark Resolved'}
-          </button>
+            Rescue in progress — View Case
+          </Link>
+        )}
+
+        {status === 'RESCUE_COMPLETED' && (
+          <Link
+            to="/verification"
+            className="block w-full rounded-xl px-4 py-3 text-center text-sm font-bold bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400"
+          >
+            Awaiting Verification — Review
+          </Link>
         )}
 
         {status === 'RESOLVED' && (
@@ -662,6 +647,13 @@ function AdminCaseCard({
             Cancelled
           </div>
         )}
+
+        <Link
+          to={`/cases/${id}`}
+          className="mt-2 block text-center text-xs font-bold text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400"
+        >
+          View full case detail →
+        </Link>
 
       </div>
     </div>
