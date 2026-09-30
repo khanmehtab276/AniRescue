@@ -392,7 +392,7 @@ export default function ReportCase() {
           </div>
         ) : (
           <form
-            className="space-y-6"
+            className="grid gap-8 lg:grid-cols-[1.1fr_.9fr]"
             onSubmit={handleSubmit}
           >
 
