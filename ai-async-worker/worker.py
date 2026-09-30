@@ -121,6 +121,7 @@ def publish_case_notification(
             delivery_mode=2,
             content_type="application/json",
         ),
+        mandatory=True,
     )
 
     print(
@@ -475,11 +476,15 @@ def main():
                             UPDATE rescue_cases
                             SET
                                 status = 'VALIDATION_PASSED',
-                                species = %s
+                                species = %s,
+                                ai_confidence = %s,
+                                ai_validated_at = CURRENT_TIMESTAMP
                             WHERE id = %s
+                              AND ai_validated_at IS NULL
                             """,
                             (
                                 species,
+                                confidence,
                                 report_id
                             )
                         )
@@ -503,10 +508,14 @@ def main():
                         cursor.execute(
                             """
                             UPDATE rescue_cases
-                            SET status = 'REJECTED_JUNK'
+                            SET
+                                status = 'REJECTED_JUNK',
+                                ai_confidence = %s,
+                                ai_validated_at = CURRENT_TIMESTAMP
                             WHERE id = %s
+                              AND ai_validated_at IS NULL
                             """,
-                            (report_id,)
+                            (confidence, report_id)
                         )
 
                         print(
@@ -580,6 +589,7 @@ def main():
                                     SET status =
                                         'PENDING_VALIDATION'
                                     WHERE id = %s
+                                      AND ai_validated_at IS NULL
                                     """,
                                     (report_id,)
                                 )
