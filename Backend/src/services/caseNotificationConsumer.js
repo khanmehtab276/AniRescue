@@ -39,7 +39,7 @@ const startCaseNotificationConsumer = async () => {
           species,
         } = payload;
 
-        if (!reportId || !validationPassed) {
+        if (!reportId) {
           console.warn(
             "⚠️ Invalid case notification event:",
             payload,
@@ -74,6 +74,21 @@ const startCaseNotificationConsumer = async () => {
           console.warn(
             `⚠️ Case #${reportId} no longer exists.`,
           );
+
+          channel.ack(message);
+          return;
+        }
+
+        if (!validationPassed) {
+          if (rescueCase.reporter_id) {
+            await notifyUser({
+              userId: rescueCase.reporter_id,
+              caseId: reportId,
+              notificationType: "VALIDATION_REJECTED",
+              title: "Rescue Report Needs Review",
+              message: `Case #${reportId} did not pass the initial AI validation. An authorized reviewer can review the report.`,
+            });
+          }
 
           channel.ack(message);
           return;
