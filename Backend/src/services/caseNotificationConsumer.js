@@ -150,6 +150,7 @@ const startCaseNotificationConsumer = async () => {
             notificationType: "CASE_AVAILABLE",
             title: "New Rescue Case Nearby",
             message: `A ${detectedSpecies} rescue case is available near you.`,
+            throwOnError: true,
           });
 
           if (!notification) {
