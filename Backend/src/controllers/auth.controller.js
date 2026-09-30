@@ -228,19 +228,26 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) {
+  if (
+    typeof email !== "string" ||
+    typeof password !== "string" ||
+    !email.trim() ||
+    !password
+  ) {
     return res.status(400).json({
       error: "Email and password are required.",
     });
   }
 
   try {
+    const normalizedEmail = email.trim().toLowerCase();
+
     const result = await pool.query("SELECT * FROM users WHERE email = $1", [
-      email.toLowerCase().trim(),
+      normalizedEmail,
     ]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
+      return res.status(401).json({
         error: "Invalid email or password.",
       });
     }
@@ -273,8 +280,10 @@ const login = async (req, res) => {
     );
 
     delete user.password_hash;
+    setAuthCookies(res, token);
 
-    res.json({ token, user });
+    res.set("Cache-Control", "no-store");
+    res.json({ authenticated: true, user });
   } catch (err) {
     console.error("Login error:", err);
 
