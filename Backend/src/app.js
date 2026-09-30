@@ -5,6 +5,7 @@ const compression = require("compression");
 
 const authRoutes = require("./routes/auth.routes");
 const casesRoutes = require("./routes/cases.routes");
+const notificationsRoutes = require("./routes/notifications.routes");
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use(compression());
 // --------------------------------------------------
 app.use("/api/auth", authRoutes);
 app.use("/api/cases", casesRoutes);
+app.use("/api/notifications", notificationsRoutes);
 
 // --------------------------------------------------
 // SYSTEM DIAGNOSTICS
