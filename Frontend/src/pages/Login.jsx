@@ -315,7 +315,7 @@ export default function Login() {
                     }
                     className={`flex-1 py-2.5 rounded-lg text-[11px] font-bold transition-all duration-300 flex flex-col items-center gap-1 ${
                       formData.role === option.value
-                        ? 'bg-[#1a1f2e] dark:bg-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.3)]'
+                        ? 'bg-emerald-700 text-white shadow-[0_4px_10px_rgba(5,150,105,0.20)]'
                         : 'text-stone-500 dark:text-stone-400'
                     }`}
                   >
@@ -511,7 +511,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-4 mt-2 rounded-xl text-lg font-bold bg-[#1a1f2e] dark:bg-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.3)] hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-4 mt-2 rounded-xl text-lg font-bold bg-emerald-700 text-white shadow-[0_4px_10px_rgba(5,150,105,0.20)] hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading
               ? 'Processing...'
