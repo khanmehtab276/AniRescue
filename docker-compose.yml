@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ---------------------------------------------------------------------------
   # Message Broker
@@ -9,8 +7,8 @@ services:
     container_name: anirescue_rabbitmq
     restart: unless-stopped
     ports:
-      - "5672:5672"   # AMQP Protocol
-      - "15672:15672" # Management UI
+      - "127.0.0.1:5672:5672"   # Local AMQP access only
+      - "127.0.0.1:15672:15672" # Local management UI only
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
@@ -47,11 +45,19 @@ services:
       - FIREBASE_SERVICE_ACCOUNT_PATH=/run/secrets/firebase-service-account.json
       - LOCATION_FRESHNESS_MINUTES=${LOCATION_FRESHNESS_MINUTES}
       - NOTIFICATION_RADIUS_KM=${NOTIFICATION_RADIUS_KM}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+      - MIGRATIONS_BASELINE_VERSION=${MIGRATIONS_BASELINE_VERSION:-5}
     volumes:
       - /home/iamatomic/Downloads/anirescue-a5fd7-firebase-adminsdk-fbsvc-0e1408292f.json:/run/secrets/firebase-service-account.json:ro
     depends_on:
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
     networks:
       - anirescue_net
 
@@ -67,6 +73,7 @@ services:
     environment:
       - RABBITMQ_URL=${RABBITMQ_URL}
       - DATABASE_URL=${DATABASE_URL}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
       - OMP_NUM_THREADS=1
       - MKL_NUM_THREADS=1
       - OPENBLAS_NUM_THREADS=1
