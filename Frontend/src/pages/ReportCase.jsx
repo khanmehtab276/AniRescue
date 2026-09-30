@@ -63,11 +63,9 @@ export default function ReportCase() {
   } = useLocation();
 
   const { user } = useAuth();
-  const viewerRole = (user?.role || '').toLowerCase();
-  // Backend only lets the reporter open their own case detail if they are
-  // a USER (or ADMIN). VOLUNTEER/NGO reporters would get a 403 until the
-  // case is verified/in their area, so don't offer a dead-end link.
-  const canOpenOwnCase = viewerRole === 'user' || viewerRole === 'admin';
+  // Every role can report, and the backend always allows a reporter to
+  // access their own case detail.
+  const canOpenOwnCase = Boolean(user?.id);
 
   const {
     isOffline,
@@ -190,22 +188,36 @@ export default function ReportCase() {
 
     try {
       // ---------------------------------------------------------
-      // 1. Upload image directly to Cloudinary
+      // 1. Get a short-lived signed Cloudinary upload authorization
+      // ---------------------------------------------------------
+      const signatureResponse = await API.post('/cases/upload-signature');
+      const {
+        cloudName,
+        apiKey,
+        timestamp,
+        signature,
+        resourceType = 'image',
+      } = signatureResponse.data || {};
+
+      if (!cloudName || !apiKey || !timestamp || !signature) {
+        throw new Error('Image upload authorization could not be created.');
+      }
+
+      // ---------------------------------------------------------
+      // 2. Upload directly to Cloudinary without exposing the API secret
       // ---------------------------------------------------------
       const cloudinaryData = new FormData();
-
       cloudinaryData.append('file', imageFile);
-      cloudinaryData.append(
-        'upload_preset',
-        'anirescue_uploads'
-      );
+      cloudinaryData.append('api_key', apiKey);
+      cloudinaryData.append('timestamp', String(timestamp));
+      cloudinaryData.append('signature', signature);
 
       const cloudRes = await fetch(
-        'https://api.cloudinary.com/v1_1/tsacc3bn/image/upload',
+        `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`,
         {
           method: 'POST',
-          body: cloudinaryData
-        }
+          body: cloudinaryData,
+        },
       );
 
       const cloudData = await cloudRes.json();
@@ -213,25 +225,27 @@ export default function ReportCase() {
       if (!cloudRes.ok) {
         throw new Error(
           cloudData.error?.message ||
-          'Cloudinary image upload failed.'
+          'Cloudinary image upload failed.',
         );
       }
 
       const imageUrl = cloudData.secure_url;
 
       if (!imageUrl) {
-        throw new Error(
-          'Cloudinary did not return an image URL.'
-        );
+        throw new Error('Cloudinary did not return an image URL.');
       }
 
       // ---------------------------------------------------------
-      // 2. Send lightweight report to Express
+      // 3. Send the lightweight report to Express.
+      // The client request ID makes retries safe and idempotent.
       // ---------------------------------------------------------
+      const clientRequestId = crypto.randomUUID();
+
       const reportData = {
+        clientRequestId,
         location: finalLocation,
         description: description.trim(),
-        imageUrl
+        imageUrl,
       };
 
       try {
@@ -324,7 +338,7 @@ export default function ReportCase() {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-lg mx-auto mb-20 md:mb-0 transition-colors duration-300">
+    <div className="mx-auto max-w-5xl px-4 py-6 pb-24 sm:px-6 lg:px-8 lg:py-10 lg:pb-10 transition-colors duration-300">
       <div className="rounded-2xl p-6 md:p-8 relative transition-colors duration-300 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm">
 
         <h2 className="text-2xl font-extrabold mb-6 text-stone-800 dark:text-stone-100 text-center">
@@ -392,11 +406,11 @@ export default function ReportCase() {
           </div>
         ) : (
           <form
-            className="space-y-6"
+            className="grid gap-8 lg:grid-cols-[1.1fr_.9fr]"
             onSubmit={handleSubmit}
           >
 
-            {/* IMAGE */}
+            <div className="space-y-6">{/* IMAGE */}
             <div>
               <input
                 type="file"
@@ -594,7 +608,7 @@ export default function ReportCase() {
               </p>
             </div>
 
-            {/* SUBMIT */}
+            </div><div className="space-y-6"><div className="rounded-2xl border border-stone-200 bg-stone-50 p-5 dark:border-stone-800 dark:bg-stone-950">{/* SUBMIT */}
             <button
               type="submit"
               disabled={
@@ -621,7 +635,7 @@ export default function ReportCase() {
               </div>
             </button>
 
-          </form>
+          </div></div></form>
         )}
       </div>
     </div>
