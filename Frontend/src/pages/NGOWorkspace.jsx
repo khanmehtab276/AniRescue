@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { AlertTriangle, Building2, MapPin, RefreshCw, ShieldCheck, Users, Siren } from "lucide-react";
+import { AlertTriangle, RefreshCw, ShieldCheck, Users, Siren } from "lucide-react";
 import API from "../utils/api";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import useLocationDetect from "../hooks/useLocation.js";
