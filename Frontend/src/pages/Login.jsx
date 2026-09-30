@@ -134,8 +134,24 @@ export default function Login() {
         return;
       }
 
-      // The backend sets the authenticated HttpOnly session cookie.
-      // No JWT is exposed to or stored by browser JavaScript.
+      const token = data.token;
+
+      if (!token) {
+        throw new Error(
+          'Authentication token was not returned by the server.'
+        );
+      }
+
+      localStorage.setItem(
+        'anirescue_token',
+        token
+      );
+
+      localStorage.setItem(
+        'token',
+        token
+      );
+
       const userData = data.user || data;
 
       const role =
@@ -154,7 +170,10 @@ export default function Login() {
           userData.account_status || 'ACTIVE'
       };
 
-      login(normalizedUser);
+      login(
+        normalizedUser,
+        token
+      );
 
       /*
        * Role-based destination.

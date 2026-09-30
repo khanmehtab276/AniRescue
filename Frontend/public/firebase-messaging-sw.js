@@ -17,7 +17,7 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data ? event.data.json() : {};
   } catch {
-    // Keep the empty payload fallback from the initialization above.
+    payload = {};
   }
 
   const notification = payload.notification || {};

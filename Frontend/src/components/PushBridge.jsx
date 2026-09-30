@@ -40,6 +40,7 @@ export default function PushBridge() {
       if (message.type === 'ANIRESCUE_PUSH') {
         const text = [message.title, message.body].filter(Boolean).join(' — ');
         showToast(text || 'You have a new update.', 'info');
+        window.dispatchEvent(new Event('anirescue:notifications-updated'));
       }
 
       if (
@@ -48,6 +49,7 @@ export default function PushBridge() {
         message.url.startsWith('/')
       ) {
         navigate(message.url);
+        window.dispatchEvent(new Event('anirescue:notifications-updated'));
       }
     };
 

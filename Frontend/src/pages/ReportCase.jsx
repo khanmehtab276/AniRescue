@@ -188,36 +188,22 @@ export default function ReportCase() {
 
     try {
       // ---------------------------------------------------------
-      // 1. Get a short-lived signed Cloudinary upload authorization
-      // ---------------------------------------------------------
-      const signatureResponse = await API.post('/cases/upload-signature');
-      const {
-        cloudName,
-        apiKey,
-        timestamp,
-        signature,
-        resourceType = 'image',
-      } = signatureResponse.data || {};
-
-      if (!cloudName || !apiKey || !timestamp || !signature) {
-        throw new Error('Image upload authorization could not be created.');
-      }
-
-      // ---------------------------------------------------------
-      // 2. Upload directly to Cloudinary without exposing the API secret
+      // 1. Upload image directly to Cloudinary
       // ---------------------------------------------------------
       const cloudinaryData = new FormData();
+
       cloudinaryData.append('file', imageFile);
-      cloudinaryData.append('api_key', apiKey);
-      cloudinaryData.append('timestamp', String(timestamp));
-      cloudinaryData.append('signature', signature);
+      cloudinaryData.append(
+        'upload_preset',
+        'anirescue_uploads'
+      );
 
       const cloudRes = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`,
+        'https://api.cloudinary.com/v1_1/tsacc3bn/image/upload',
         {
           method: 'POST',
-          body: cloudinaryData,
-        },
+          body: cloudinaryData
+        }
       );
 
       const cloudData = await cloudRes.json();
@@ -225,27 +211,25 @@ export default function ReportCase() {
       if (!cloudRes.ok) {
         throw new Error(
           cloudData.error?.message ||
-          'Cloudinary image upload failed.',
+          'Cloudinary image upload failed.'
         );
       }
 
       const imageUrl = cloudData.secure_url;
 
       if (!imageUrl) {
-        throw new Error('Cloudinary did not return an image URL.');
+        throw new Error(
+          'Cloudinary did not return an image URL.'
+        );
       }
 
       // ---------------------------------------------------------
-      // 3. Send the lightweight report to Express.
-      // The client request ID makes retries safe and idempotent.
+      // 2. Send lightweight report to Express
       // ---------------------------------------------------------
-      const clientRequestId = crypto.randomUUID();
-
       const reportData = {
-        clientRequestId,
         location: finalLocation,
         description: description.trim(),
-        imageUrl,
+        imageUrl
       };
 
       try {

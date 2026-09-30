@@ -73,11 +73,7 @@ export default function Navbar() {
   const meta = ROLE_META[role];
   const ThemeIcon = theme === 'light' ? Sun : Moon;
 
-  const handleLogout = async () => {
-    setMenuOpen(false);
-    await logout();
-    navigate('/login', { replace: true });
-  };
+  const handleLogout = () => { setMenuOpen(false); logout(); navigate('/login'); };
 
   return (
     <>

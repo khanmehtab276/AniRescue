@@ -98,17 +98,12 @@ export default function MapView() {
   const config = ROLE_CONFIG[role] || ROLE_CONFIG.user;
   const RoleIcon = config.icon;
   const isDark = theme === 'dark';
-  const cartoKey = import.meta.env.VITE_CARTO_API_KEY?.trim();
-
-  const tileUrl = cartoKey
-    ? isDark
-      ? `https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png?key=${encodeURIComponent(cartoKey)}`
-      : `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=${encodeURIComponent(cartoKey)}`
-    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-
-  const tileAttribution = cartoKey
+  const tileUrl = isDark
+    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+  const tileAttribution = isDark
     ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
   const [mapCases, setMapCases] = useState([]);
   const [filter, setFilter] = useState('all');

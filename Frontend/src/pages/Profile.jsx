@@ -258,10 +258,7 @@ export default function Profile() {
 
   if (!user) return null;
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login', { replace: true });
-  };
+  const handleLogout = () => { logout(); navigate('/login'); };
   const content = role === 'ngo'
     ? <NGOProfile user={user} cases={cases} />
     : role === 'volunteer'

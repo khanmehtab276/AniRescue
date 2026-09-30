@@ -1,143 +1,32 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { Siren, PawPrint, Activity, CheckCircle2 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext.jsx';
-import API from '../utils/api';
-import Surface from '../components/ui/Surface.jsx';
-import Button from '../components/ui/Button.jsx';
-import BentoStats from '../components/ui/BentoStats.jsx';
-import CaseCard from '../components/ui/CaseCard.jsx';
-import EmptyState from '../components/ui/EmptyState.jsx';
-import { CaseListSkeleton } from '../components/ui/LoadingState.jsx';
-import SectionHeader from '../components/ui/SectionHeader.jsx';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { ArrowRight, CheckCircle2, Clock3, PawPrint, Siren, Sparkles } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext.jsx";
+import API from "../utils/api";
+import Surface from "../components/ui/Surface.jsx";
+import Button from "../components/ui/Button.jsx";
+import EmptyState from "../components/ui/EmptyState.jsx";
+import { CaseListSkeleton } from "../components/ui/LoadingState.jsx";
+import { StatusBadge } from "../components/ui/Badge.jsx";
 
-export default function UserDashboard() {
-  const { user } = useAuth();
+const ACTIVE=["PENDING_VALIDATION","PROCESSING_ANALYSIS","VALIDATION_PASSED","IN_PROGRESS","RESCUE_COMPLETED"];
 
-  const [cases, setCases] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  const fetchMyCases = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const { data } = await API.get('/cases/mine');
-      setCases(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error('Failed to load your reported cases:', err);
-      setError(
-        err.response?.data?.error || 'Unable to load your reported cases right now.',
-      );
-      setCases([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchMyCases();
-  }, [fetchMyCases]);
-
-  const stats = {
-    total: cases.length,
-    active: cases.filter((c) =>
-      ['PENDING_VALIDATION', 'PROCESSING_ANALYSIS', 'VALIDATION_PASSED', 'IN_PROGRESS', 'RESCUE_COMPLETED'].includes(
-        c.status,
-      ),
-    ).length,
-    resolved: cases.filter((c) => c.status === 'RESOLVED').length,
-  };
-
-  return (
-    <div className="p-4 md:p-8 max-w-2xl mx-auto mb-20 md:mb-0">
-
-      {/* HEADER — one clear CTA, no giant Report/Map tiles */}
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-            My AniRescue
-          </p>
-          <h1 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100">
-            Hi, {user?.name?.split(' ')[0] || 'there'}
-          </h1>
-        </div>
-
-        <Button as={Link} to="/report" variant="urgent" size="sm">
-          <Siren size={14} strokeWidth={2.5} /> Report
-        </Button>
-      </div>
-
-      {/* STATS */}
-      <div className="mb-8">
-        <BentoStats
-          items={[
-            { label: 'Total Reported', value: stats.total, tone: 'neutral', Icon: PawPrint },
-            { label: 'In Progress', value: stats.active, tone: 'warning', Icon: Activity },
-            { label: 'Resolved', value: stats.resolved, tone: 'success', Icon: CheckCircle2 },
-          ]}
-        />
-      </div>
-
-      <SectionHeader
-        title="My Reported Cases"
-        action={
-          <button
-            type="button"
-            onClick={fetchMyCases}
-            disabled={isLoading}
-            className="text-xs font-bold text-blue-600 dark:text-blue-400 disabled:opacity-50"
-          >
-            Refresh
-          </button>
-        }
-      />
-
-      {error && (
-        <div className="mb-4 p-3 text-sm font-bold text-center text-rose-500 bg-rose-100 dark:bg-rose-900/30 rounded-xl border border-rose-200 dark:border-rose-800/50">
-          {error}
-        </div>
-      )}
-
-      {isLoading ? (
-        <CaseListSkeleton />
-      ) : cases.length === 0 ? (
-        <EmptyState
-          icon="🐕"
-          title="No reports yet"
-          message="Cases you report will show up here so you can track their rescue status."
-        />
-      ) : (
-        <div className="space-y-4 rescue-stagger">
-          {cases.map((caseItem) => (
-            <CaseCard
-              key={caseItem.id}
-              caseItem={caseItem}
-              friendly
-              action={
-                <Link
-                  to={`/cases/${caseItem.id}`}
-                  className="text-xs font-bold text-emerald-600 dark:text-emerald-400"
-                >
-                  View Progress →
-                </Link>
-              }
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Honest placeholder, not fake functionality */}
-      <Surface inset className="mt-8 p-5 text-center">
-        <p className="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500">
-          Coming Soon
-        </p>
-        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-          Adoption feed and rescuer badges are on the roadmap.
-        </p>
-      </Surface>
-
-    </div>
-  );
+export default function UserDashboard(){
+ const {user}=useAuth(); const [cases,setCases]=useState([]); const [loading,setLoading]=useState(true); const [error,setError]=useState("");
+ const load=useCallback(async()=>{setLoading(true);setError("");try{const {data}=await API.get("/cases/mine");setCases(Array.isArray(data)?data:[]);}catch(e){setError(e.response?.data?.error||"We could not load your rescue activity.");}finally{setLoading(false);}},[]);
+ useEffect(()=>{load();},[load]);
+ const stats=useMemo(()=>({total:cases.length,active:cases.filter(c=>ACTIVE.includes(c.status)).length,resolved:cases.filter(c=>c.status==="RESOLVED").length}),[cases]);
+ const current=cases.find(c=>["IN_PROGRESS","RESCUE_COMPLETED"].includes(c.status))||cases.find(c=>c.status==="VALIDATION_PASSED");
+ return <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+  <section className="grid gap-6 lg:grid-cols-[1.4fr_.6fr]">
+   <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950 via-stone-900 to-stone-950 p-6 text-white sm:p-9"><div className="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-emerald-400/20 blur-3xl"/><div className="relative"><div className="flex items-center gap-2 text-emerald-300"><PawPrint size={17}/><span className="text-xs font-black uppercase tracking-[0.18em]">Reporter overview</span></div><h1 className="mt-3 text-3xl font-black sm:text-5xl">Hi, {user?.name?.split(" ")[0]||"there"}.</h1><p className="mt-3 max-w-xl text-sm leading-6 text-stone-300">Your overview shows what needs your attention. Open My Cases when you want the complete report history.</p><div className="mt-6 flex flex-wrap gap-3"><Button as={Link} to="/report" className="bg-emerald-500 hover:bg-emerald-400"><Siren size={16}/> Report an animal</Button><Button as={Link} to="/dashboard/cases" variant="secondary" className="border-stone-700 bg-stone-800 text-white"><ArrowRight size={16}/> My cases</Button></div></div></div>
+   <Surface className="p-6"><div className="flex items-center gap-2"><Sparkles size={17} className="text-emerald-600"/><h2 className="font-black dark:text-white">Current rescue</h2></div>{current?<div className="mt-5"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-wider text-stone-400">Case #{current.id}</p><h3 className="mt-1 text-xl font-black dark:text-white">{current.species||"Animal rescue"}</h3></div><StatusBadge status={current.status} friendly/></div><p className="mt-4 text-sm leading-6 text-stone-500">{current.issue_description||"Your case is moving through the rescue workflow."}</p><Link to={"/cases/"+current.id} className="mt-5 inline-flex items-center gap-2 text-sm font-black text-emerald-600">Track this rescue <ArrowRight size={15}/></Link></div>:<div className="mt-5 rounded-2xl bg-stone-50 p-5 dark:bg-stone-800/60"><p className="text-sm font-bold dark:text-white">No active rescue needs your attention.</p><p className="mt-1 text-xs text-stone-500">Submit a report whenever you see an animal that needs help.</p></div>}</Surface>
+  </section>
+  <section className="mt-6 grid grid-cols-3 gap-3"><Metric label="Reports" value={stats.total} Icon={PawPrint}/><Metric label="Active" value={stats.active} Icon={Clock3}/><Metric label="Resolved" value={stats.resolved} Icon={CheckCircle2}/></section>
+  {error&&<div role="alert" className="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">{error}</div>}
+  <section className="mt-8"><div className="flex items-end justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-400">Your activity</p><h2 className="mt-1 text-2xl font-black dark:text-white">Recent cases</h2><p className="mt-1 text-sm text-stone-500">Your latest rescue reports and their current progress.</p></div><Link to="/dashboard/cases" className="shrink-0 text-sm font-black text-emerald-600 hover:text-emerald-700">View all <ArrowRight size={15} className="ml-1 inline"/></Link></div>{cases.length===0?<Surface className="mt-4 p-6"><EmptyState icon="🐾" title="No cases yet" message="Your recent rescue activity will appear here after you submit a report."/></Surface>:<div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-3">{cases.slice(0,3).map((item,index)=><Link key={item.id} to={"/cases/"+item.id} className="group relative overflow-hidden rounded-[1.35rem] border border-stone-200/90 bg-white p-5 shadow-[0_8px_24px_rgba(28,25,23,0.05)] transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(28,25,23,0.09)] dark:border-stone-800 dark:bg-stone-900 dark:shadow-none"><div className="flex items-start justify-between gap-3"><span className={"grid h-10 w-10 place-items-center rounded-xl "+(index===0?"bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40":"bg-stone-100 text-stone-500 dark:bg-stone-800")}><PawPrint size={17}/></span><StatusBadge status={item.status} friendly compact/></div><p className="mt-4 text-[11px] font-black uppercase tracking-wider text-stone-400">Case #{item.id}</p><h3 className="mt-1 font-black dark:text-white">{item.species||"Animal rescue"}</h3><p className="mt-1 line-clamp-2 text-sm text-stone-500">{item.issue_description||"Rescue report submitted."}</p><div className="mt-4 flex items-center justify-between text-xs font-bold text-stone-400"><span className="truncate pr-3">{item.manual_address||"Location available"}</span><ArrowRight size={14} className="shrink-0 transition-transform group-hover:translate-x-1"/></div></Link>)}</div>}</section>
+  {loading&&<div className="mt-8"><CaseListSkeleton/></div>}
+  {!loading&&cases.length===0&&<Surface className="mt-8 p-8"><EmptyState icon="🐾" title="Your first report starts the rescue" message="Use Report an animal to create your first rescue case."/></Surface>}
+ </main>;
 }
+function Metric({label,value,Icon}){return <Surface className="p-4"><div className="flex items-center justify-between"><Icon size={17} className="text-emerald-600"/><span className="text-2xl font-black dark:text-white">{value}</span></div><p className="mt-3 text-[11px] font-black uppercase tracking-wider text-stone-400">{label}</p></Surface>}
