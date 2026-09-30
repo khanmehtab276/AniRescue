@@ -432,7 +432,7 @@ export default function ReportCase() {
                   <img
                     src={imagePreview}
                     alt="Selected rescue animal"
-                    className="w-full h-56 object-cover rounded-xl"
+                    className="w-full h-auto object-contain rounded-xl"
                   />
                 ) : (
                   <div className="p-10 flex flex-col items-center justify-center h-56">
