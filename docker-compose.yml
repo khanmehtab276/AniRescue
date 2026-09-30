@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ---------------------------------------------------------------------------
   # Message Broker
@@ -48,7 +46,8 @@ services:
       - LOCATION_FRESHNESS_MINUTES=${LOCATION_FRESHNESS_MINUTES}
       - NOTIFICATION_RADIUS_KM=${NOTIFICATION_RADIUS_KM}
     volumes:
-      - /home/iamatomic/Downloads/anirescue-a5fd7-firebase-adminsdk-fbsvc-0e1408292f.json:/run/secrets/firebase-service-account.json:ro
+      # Local development only; set FIREBASE_SERVICE_ACCOUNT_HOST_PATH in .env.
+      - ${FIREBASE_SERVICE_ACCOUNT_HOST_PATH:-./secrets/firebase-service-account.json}:/run/secrets/firebase-service-account.json:ro
     depends_on:
       rabbitmq:
         condition: service_healthy
