@@ -170,9 +170,9 @@ export default function NGODashboard() {
   const inProgressCases = cases.filter((c) => c.status === 'IN_PROGRESS');
 
   return (
-    <div className="p-4 md:p-8 max-w-2xl mx-auto mb-20 md:mb-0">
+    <div className="mx-auto max-w-7xl px-4 py-6 pb-24 sm:px-6 lg:px-8 lg:py-10 lg:pb-10">
 
-      <div className="flex items-center justify-between gap-3 mb-6">
+      <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
             NGO Operations
@@ -232,12 +232,12 @@ export default function NGODashboard() {
 
       {/* SECTION SWITCHER */}
       <Surface className="p-2 mb-6">
-        <div className="flex gap-1">
+        <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => setActiveSection('operations')}
             className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
               activeSection === 'operations'
-                ? 'bg-[#1a1f2e] dark:bg-black text-white'
+                ? 'bg-stone-900 dark:bg-stone-100 dark:text-stone-900 text-white'
                 : 'text-stone-500 dark:text-stone-400'
             }`}
           >
@@ -271,7 +271,7 @@ export default function NGODashboard() {
               }
             />
           ) : (
-            <div className="space-y-4 rescue-stagger">
+            <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900">
               {activeCases.map((caseItem) => (
                 <CaseCard
                   key={caseItem.id}
@@ -304,7 +304,7 @@ export default function NGODashboard() {
           ) : junkQueue.length === 0 ? (
             <EmptyState icon="✅" title="Review queue is clear" message="No AI-flagged cases require review." />
           ) : (
-            <div className="space-y-4 rescue-stagger">
+            <div className="grid gap-3 lg:grid-cols-2">
               {junkQueue.map((caseItem) => (
                 <Surface key={caseItem.id} className="p-5">
                   <div className="mb-3 flex items-start justify-between gap-3">
