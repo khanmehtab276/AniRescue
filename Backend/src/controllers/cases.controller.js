@@ -1288,6 +1288,12 @@ const verifyCompletion = async (req, res) => {
       );
     }
 
+    if (!result?.rows?.length) {
+      return res.status(409).json({
+        error: "Case was already verified or changed by another action.",
+      });
+    }
+
     const notification = await createNotification({
       userId: currentCase.assigned_volunteer_id,
       caseId: id,
