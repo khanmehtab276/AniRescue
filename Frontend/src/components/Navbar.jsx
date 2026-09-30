@@ -3,6 +3,7 @@ import { Activity, Building2, ClipboardCheck, ClipboardList, LayoutDashboard, Lo
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
+import NotificationBell from './NotificationBell.jsx';
 
 const NAV = {
   user: [
@@ -82,15 +83,15 @@ export default function Navbar() {
             <Brand />
             {user && meta && <div className="hidden items-center gap-2 border-l border-stone-200 pl-6 dark:border-stone-800 md:flex"><meta.Icon size={15} className="text-emerald-600 dark:text-emerald-400" /><span className="text-sm font-bold text-stone-600 dark:text-stone-300">{meta.label}</span></div>}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">{user && <NotificationBell />}
             {user && <button type="button" onClick={() => setMenuOpen((value) => !value)} className="inline-flex h-10 items-center gap-2 rounded-xl border border-stone-300 bg-white px-3 text-stone-800 shadow-[0_4px_14px_rgba(28,25,23,0.10)] transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:text-emerald-700 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:shadow-[0_4px_16px_rgba(0,0,0,0.30)] dark:hover:border-emerald-700 dark:hover:text-emerald-400" aria-expanded={menuOpen} aria-controls="rescue-navigation" aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}>{menuOpen ? <X size={18} /> : <Menu size={18} />}<span className="hidden text-xs font-extrabold sm:inline">Menu</span></button>}
             <button type="button" onClick={cycleTheme} className="grid h-10 w-10 place-items-center rounded-xl border border-stone-200 bg-white text-stone-500 transition-all hover:-translate-y-0.5 hover:text-stone-900 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-400 dark:hover:text-white" aria-label="Change theme"><ThemeIcon size={17} /></button>
             {user ? <><Link to="/profile" className="hidden items-center gap-2 rounded-xl border border-stone-200 bg-white px-3 py-2 transition-colors hover:border-emerald-300 dark:border-stone-800 dark:bg-stone-900 sm:flex"><span className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"><User size={15} /></span><span className="max-w-[130px] truncate text-xs font-bold text-stone-700 dark:text-stone-200">{user.name || 'Account'}</span></Link><button type="button" onClick={handleLogout} className="hidden h-10 w-10 place-items-center rounded-xl border border-stone-200 bg-white text-stone-400 transition-colors hover:text-rose-600 dark:border-stone-800 dark:bg-stone-900 sm:grid" aria-label="Log out"><LogOut size={16} /></button></> : <Link to="/login" className="rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white transition-all hover:-translate-y-0.5 hover:bg-emerald-700">Sign in</Link>}
           </div>
         </div>
-        {menuOpen && user && <div id="rescue-navigation" className="absolute right-4 top-[4.5rem] z-[60] w-[min(92vw,380px)] overflow-hidden rounded-2xl border border-stone-200 bg-white/80 p-3 shadow-2xl backdrop-blur-2xl shadow-stone-950/10 backdrop-blur-xl animate-rescue-fade-up dark:border-stone-800 dark:bg-stone-900/80 sm:right-6 lg:right-8">
+        {menuOpen && user && <div id="rescue-navigation" className="absolute right-4 top-[4.5rem] z-[60] w-[min(92vw,380px)] overflow-hidden rounded-2xl border border-stone-200 bg-white/80 p-3 shadow-2xl backdrop-blur-2xl shadow-stone-950/10 animate-rescue-fade-up dark:border-stone-800 dark:bg-stone-900/80 sm:right-6 lg:right-8">
           <div className="mb-3 flex items-center gap-3 rounded-xl bg-stone-50 p-3 dark:bg-stone-950"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">{meta ? <meta.Icon size={20} /> : <User size={20} />}</div><div className="min-w-0"><p className="truncate text-sm font-extrabold text-stone-900 dark:text-stone-100">{user.name || 'Account'}</p><p className="text-xs font-semibold text-stone-400">{meta?.label || 'AniRescue'}</p></div></div>
-          <nav className="grid gap-0 rounded-xl bg-white/40 dark:bg-stone-900/40">
+          <nav className="grid gap-0 rounded-xl">
             {links.map(({ label, path, Icon, primary }) => { const active = isActivePath(location.pathname, path); const classes = primary ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700' : active ? 'bg-stone-100 text-stone-900 dark:bg-stone-800 dark:text-white' : 'text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800'; return <Link key={label} to={path} onClick={() => setMenuOpen(false)} className={'flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold transition-all hover:translate-x-0.5 ' + classes}><Icon size={18} /><span>{label}</span></Link>; })}
             <div className="my-1 border-t border-stone-200 dark:border-stone-800" />
             <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"><User size={18} /> Profile</Link>
