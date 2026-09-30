@@ -41,7 +41,7 @@ export default function CaseCard({ caseItem, action, distanceKm, meta, friendly 
         <img
           src={caseItem.image_payload}
           alt={`Photo submitted with the report for ${caseItem.species || 'this animal'}`}
-          className="w-full h-36 object-cover rounded-xl mb-3"
+          className="w-full h-auto object-contain rounded-xl mb-3"
           loading="lazy"
         />
       )}
