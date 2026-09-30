@@ -93,7 +93,9 @@ export default function Navbar() {
             {user ? <><Link to="/profile" className="hidden items-center gap-2 rounded-xl border border-stone-200 bg-white px-3 py-2 transition-colors hover:border-emerald-300 dark:border-stone-800 dark:bg-stone-900 sm:flex"><span className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"><User size={15} /></span><span className="max-w-[130px] truncate text-xs font-bold text-stone-700 dark:text-stone-200">{user.name || 'Account'}</span></Link><button type="button" onClick={handleLogout} className="hidden h-10 w-10 place-items-center rounded-xl border border-stone-200 bg-white text-stone-400 transition-colors hover:text-rose-600 dark:border-stone-800 dark:bg-stone-900 sm:grid" aria-label="Log out"><LogOut size={16} /></button></> : <Link to="/login" className="rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white transition-all hover:-translate-y-0.5 hover:bg-emerald-700">Sign in</Link>}
           </div>
         </div>
-        {menuOpen && user && <div id="rescue-navigation" className="absolute right-4 top-[4.5rem] z-[60] w-[min(92vw,380px)] overflow-hidden rounded-2xl border border-stone-200 bg-white/72 p-3 shadow-2xl shadow-stone-950/20 ring-1 ring-black/5 backdrop-blur-3xl backdrop-saturate-150 animate-rescue-popover dark:border-stone-800 dark:bg-stone-900/72 sm:right-6 lg:right-8">
+        {menuOpen && user && <>
+          <button type="button" aria-label="Close navigation menu" onClick={() => setMenuOpen(false)} className="fixed inset-0 z-[55] cursor-default bg-stone-950/10 backdrop-blur-md dark:bg-black/20" />
+          <div id="rescue-navigation" className="absolute right-4 top-[4.5rem] z-[60] w-[min(92vw,380px)] overflow-hidden rounded-2xl border border-stone-200 bg-white/95 p-3 shadow-2xl shadow-stone-950/20 ring-1 ring-black/5 animate-rescue-popover dark:border-stone-800 dark:bg-stone-900/95 sm:right-6 lg:right-8">
           <div className="mb-3 flex items-center gap-3 rounded-xl bg-stone-50 p-3 dark:bg-stone-950"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">{meta ? <meta.Icon size={20} /> : <User size={20} />}</div><div className="min-w-0"><p className="truncate text-sm font-extrabold text-stone-900 dark:text-stone-100">{user.name || 'Account'}</p><p className="text-xs font-semibold text-stone-400">{meta?.label || 'AniRescue'}</p></div></div>
           <nav className="grid gap-0 rounded-xl">
             {links.map(({ label, path, Icon, primary }) => { const active = isActivePath(location.pathname, path); const classes = primary ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700' : active ? 'bg-stone-100 text-stone-900 dark:bg-stone-800 dark:text-white' : 'text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800'; return <Link key={label} to={path} onClick={() => setMenuOpen(false)} className={'flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold transition-all hover:translate-x-0.5 ' + classes}><Icon size={18} /><span>{label}</span></Link>; })}
@@ -101,7 +103,8 @@ export default function Navbar() {
             <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"><User size={18} /> Profile</Link>
             <button type="button" onClick={handleLogout} className="flex items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-bold text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"><LogOut size={18} /> Log out</button>
           </nav>
-        </div>}
+          </div>
+        </>}
       </header>
     </>
   );
