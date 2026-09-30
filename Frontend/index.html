@@ -28,10 +28,7 @@
     <title>AniRescue</title>
     <script>
       (function () {
-        const theme = localStorage.getItem('anirescue_theme');
-        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-        if (theme === 'dark' || (theme === 'system' && systemDark)) {
+        if (localStorage.getItem('anirescue_theme') === 'dark') {
           document.documentElement.classList.add('dark');
         }
       })();
