@@ -39,6 +39,7 @@ jobs:
           cache: npm
           cache-dependency-path: Backend/package-lock.json
       - run: npm ci
+      - run: npm test
       - name: Check JavaScript syntax
         working-directory: .
         run: find Backend -path '*/node_modules' -prune -o -name '*.js' -print0 | xargs -0 -n1 node --check
