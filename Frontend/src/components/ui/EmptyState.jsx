@@ -1,6 +1,6 @@
 import Surface from './Surface.jsx';
 
-export default function EmptyState({ icon = '🐕', title, message }) {
+export default function EmptyState({ icon = '🐕', title, message, children }) {
   return (
     <Surface inset className="p-10 text-center">
       <div className="text-4xl mb-3">{icon}</div>
@@ -16,6 +16,8 @@ export default function EmptyState({ icon = '🐕', title, message }) {
           {message}
         </p>
       )}
+
+      {children && <div className="mt-5 flex justify-center">{children}</div>}
     </Surface>
   );
 }
