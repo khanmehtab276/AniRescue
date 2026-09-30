@@ -41,6 +41,7 @@ export default function App() {
           <Route path="/report" element={<ReportCase/>}/>
           <Route path="/profile" element={<Profile/>}/>
           <Route path="/notifications" element={<Notifications/>}/>
+          <Route path="/my-reports" element={<UserCases/>}/>
           <Route path="/map" element={<MapView/>}/>
           <Route path="/cases/:id" element={<CaseDetail/>}/>
         </Route>
