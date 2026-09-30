@@ -1748,6 +1748,12 @@ const getDashboardCases = async (req, res) => {
                   AND status != 'CANCELLED'
                   AND (
                     assigned_volunteer_id = $4
+                    OR EXISTS (
+                      SELECT 1
+                      FROM ngo_volunteers nv
+                      WHERE nv.ngo_id = $4
+                        AND nv.volunteer_id = rescue_cases.assigned_volunteer_id
+                    )
                     OR (
                       status = 'VALIDATION_PASSED'
                       AND assigned_volunteer_id IS NULL
