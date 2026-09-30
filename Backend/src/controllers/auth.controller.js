@@ -183,18 +183,25 @@ const register = async (req, res) => {
 
       await client.query("COMMIT");
 
-      const token = jwt.sign(
-        {
-          id: user.id,
-          role: user.role,
-          account_status: user.account_status,
-          email: user.email,
-        },
-        process.env.JWT_SECRET,
-        { expiresIn: "30d" },
-      );
+      if (accountStatus === "ACTIVE") {
+        const token = jwt.sign(
+          {
+            id: user.id,
+            role: user.role,
+            account_status: user.account_status,
+            email: user.email,
+          },
+          process.env.JWT_SECRET,
+          { expiresIn: "30d" },
+        );
 
-      res.status(201).json({ token, user });
+        setAuthCookies(res, token);
+      }
+
+      res.status(201).json({
+        authenticated: accountStatus === "ACTIVE",
+        user,
+      });
     } catch (err) {
       await client.query("ROLLBACK");
 
