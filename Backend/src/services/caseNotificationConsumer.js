@@ -1,6 +1,6 @@
 const { getChannel, CASE_NOTIFICATION_QUEUE } = require("../config/rabbitmq");
 const { pool } = require("../config/db");
-const { createNotification } = require("../utils/notifications");
+const { createNotification, notifyUser } = require("../utils/notifications");
 const { sendPushNotification } = require("../utils/pushNotifications");
 const {
   NOTIFICATION_RADIUS_KM,
@@ -60,7 +60,8 @@ const startCaseNotificationConsumer = async () => {
             issue_description,
             latitude,
             longitude,
-            species
+            species,
+            reporter_id
           FROM rescue_cases
           WHERE id = $1
           `,
@@ -136,6 +137,16 @@ const startCaseNotificationConsumer = async () => {
 
         const detectedSpecies =
           species || rescueCase.species || "animal";
+
+        if (rescueCase.reporter_id) {
+          await notifyUser({
+            userId: rescueCase.reporter_id,
+            caseId: reportId,
+            notificationType: "VALIDATION_PASSED",
+            title: "Your Rescue Report Was Validated",
+            message: `Case #${reportId} passed AI validation and is now available for rescue coordination.`,
+          });
+        }
 
         for (const volunteer of volunteerResult.rows) {
           const notification = await createNotification({
