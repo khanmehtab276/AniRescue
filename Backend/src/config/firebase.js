@@ -7,13 +7,22 @@ function getFirebaseAdmin() {
   if (firebaseAdmin) return firebaseAdmin;
 
   const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
-  if (!serviceAccountPath || !fs.existsSync(serviceAccountPath)) {
+  if (!serviceAccountPath && !serviceAccountJson) {
     return null;
   }
 
   try {
-    const serviceAccount = require(serviceAccountPath);
+    const serviceAccount = serviceAccountJson
+      ? JSON.parse(serviceAccountJson)
+      : fs.existsSync(serviceAccountPath)
+        ? require(serviceAccountPath)
+        : null;
+
+    if (!serviceAccount) {
+      return null;
+    }
 
     if (admin.getApps().length === 0) {
       admin.initializeApp({
