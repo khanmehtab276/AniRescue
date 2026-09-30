@@ -7,6 +7,7 @@ const createNotification = async ({
   notificationType,
   title,
   message,
+  throwOnError = false,
 }) => {
   try {
     const result = await pool.query(
@@ -21,6 +22,8 @@ const createNotification = async ({
 
     return result.rows[0] || null;
   } catch (error) {
+    if (throwOnError) throw error;
+
     console.error(
       "Failed to persist notification (non-fatal):",
       error?.message || error,
