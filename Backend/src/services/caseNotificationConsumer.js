@@ -7,6 +7,8 @@ const {
   LOCATION_FRESHNESS_MINUTES,
 } = require("../utils/caseNotifications");
 
+let activeConsumerChannel = null;
+
 const startCaseNotificationConsumer = async () => {
   const channel = getChannel();
 
@@ -14,6 +16,10 @@ const startCaseNotificationConsumer = async () => {
     console.error(
       "❌ Cannot start case notification consumer: RabbitMQ channel unavailable.",
     );
+    return;
+  }
+
+  if (activeConsumerChannel === channel) {
     return;
   }
 
@@ -255,6 +261,8 @@ const startCaseNotificationConsumer = async () => {
     },
     { noAck: false },
   );
+
+  activeConsumerChannel = channel;
 
   console.log(
     `👂 Listening on '${CASE_NOTIFICATION_QUEUE}' for case notification events...`,
