@@ -24,7 +24,7 @@ export default function UserDashboard(){
   </section>
   <section className="mt-6 grid grid-cols-3 gap-3"><Metric label="Reports" value={stats.total} Icon={PawPrint}/><Metric label="Active" value={stats.active} Icon={Clock3}/><Metric label="Resolved" value={stats.resolved} Icon={CheckCircle2}/></section>
   {error&&<div role="alert" className="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">{error}</div>}
-  <section className="mt-8 grid gap-4 lg:grid-cols-3"><Action icon={<PawPrint/>} tone="emerald" title="My Rescue Cases" text="Open the full history, filter cases, and track individual reports." to="/dashboard/cases"/><Action icon={<MapPin/>} tone="sky" title="Rescue Map" text="See active rescue locations with available geographic data." to="/map"/><Action icon={} tone="amber" title="Refresh activity" text="Reload your latest case status from the backend." onClick={load} loading={loading}/></section>
+  <section className="mt-8 grid gap-4 lg:grid-cols-3"><Action icon={<PawPrint/>} tone="emerald" title="My Rescue Cases" text="Open the full history, filter cases, and track individual reports." to="/dashboard/cases"/><Action icon={<MapPin/>} tone="sky" title="Rescue Map" text="See active rescue locations with available geographic data." to="/map"/></section>
   {loading&&<div className="mt-8"><CaseListSkeleton/></div>}
   {!loading&&cases.length===0&&<Surface className="mt-8 p-8"><EmptyState icon="🐾" title="Your first report starts the rescue" message="Use Report an animal to create your first rescue case."/></Surface>}
  </main>;
