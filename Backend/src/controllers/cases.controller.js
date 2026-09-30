@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const { pool } = require("../config/db");
 const { getChannel, QUEUE_NAME } = require("../config/rabbitmq");
 const apiCache = require("../utils/cache");
@@ -23,30 +24,126 @@ const CASE_FIELDS = `
 `;
 
 // 1. SUBMIT CASE
-const reportCase = async (req, res) => {
-  const { location, description, imageUrl } = req.body;
+const getUploadSignature = async (req, res) => {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
+  if (!cloudName || !apiKey || !apiSecret) {
+    return res.status(503).json({
+      error: "Image upload service is not configured for this deployment.",
+    });
+  }
+
+  const timestamp = Math.floor(Date.now() / 1000);
+  const signature = crypto
+    .createHash("sha1")
+    .update(`timestamp=${timestamp}${apiSecret}`)
+    .digest("hex");
+
+  res.set("Cache-Control", "no-store");
+
+  return res.json({
+    cloudName,
+    apiKey,
+    timestamp,
+    signature,
+    resourceType: "image",
+  });
+};
+
+const reportCase = async (req, res) => {
+  const { location, description, imageUrl, clientRequestId } = req.body;
   const reporterId = req.user.id;
 
   const descriptionText =
     typeof description === "string" ? description.trim() : "";
 
+  if (
+    !clientRequestId ||
+    typeof clientRequestId !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(clientRequestId)
+  ) {
+    return res.status(400).json({
+      error: "A valid client request ID is required.",
+    });
+  }
+
+  if (!imageUrl || typeof imageUrl !== "string" || imageUrl.length > 2048) {
+    return res.status(400).json({
+      error: "A valid rescue image URL is required.",
+    });
+  }
+
+  if (descriptionText.length > 2000) {
+    return res.status(400).json({
+      error: "Description must be 2000 characters or fewer.",
+    });
+  }
+
+  const lat =
+    typeof location?.lat === "number" && Number.isFinite(location.lat)
+      ? location.lat
+      : null;
+  const lng =
+    typeof location?.lng === "number" && Number.isFinite(location.lng)
+      ? location.lng
+      : null;
+  const manualAddress =
+    typeof location?.address === "string"
+      ? location.address.trim().slice(0, 500)
+      : null;
+  const isCustom = Boolean(location?.isCustom ?? location?.isManual);
+
+  if (lat !== null && (lat < -90 || lat > 90)) {
+    return res.status(400).json({ error: "Latitude must be between -90 and 90." });
+  }
+
+  if (lng !== null && (lng < -180 || lng > 180)) {
+    return res.status(400).json({ error: "Longitude must be between -180 and 180." });
+  }
+
+  if ((lat === null) !== (lng === null)) {
+    return res.status(400).json({
+      error: "Latitude and longitude must be provided together.",
+    });
+  }
+
+  let parsedImageUrl;
+  try {
+    parsedImageUrl = new URL(imageUrl);
+  } catch {
+    return res.status(400).json({ error: "Image URL is invalid." });
+  }
+
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+
+  if (
+    parsedImageUrl.protocol !== "https:" ||
+    parsedImageUrl.hostname !== "res.cloudinary.com" ||
+    !cloudName ||
+    !parsedImageUrl.pathname.startsWith(`/${cloudName}/`) ||
+    parsedImageUrl.username ||
+    parsedImageUrl.password
+  ) {
+    return res.status(400).json({
+      error: "Only approved Cloudinary HTTPS image URLs are accepted.",
+    });
+  }
+
   let client;
 
   try {
     client = await pool.connect();
-
-    const lat = location?.lat ?? null;
-    const lng = location?.lng ?? null;
-    const manualAddress = location?.address ?? null;
-    const isCustom = location?.isCustom ?? location?.isManual ?? false;
-
     await client.query("BEGIN");
 
     const result = await client.query(
       `INSERT INTO rescue_cases
-          (issue_description, latitude, longitude, manual_address, is_custom_location, image_payload, reporter_id, status)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,'PENDING_VALIDATION')
+          (issue_description, latitude, longitude, manual_address,
+           is_custom_location, image_payload, reporter_id, status,
+           client_request_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING_VALIDATION', $8)
+         ON CONFLICT (reporter_id, client_request_id) DO NOTHING
          RETURNING id, status, priority, image_payload, created_at`,
       [
         descriptionText,
@@ -54,36 +151,42 @@ const reportCase = async (req, res) => {
         lng,
         manualAddress,
         isCustom,
-        imageUrl || null,
+        imageUrl,
         reporterId,
+        clientRequestId,
       ],
     );
 
-    const savedCase = result.rows[0];
+    if (result.rows.length === 0) {
+      const existing = await client.query(
+        `SELECT id, status, priority, image_payload, created_at
+         FROM rescue_cases
+         WHERE reporter_id = $1
+           AND client_request_id = $2`,
+        [reporterId, clientRequestId],
+      );
 
-    // A case must not be accepted unless RabbitMQ is ready
-    // to hand it to the AI worker.
-    const rabbitChannel = getChannel();
+      if (existing.rows.length === 0) {
+        throw new Error("Idempotent rescue report lookup failed.");
+      }
 
-    if (!rabbitChannel) {
-      throw new Error("RabbitMQ is currently unavailable.");
+      await client.query("COMMIT");
+
+      return res.status(200).json({
+        success: true,
+        duplicate: true,
+        case: existing.rows[0],
+      });
     }
 
-    const messagePayload = JSON.stringify({
-      reportId: savedCase.id,
-      imageUrl: savedCase.image_payload,
-    });
+    const savedCase = result.rows[0];
 
-    rabbitChannel.sendToQueue(
-      QUEUE_NAME,
-      Buffer.from(messagePayload),
-      {
-        persistent: true,
-      },
+    await client.query(
+      `INSERT INTO case_processing_jobs (case_id, image_url)
+       VALUES ($1, $2)`,
+      [savedCase.id, imageUrl],
     );
 
-    await rabbitChannel.waitForConfirms();
-    
     await client.query("COMMIT");
 
     apiCache.flushAll();
@@ -97,7 +200,7 @@ const reportCase = async (req, res) => {
     });
 
     console.log(
-      `📡 Case #${savedCase.id} queued for YOLO evaluation.`,
+      `📬 Case #${savedCase.id} committed and queued in the AI processing outbox.`,
     );
 
     res.status(201).json({
@@ -106,29 +209,16 @@ const reportCase = async (req, res) => {
     });
   } catch (err) {
     try {
-      if (client) {
-        await client.query("ROLLBACK");
-      }
-    } catch (rollbackErr) {
-      console.error(
-        "Failed to rollback rescue case transaction:",
-        rollbackErr?.message || rollbackErr,
-      );
-    }
+      await client?.query("ROLLBACK");
+    } catch {}
 
-    console.error(
-      "Failed to report rescue case:",
-      err?.stack || err,
-    );
+    console.error("Failed to report rescue case:", err?.stack || err);
 
     res.status(503).json({
-      error:
-        "Rescue case could not be queued for AI processing. Please try again.",
+      error: "Rescue case could not be saved right now. Please try again.",
     });
   } finally {
-    if (client) {
-      client.release();
-    }
+    client?.release();
   }
 };
 
