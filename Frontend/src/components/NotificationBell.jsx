@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell, BellRing, Check, CheckCheck, ChevronRight, Inbox } from "lucide-react";
+import { Bell, BellRing, CheckCheck, ChevronRight, Inbox } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../utils/api";
 import { useAuth } from "../contexts/AuthContext.jsx";
