@@ -51,7 +51,7 @@ export default function App() {
           <Route path="/dashboard/cases" element={<UserCases/>}/>
         </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={["volunteer","admin"]}/>}>
+        <Route element={<ProtectedRoute allowedRoles={["volunteer"]}/>}>
           <Route path="/volunteer" element={<VolunteerWorkspace/>}/>
           <Route path="/volunteer/cases" element={<VolunteerWorkspace/>}/>
           <Route path="/volunteer/active" element={<VolunteerWorkspace/>}/>
