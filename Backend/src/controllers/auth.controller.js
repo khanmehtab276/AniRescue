@@ -2,6 +2,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { pool } = require("../config/db");
 const { normalizeEnum } = require("../utils/helpers");
+const apiCache = require("../utils/cache");
 const {
   notifyVolunteerAboutNearbyCases,
 } = require("../utils/caseNotifications");
@@ -374,6 +375,8 @@ const updateJurisdiction = async (req, res) => {
         error: "User not found.",
       });
     }
+
+    apiCache.flushAll();
 
     res.json({
       success: true,
