@@ -254,7 +254,7 @@ export default function AdminDashboard() {
               onClick={() => setActiveTab(value)}
               className={`shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
                 activeTab === value
-                  ? 'bg-[#1a1f2e] dark:bg-black text-white shadow-lg'
+                  ? 'bg-stone-900 dark:bg-stone-100 dark:text-stone-900 text-white shadow-lg'
                   : 'bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-800 shadow-sm'
               }`}
             >
@@ -309,7 +309,7 @@ export default function AdminDashboard() {
 
                     <button
                       onClick={() => setActiveTab('cases')}
-                      className="p-4 rounded-2xl text-left bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm hover:-translate-y-0.5 transition-all"
+                      className="p-4 rounded-2xl text-left bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors"
                     >
                       <ClipboardList size={22} className="mb-2 text-emerald-600 dark:text-emerald-400" strokeWidth={2} />
 
@@ -415,7 +415,7 @@ export default function AdminDashboard() {
                     message="There are currently no rescue cases."
                   />
                 ) : (
-                  <div className="space-y-4 rescue-stagger">
+                  <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900">
                     {cases.map((item) => (
                       <AdminCaseCard
                         key={item.id}
