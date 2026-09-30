@@ -228,7 +228,7 @@ export default function CaseDetail() {
 
   if (error || !data) {
     return (
-      <div className="p-4 md:p-8 max-w-2xl mx-auto mb-20 text-center">
+      <div className="p-4 md:p-8 max-w-7xl mx-auto mb-20 text-center">
         <p className="text-rose-500 font-bold mb-4">{error || 'Case not found.'}</p>
         <Button variant="secondary" onClick={() => navigate(-1)}>
           Go Back
