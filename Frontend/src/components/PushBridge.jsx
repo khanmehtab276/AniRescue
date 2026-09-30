@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useToast } from '../contexts/ToastContext.jsx';
 import {
+  getFirebaseMessaging,
+  onMessage,
+} from '../services/firebase.js';
+import {
   getPermissionState,
   registerDeviceToken,
 } from '../services/pushNotifications.js';
@@ -30,18 +34,57 @@ export default function PushBridge() {
     });
   }, [isLoggedIn]);
 
+  // Foreground FCM messages are delivered directly to the page.
+  // The push service worker is reserved for background/closed-app
+  // notifications, so an open mobile PWA gets the same in-app behavior
+  // without depending on service-worker scope/control.
+  useEffect(() => {
+    if (!isLoggedIn || getPermissionState() !== 'granted') {
+      return undefined;
+    }
+
+    let unsubscribe;
+
+    getFirebaseMessaging()
+      .then((messaging) => {
+        if (!messaging) return;
+
+        unsubscribe = onMessage(messaging, (payload) => {
+          const notification = payload?.notification || {};
+          const data = payload?.data || {};
+
+          const title = notification.title || data.title || 'AniRescue';
+          const body = notification.body || data.body || '';
+
+          showToast(
+            [title, body].filter(Boolean).join(' — ') ||
+              'You have a new update.',
+            'info',
+          );
+
+          window.dispatchEvent(
+            new Event('anirescue:notifications-updated'),
+          );
+        });
+      })
+      .catch((error) => {
+        console.warn('Foreground notification listener failed:', error);
+      });
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, [isLoggedIn, showToast]);
+
+  // The service worker still handles notification-click navigation for
+  // background notifications. Foreground notifications use onMessage()
+  // above and therefore do not need the ANIRESCUE_PUSH bridge message.
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return undefined;
 
     const handleMessage = (event) => {
       const message = event.data;
       if (!message || typeof message !== 'object') return;
-
-      if (message.type === 'ANIRESCUE_PUSH') {
-        const text = [message.title, message.body].filter(Boolean).join(' — ');
-        showToast(text || 'You have a new update.', 'info');
-        window.dispatchEvent(new Event('anirescue:notifications-updated'));
-      }
 
       if (
         message.type === 'ANIRESCUE_NAVIGATE' &&
@@ -57,7 +100,7 @@ export default function PushBridge() {
 
     return () =>
       navigator.serviceWorker.removeEventListener('message', handleMessage);
-  }, [showToast, navigate]);
+  }, [navigate]);
 
   return null;
 }
