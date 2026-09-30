@@ -38,18 +38,26 @@ export default function Notifications() {
   );
 
   const markRead = async (id) => {
-    await API.patch(`/notifications/${id}/read`);
-    setItems((current) =>
-      current.map((item) => (item.id === id ? { ...item, is_read: true } : item)),
-    );
-    setUnreadCount((count) => Math.max(0, count - 1));
+    try {
+      await API.patch(`/notifications/${id}/read`);
+      setItems((current) =>
+        current.map((item) => (item.id === id ? { ...item, is_read: true } : item)),
+      );
+      setUnreadCount((count) => Math.max(0, count - 1));
+    } catch {
+      await load();
+    }
   };
 
   const markAllRead = async () => {
     if (!unreadCount) return;
-    await API.patch("/notifications/read-all");
-    setItems((current) => current.map((item) => ({ ...item, is_read: true })));
-    setUnreadCount(0);
+    try {
+      await API.patch("/notifications/read-all");
+      setItems((current) => current.map((item) => ({ ...item, is_read: true })));
+      setUnreadCount(0);
+    } catch {
+      await load();
+    }
   };
 
   return (
