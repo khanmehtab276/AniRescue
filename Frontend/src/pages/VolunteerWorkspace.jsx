@@ -34,3 +34,20 @@ export default function VolunteerWorkspace() {
     <div className="mt-6">{loading?<CaseListSkeleton/>:list.length===0?<Surface className="p-8"><EmptyState icon={view==="cases"?"🦺":view==="active"?"🛟":"🏁"} title={view==="cases"?"No rescues available":view==="active"?"No active rescue":"No verified history"} message="This workspace updates from the rescue case API."/></Surface>:<div className="grid gap-3 lg:grid-cols-2">{list.map(item=><article key={item.id} className="rounded-[1.5rem] border border-stone-200/90 bg-white p-5 shadow-[0_10px_30px_rgba(28,25,23,0.06)] transition-all hover:-translate-y-1 hover:shadow-[0_16px_38px_rgba(28,25,23,0.10)] dark:border-stone-800 dark:bg-stone-900 dark:shadow-none"><div className="flex items-start justify-between"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100 dark:bg-emerald-950/40 dark:ring-emerald-900"><Siren size={19}/></span><PriorityBadge priority={item.priority}/></div><p className="mt-4 text-xs font-black uppercase tracking-wider text-stone-400">Case #{item.id}</p><h2 className="mt-1 text-lg font-black dark:text-white">{item.species||"Animal rescue"}</h2><p className="mt-1 line-clamp-2 text-sm text-stone-500">{item.issue_description||item.manual_address||"Rescue case"}</p><div className="mt-4 flex items-center justify-between gap-3"><StatusBadge status={item.status} friendly compact/><div className="flex gap-2"><Button as={Link} to={"/cases/"+item.id} variant="secondary" size="sm">View</Button>{view==="cases"&&<Button size="sm" disabled={processing===item.id} onClick={()=>claim(item.id)}>{processing===item.id?"Accepting...":"Accept rescue"}</Button>}</div></div></article>)}</div>}</div>
   </main>;
 }
+
+
+function VolunteerPanel({Icon,title,value,text,tone="emerald"}) {
+  const tones = {
+    amber: "border-amber-100 bg-gradient-to-br from-white to-amber-50/70 text-amber-600 dark:border-amber-950/60 dark:from-stone-900 dark:to-amber-950/20",
+    emerald: "border-emerald-100 bg-gradient-to-br from-white to-emerald-50/70 text-emerald-600 dark:border-emerald-950/60 dark:from-stone-900 dark:to-emerald-950/20",
+    sky: "border-sky-100 bg-gradient-to-br from-white to-sky-50/70 text-sky-600 dark:border-sky-950/60 dark:from-stone-900 dark:to-sky-950/20",
+  };
+  return <Surface className={"border p-5 shadow-sm " + (tones[tone] || tones.emerald)}>
+    <div className="flex items-center justify-between gap-3">
+      <span className="grid h-10 w-10 place-items-center rounded-2xl bg-white/80 ring-1 ring-black/5 dark:bg-stone-900/60 dark:ring-white/10"><Icon size={19}/></span>
+      <span className="text-3xl font-black text-stone-900 dark:text-white">{value}</span>
+    </div>
+    <p className="mt-4 text-xs font-black uppercase tracking-wider text-stone-600 dark:text-stone-300">{title}</p>
+    <p className="mt-1 text-xs leading-5 text-stone-500 dark:text-stone-400">{text}</p>
+  </Surface>;
+}
