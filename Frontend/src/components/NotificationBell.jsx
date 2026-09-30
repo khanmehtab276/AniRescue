@@ -10,6 +10,12 @@ const TYPE_META = {
   CASE_ASSIGNED: { label: "Case assigned", tone: "sky" },
   COMPLETION_VERIFIED: { label: "Rescue verified", tone: "emerald" },
   COMPLETION_REJECTED: { label: "Verification update", tone: "rose" },
+  VALIDATION_PASSED: { label: "AI validation", tone: "emerald" },
+  VALIDATION_REJECTED: { label: "AI review", tone: "rose" },
+  EVIDENCE_SUBMITTED: { label: "Rescue update", tone: "sky" },
+  CASE_RESOLVED: { label: "Case resolved", tone: "emerald" },
+  CASE_RELEASED: { label: "Case released", tone: "amber" },
+  CASE_CANCELLED: { label: "Case cancelled", tone: "rose" },
 };
 
 function relativeTime(value) {
