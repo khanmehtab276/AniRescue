@@ -97,7 +97,7 @@ export default function MapView() {
   const role = (user?.role || 'USER').toLowerCase();
   const config = ROLE_CONFIG[role] || ROLE_CONFIG.user;
   const RoleIcon = config.icon;
-  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const isDark = theme === 'dark';
   const tileUrl = isDark
     ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
     : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
