@@ -298,7 +298,7 @@ export default function CaseDetail() {
             <img
               src={caseItem.evidence_image_payload}
               alt="Rescue evidence"
-              className="w-full h-48 object-cover rounded-xl"
+              className="w-full h-auto object-contain rounded-xl"
             />
             {caseItem.evidence_notes && (
               <p className="text-sm text-stone-600 dark:text-stone-300 mt-2">
