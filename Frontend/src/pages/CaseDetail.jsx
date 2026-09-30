@@ -220,7 +220,7 @@ export default function CaseDetail() {
 
   if (isLoading) {
     return (
-      <div className="p-4 md:p-8 max-w-2xl mx-auto mb-20">
+      <div className="mx-auto max-w-7xl px-4 py-6 pb-24 sm:px-6 lg:px-8 lg:py-10 lg:pb-10">
         <CaseCardSkeleton />
       </div>
     );
@@ -243,7 +243,7 @@ export default function CaseDetail() {
   const isReporterMe = caseItem.reporter_id === user?.id;
 
   return (
-    <div className="p-4 md:p-8 max-w-2xl mx-auto mb-20 md:mb-0">
+    <div className="mx-auto max-w-7xl px-4 py-6 pb-24 sm:px-6 lg:px-8 lg:py-10 lg:pb-10">
 
       <button
         type="button"
@@ -253,7 +253,7 @@ export default function CaseDetail() {
         ← Back
       </button>
 
-      <Surface className="p-5 mb-5">
+      <Surface className="mb-6 overflow-hidden p-5 sm:p-7">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div>
             <h1 className="text-xl font-black text-stone-800 dark:text-stone-100">
@@ -316,7 +316,7 @@ export default function CaseDetail() {
       </Surface>
 
       {/* ROLE-SPECIFIC ACTIONS */}
-      <Surface className="p-5 mb-5 space-y-3">
+      <Surface className="mb-6 p-5 sm:p-6 space-y-3">
         <p className="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500">
           Actions
         </p>
