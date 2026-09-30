@@ -59,7 +59,7 @@ export default function useOfflineSync() {
       return;
     }
 
-    let queue = [];
+    let queue;
 
     try {
       const stored = localStorage.getItem(
@@ -71,12 +71,14 @@ export default function useOfflineSync() {
         return;
       }
 
-      queue = JSON.parse(stored);
+      const parsedQueue = JSON.parse(stored);
 
-      if (!Array.isArray(queue) || queue.length === 0) {
+      if (!Array.isArray(parsedQueue) || parsedQueue.length === 0) {
         setPendingCases([]);
         return;
       }
+
+      queue = parsedQueue;
     } catch (error) {
       console.error(
         'Failed to read offline queue:',
