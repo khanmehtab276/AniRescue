@@ -31,6 +31,7 @@ const { runMigrations } = require("./src/services/migrations");
 const port = process.env.PORT || 3000;
 
 let server;
+let notificationConsumerTimer;
 
 async function start() {
   try {
@@ -42,6 +43,16 @@ async function start() {
     await connectRabbitMQ();
     startCaseProcessingDispatcher();
     await startCaseNotificationConsumer();
+
+    notificationConsumerTimer = setInterval(() => {
+      startCaseNotificationConsumer().catch((error) => {
+        console.error(
+          "Notification consumer reconnect check failed:",
+          error?.message || error,
+        );
+      });
+    }, 5000);
+    notificationConsumerTimer.unref?.();
 
     server = app.listen(port, "0.0.0.0", () =>
       console.log(`🚀 AniRescue API server listening on port ${port}`),
@@ -66,6 +77,7 @@ const gracefulShutdown = async (signal) => {
       server.close(() => console.log("HTTP server terminated."));
     }
 
+    if (notificationConsumerTimer) clearInterval(notificationConsumerTimer);
     stopCaseProcessingDispatcher();
     await closeRabbitMQ();
 
