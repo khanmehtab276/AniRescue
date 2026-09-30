@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { pool } = require("../config/db");
+const { setAuthCookies, clearAuthCookies } = require("../middleware/auth");
 const { normalizeEnum } = require("../utils/helpers");
 const {
   notifyVolunteerAboutNearbyCases,
