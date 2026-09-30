@@ -470,7 +470,6 @@ const getNearbyVolunteers = async (req, res) => {
           SELECT
             id,
             full_name,
-            email,
             (6371 * acos(LEAST(1, GREATEST(-1,
               cos(radians($1)) * cos(radians(latitude)) *
               cos(radians(longitude) - radians($2))
