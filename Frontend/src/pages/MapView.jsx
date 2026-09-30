@@ -111,12 +111,12 @@ export default function MapView() {
         </div>
       </div>
 
-      {/* Legend */}
+      {/* Legend — matches the same status/tone mapping used by badges and markers. */}
       <div className="flex flex-wrap items-center gap-4 mb-4 px-1">
-        <LegendItem color="#64748b" label="Pending AI review" />
-        <LegendItem color="#e11d48" label="Verified — needs a volunteer" />
-        <LegendItem color="#f59e0b" label="Rescue in progress" />
-        <LegendItem color="#059669" label="Awaiting verification" />
+        <LegendItem color={MARKER_HEX.info} label="AI review" />
+        <LegendItem color={MARKER_HEX.success} label="Verified — awaiting rescue" />
+        <LegendItem color={MARKER_HEX.warning} label="Rescue in progress" />
+        <LegendItem color={MARKER_HEX.info} label="Awaiting verification" />
       </div>
 
       {/* Map Container */}
