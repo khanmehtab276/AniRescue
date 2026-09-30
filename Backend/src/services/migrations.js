@@ -45,6 +45,27 @@ async function runMigrations() {
     }
 
     if (applied.size === 0 && baseline > 0) {
+      const requiredBaseTables = ["users", "rescue_cases"];
+
+      const tableChecks = await Promise.all(
+        requiredBaseTables.map((tableName) =>
+          client.query(
+            `SELECT to_regclass($1) IS NOT NULL AS exists`,
+            [tableName],
+          ),
+        ),
+      );
+
+      const missingTables = requiredBaseTables.filter(
+        (_, index) => !tableChecks[index].rows[0]?.exists,
+      );
+
+      if (missingTables.length > 0) {
+        throw new Error(
+          `Cannot baseline migrations 1-${baseline}: missing required existing schema tables: ${missingTables.join(", ")}. Provision the original AniRescue database schema first.`,
+        );
+      }
+
       for (let version = 1; version <= baseline; version += 1) {
         const name = filesafeMigrationName(version);
         await client.query(
@@ -55,7 +76,8 @@ async function runMigrations() {
         );
         applied.add(version);
       }
-      console.log(`Recorded migration baseline through version ${baseline}.`);
+
+      console.log(`Verified required base tables and recorded migration baseline through version ${baseline}.`);
     }
 
     const files = fs
