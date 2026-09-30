@@ -1447,18 +1447,18 @@ const getCaseDetail = async (req, res) => {
 
     const caseRow = caseResult.rows[0];
 
-    let authorized = false;
+    // A reporter can always access their own case, regardless of role.
+    // Operational roles receive additional access below.
+    let authorized = caseRow.reporter_id === req.user.id;
 
-    if (role === "ADMIN") {
+    if (!authorized && role === "ADMIN") {
       authorized = true;
-    } else if (role === "USER") {
-      authorized = caseRow.reporter_id === req.user.id;
-    } else if (role === "VOLUNTEER") {
+    } else if (!authorized && role === "VOLUNTEER") {
       authorized =
         caseRow.assigned_volunteer_id === req.user.id ||
         (caseRow.status === "VALIDATION_PASSED" &&
           caseRow.assigned_volunteer_id === null);
-    } else if (role === "NGO") {
+    } else if (!authorized && role === "NGO") {
       authorized = await isCaseWithinNgoJurisdiction(req.user.id, caseRow);
     }
 
