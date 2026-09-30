@@ -1,4 +1,5 @@
 const { pool } = require("../config/db");
+const { sendPushNotification } = require("./pushNotifications");
 
 const createNotification = async ({
   userId,
@@ -20,6 +21,71 @@ const createNotification = async ({
   return result.rows[0] || null;
 };
 
+const notifyUser = async ({
+  userId,
+  caseId = null,
+  notificationType,
+  title,
+  message,
+}) => {
+  const notification = await createNotification({
+    userId,
+    caseId,
+    notificationType,
+    title,
+    message,
+  });
+
+  if (!notification) {
+    return null;
+  }
+
+  const tokenResult = await pool.query(
+    `SELECT token
+     FROM device_tokens
+     WHERE user_id = $1
+       AND is_active = TRUE`,
+    [userId],
+  );
+
+  for (const device of tokenResult.rows) {
+    try {
+      await sendPushNotification({
+        token: device.token,
+        title: notification.title,
+        body: notification.message,
+        data: {
+          caseId: caseId ?? "",
+          notificationType,
+        },
+      });
+    } catch (pushError) {
+      const errorCode = pushError?.errorInfo?.code;
+
+      console.error(
+        `⚠️ Notification push failed for User #${userId}:`,
+        pushError?.message || pushError,
+      );
+
+      if (
+        errorCode === "messaging/registration-token-not-registered" ||
+        errorCode === "messaging/invalid-registration-token"
+      ) {
+        await pool.query(
+          `UPDATE device_tokens
+           SET is_active = FALSE,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE token = $1`,
+          [device.token],
+        );
+      }
+    }
+  }
+
+  return notification;
+};
+
 module.exports = {
   createNotification,
+  notifyUser,
 };
