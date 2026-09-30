@@ -19,6 +19,7 @@ const AdminWorkspace = lazy(() => import("./pages/AdminWorkspace.jsx"));
 const Profile = lazy(() => import("./pages/Profile.jsx"));
 const CaseDetail = lazy(() => import("./pages/CaseDetail.jsx"));
 const VerificationQueue = lazy(() => import("./pages/VerificationQueue.jsx"));
+const Notifications = lazy(() => import("./pages/Notifications.jsx"));
 
 function RouteTransition({ children }) {
   const location = useLocation();
@@ -39,6 +40,7 @@ export default function App() {
         <Route element={<ProtectedRoute allowedRoles={ALL}/>}>
           <Route path="/report" element={<ReportCase/>}/>
           <Route path="/profile" element={<Profile/>}/>
+          <Route path="/notifications" element={<Notifications/>}/>
           <Route path="/map" element={<MapView/>}/>
           <Route path="/cases/:id" element={<CaseDetail/>}/>
         </Route>
