@@ -678,6 +678,16 @@ const cancelCase = async (req, res) => {
       );
     }
 
+    if (currentCase.reporter_id && currentCase.reporter_id !== req.user.id) {
+      await notifyUser({
+        userId: currentCase.reporter_id,
+        caseId: id,
+        notificationType: "CASE_CANCELLED",
+        title: "Rescue Case Cancelled",
+        message: `Rescue Case #${id} was cancelled by an administrator.`,
+      });
+    }
+
     apiCache.flushAll();
 
     await logCaseHistory({
