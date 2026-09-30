@@ -1688,6 +1688,7 @@ const getDashboardCases = async (req, res) => {
 };
 
 module.exports = {
+  getUploadSignature,
   reportCase,
   getJunkQueue,
   verifyJunkCase,
