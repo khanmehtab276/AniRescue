@@ -42,13 +42,11 @@ services:
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
-      - FIREBASE_SERVICE_ACCOUNT_PATH=/run/secrets/firebase-service-account.json
+      - FIREBASE_SERVICE_ACCOUNT_JSON=${FIREBASE_SERVICE_ACCOUNT_JSON:-}
       - LOCATION_FRESHNESS_MINUTES=${LOCATION_FRESHNESS_MINUTES}
       - NOTIFICATION_RADIUS_KM=${NOTIFICATION_RADIUS_KM}
       - CORS_ORIGIN=${CORS_ORIGIN}
       - MIGRATIONS_BASELINE_VERSION=${MIGRATIONS_BASELINE_VERSION:-5}
-    volumes:
-      - /home/iamatomic/Downloads/anirescue-a5fd7-firebase-adminsdk-fbsvc-0e1408292f.json:/run/secrets/firebase-service-account.json:ro
     depends_on:
       rabbitmq:
         condition: service_healthy
