@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext.jsx";
 import { ArrowRight, PawPrint, RefreshCw, Siren } from "lucide-react";
 import API from "../utils/api";
 import Surface from "../components/ui/Surface.jsx";
