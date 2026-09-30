@@ -536,6 +536,12 @@ export default function ReportCase() {
                           }
                           zoom={13}
                           scrollWheelZoom={true}
+                          worldCopyJump={false}
+                          maxBounds={[
+                            [-85.05112878, -180],
+                            [85.05112878, 180]
+                          ]}
+                          maxBoundsViscosity={1}
                           className="w-full h-full"
                         >
                           <TileLayer
