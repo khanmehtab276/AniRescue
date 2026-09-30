@@ -23,9 +23,40 @@ const register = async (req, res) => {
     maximumCoverageRadiusKm,
   } = req.body;
 
-  if (!email || !password || !name) {
+  if (
+    typeof name !== "string" ||
+    typeof email !== "string" ||
+    typeof password !== "string" ||
+    !name.trim() ||
+    !email.trim() ||
+    !password
+  ) {
     return res.status(400).json({
       error: "Name, email, and password are required.",
+    });
+  }
+
+  const normalizedName = name.trim();
+  const normalizedEmail = email.trim().toLowerCase();
+
+  if (normalizedName.length < 2 || normalizedName.length > 100) {
+    return res.status(400).json({
+      error: "Name must be between 2 and 100 characters.",
+    });
+  }
+
+  if (
+    normalizedEmail.length > 254 ||
+    !/^\S+@\S+\.\S+$/.test(normalizedEmail)
+  ) {
+    return res.status(400).json({
+      error: "Please provide a valid email address.",
+    });
+  }
+
+  if (password.length < 8 || password.length > 128) {
+    return res.status(400).json({
+      error: "Password must be between 8 and 128 characters.",
     });
   }
 
@@ -103,8 +134,8 @@ const register = async (req, res) => {
          VALUES ($1, $2, $3, $4, $5)
          RETURNING id, full_name, email, role, account_status`,
         [
-          name.trim(),
-          email.toLowerCase().trim(),
+          normalizedName,
+          normalizedEmail,
           passwordHash,
           assignedRole,
           accountStatus,
