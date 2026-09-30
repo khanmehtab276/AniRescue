@@ -2,12 +2,22 @@ const express = require("express");
 const router = express.Router();
 
 const { verifyToken, authorizeRoles } = require("../middleware/auth");
+const { reportLimiter } = require("../middleware/rateLimiter");
 const ctrl = require("../controllers/cases.controller");
+
+router.post(
+  "/upload-signature",
+  verifyToken,
+  authorizeRoles("USER", "VOLUNTEER", "NGO", "ADMIN"),
+  reportLimiter,
+  ctrl.getUploadSignature,
+);
 
 router.post(
   "/report",
   verifyToken,
   authorizeRoles("USER", "VOLUNTEER", "NGO", "ADMIN"),
+  reportLimiter,
   ctrl.reportCase,
 );
 
