@@ -3,8 +3,11 @@ require("dotenv").config();
 // --------------------------------------------------
 // REQUIRED ENVIRONMENT VARIABLES
 // --------------------------------------------------
-if (!process.env.JWT_SECRET) {
-  console.error("❌ JWT_SECRET is missing from environment variables.");
+if (
+  !process.env.JWT_SECRET ||
+  process.env.JWT_SECRET.length < 32
+) {
+  console.error("❌ JWT_SECRET must be set and contain at least 32 characters.");
   process.exit(1);
 }
 
@@ -19,37 +22,38 @@ const { connectRabbitMQ, closeRabbitMQ } = require("./src/config/rabbitmq");
 const {
   startCaseNotificationConsumer,
 } = require("./src/services/caseNotificationConsumer");
-const { Server } = require("socket.io");
+const {
+  startCaseProcessingDispatcher,
+  stopCaseProcessingDispatcher,
+} = require("./src/services/caseProcessingDispatcher");
+const { runMigrations } = require("./src/services/migrations");
 
 const port = process.env.PORT || 3000;
 
-// --------------------------------------------------
-// STARTUP: DB + RABBITMQ
-// --------------------------------------------------
-ensureDbConnection().catch((err) =>
-  console.error("Database connection initialization error:", err),
-);
+let server;
 
-startKeepalive();
+async function start() {
+  try {
+    await ensureDbConnection();
+    await runMigrations();
 
-connectRabbitMQ()
-  .then(() => startCaseNotificationConsumer())
-  .catch((err) =>
-    console.error("RabbitMQ initialization error:", err),
-  );
+    startKeepalive();
 
-// --------------------------------------------------
-// START SERVER
-// --------------------------------------------------
-const server = app.listen(port, "0.0.0.0", () =>
-  console.log(`🚀 AniRescue API server listening on port ${port}`),
-);
+    await connectRabbitMQ();
+    startCaseProcessingDispatcher();
+    await startCaseNotificationConsumer();
 
-const io = new Server(server, {
-  cors: {
-    origin: "*",
-  },
-});
+    server = app.listen(port, "0.0.0.0", () =>
+      console.log(`🚀 AniRescue API server listening on port ${port}`),
+    );
+  } catch (error) {
+    console.error("❌ AniRescue startup failed:", error?.stack || error);
+    process.exit(1);
+  }
+}
+
+start();
+
 
 // --------------------------------------------------
 // GRACEFUL SHUTDOWN
@@ -62,6 +66,7 @@ const gracefulShutdown = async (signal) => {
       server.close(() => console.log("HTTP server terminated."));
     }
 
+    stopCaseProcessingDispatcher();
     await closeRabbitMQ();
 
     if (pool) {
