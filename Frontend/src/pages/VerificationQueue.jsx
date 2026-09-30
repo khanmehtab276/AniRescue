@@ -113,7 +113,7 @@ export default function VerificationQueue() {
                 <img
                   src={caseItem.evidence_image_payload}
                   alt="Rescue evidence"
-                  className="w-full h-40 object-cover rounded-xl mb-3"
+                  className="w-full h-auto object-contain rounded-xl mb-3"
                 />
               )}
 
