@@ -1414,28 +1414,108 @@ const setPriority = async (req, res) => {
   }
 };
 
-// 14. MAP DATA (public — minimal fields only, no description text)
+// 14. MAP DATA — role-scoped exact coordinates
 const getMapData = async (req, res) => {
+  const role = (req.user.role || "").toUpperCase();
+  const cacheKey = `map_data:${role}:${req.user.id}`;
+
   try {
-    if (apiCache.has("map_data")) {
-      return res.json(apiCache.get("map_data"));
+    if (apiCache.has(cacheKey)) {
+      return res.json(apiCache.get(cacheKey));
     }
 
-    const result = await pool.query(
-      `SELECT id, species, priority, latitude, longitude, status
-         FROM rescue_cases
-         WHERE status NOT IN ('RESOLVED', 'REJECTED_JUNK', 'CANCELLED')
-           AND latitude IS NOT NULL AND longitude IS NOT NULL`,
-    );
+    let result;
 
-    apiCache.set("map_data", result.rows);
+    if (role === "ADMIN") {
+      result = await pool.query(
+        `SELECT id, species, priority, latitude, longitude, status
+           FROM rescue_cases
+           WHERE status NOT IN ('RESOLVED', 'REJECTED_JUNK', 'CANCELLED')
+             AND latitude IS NOT NULL
+             AND longitude IS NOT NULL
+           ORDER BY created_at DESC`,
+      );
+    } else if (role === "USER") {
+      // Reporters can see exact map coordinates only for their own cases.
+      result = await pool.query(
+        `SELECT id, species, priority, latitude, longitude, status
+           FROM rescue_cases
+           WHERE reporter_id = $1
+             AND status NOT IN ('RESOLVED', 'REJECTED_JUNK', 'CANCELLED')
+             AND latitude IS NOT NULL
+             AND longitude IS NOT NULL
+           ORDER BY created_at DESC`,
+        [req.user.id],
+      );
+    } else if (role === "VOLUNTEER") {
+      // Volunteers need exact locations for cases they can act on and
+      // cases they are already handling.
+      result = await pool.query(
+        `SELECT id, species, priority, latitude, longitude, status
+           FROM rescue_cases
+           WHERE (
+             assigned_volunteer_id = $1
+             OR (status = 'VALIDATION_PASSED' AND assigned_volunteer_id IS NULL)
+           )
+             AND status NOT IN ('RESOLVED', 'REJECTED_JUNK', 'CANCELLED')
+             AND latitude IS NOT NULL
+             AND longitude IS NOT NULL
+           ORDER BY created_at DESC`,
+        [req.user.id],
+      );
+    } else if (role === "NGO") {
+      // NGOs receive exact coordinates only inside their configured
+      // operating jurisdiction. Missing jurisdiction fails closed.
+      const ngoResult = await pool.query(
+        `SELECT jurisdiction_lat, jurisdiction_lng, jurisdiction_radius_km
+           FROM users
+           WHERE id = $1 AND role = 'NGO'`,
+        [req.user.id],
+      );
 
+      const ngo = ngoResult.rows[0];
+
+      if (
+        !ngo ||
+        ngo.jurisdiction_lat === null ||
+        ngo.jurisdiction_lng === null
+      ) {
+        result = { rows: [] };
+      } else {
+        result = await pool.query(
+          `SELECT * FROM (
+             SELECT id, species, priority, latitude, longitude, status,
+               (6371 * acos(LEAST(1, GREATEST(-1,
+                 cos(radians($1)) * cos(radians(latitude)) *
+                 cos(radians(longitude) - radians($2)) +
+                 sin(radians($1)) * sin(radians(latitude))
+               )))) AS distance_km
+             FROM rescue_cases
+             WHERE status NOT IN ('RESOLVED', 'REJECTED_JUNK', 'CANCELLED')
+               AND latitude IS NOT NULL
+               AND longitude IS NOT NULL
+           ) AS nearby
+           WHERE distance_km <= $3
+           ORDER BY distance_km ASC`,
+          [
+            ngo.jurisdiction_lat,
+            ngo.jurisdiction_lng,
+            ngo.jurisdiction_radius_km ?? 15,
+          ],
+        );
+      }
+    } else {
+      // Fail closed for any unexpected role.
+      result = { rows: [] };
+    }
+
+    apiCache.set(cacheKey, result.rows);
     res.json(result.rows);
   } catch (err) {
     console.error("Map data fetch error:", err);
 
     res.status(500).json({
-      error: "Failed to retrieve active map entries.",
+      error: "Failed to retrieve rescue map entries.",
     });
   }
 };
