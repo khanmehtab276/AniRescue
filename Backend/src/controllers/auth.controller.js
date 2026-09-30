@@ -303,10 +303,30 @@ const logout = async (req, res) => {
 const getCurrentUser = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, full_name, email, role, account_status,
-      jurisdiction_lat, jurisdiction_lng, jurisdiction_radius_km
-      FROM users
-      WHERE id = $1`,
+      `SELECT
+         u.id,
+         u.full_name,
+         u.email,
+         u.role,
+         u.account_status,
+         u.jurisdiction_lat,
+         u.jurisdiction_lng,
+         u.jurisdiction_radius_km,
+         u.availability_status,
+         u.latitude,
+         u.longitude,
+         u.location_updated_at,
+         vp.phone AS volunteer_phone,
+         vp.address AS volunteer_address,
+         np.organization_name,
+         np.contact_person,
+         np.phone AS organization_phone,
+         np.address AS organization_address,
+         np.maximum_coverage_radius_km
+       FROM users u
+       LEFT JOIN volunteer_profiles vp ON vp.user_id = u.id
+       LEFT JOIN ngo_profiles np ON np.user_id = u.id
+       WHERE u.id = $1`,
       [req.user.id],
     );
 
