@@ -1,5 +1,4 @@
-const admin = require("../config/firebase");
-const { getMessaging } = require("firebase-admin/messaging");
+const { getFirebaseAdmin } = require("../config/firebase");
 
 const sendPushNotification = async ({
   token,
@@ -9,6 +8,12 @@ const sendPushNotification = async ({
 }) => {
   if (!token) {
     throw new Error("FCM device token is required.");
+  }
+
+  const admin = getFirebaseAdmin();
+
+  if (!admin) {
+    throw new Error("Push notifications are not configured for this deployment.");
   }
 
   const message = {
@@ -22,7 +27,7 @@ const sendPushNotification = async ({
     ),
   };
 
-  return getMessaging().send(message);
+  return admin.messaging().send(message);
 };
 
 module.exports = {
