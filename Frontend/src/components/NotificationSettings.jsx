@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Bell, BellOff, BellRing } from 'lucide-react';
 import Surface from './ui/Surface.jsx';
 import Button from './ui/Button.jsx';
@@ -82,6 +83,13 @@ export default function NotificationSettings() {
           {isWorking ? 'Enabling...' : 'Enable notifications'}
         </Button>
       )}
+
+      <Link
+        to="/notifications"
+        className="mt-3 flex items-center justify-center rounded-xl border border-stone-200 bg-white px-4 py-3 text-xs font-black text-stone-600 transition-colors hover:border-emerald-200 hover:text-emerald-600 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300 dark:hover:border-emerald-900 dark:hover:text-emerald-400"
+      >
+        Open notification inbox
+      </Link>
     </Surface>
   );
 }
