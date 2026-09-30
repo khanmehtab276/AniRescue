@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext.jsx";
 import { ArrowRight, PawPrint, RefreshCw, Siren } from "lucide-react";
 import API from "../utils/api";
 import Surface from "../components/ui/Surface.jsx";
@@ -22,9 +23,9 @@ export default function UserCases() {
   const visible = cases.filter((c) => filter === "ALL" || (filter === "ACTIVE" ? !["RESOLVED","CANCELLED","REJECTED_JUNK"].includes(c.status) : c.status === filter));
   return <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
     <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950 via-stone-900 to-stone-950 p-6 text-white sm:p-8">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-300">Reporter workspace</p>
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-300">My reports</p>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
-        <div><h1 className="text-3xl font-black sm:text-4xl">My Rescue Cases</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-stone-300">Track every animal report you have submitted.</p></div>
+        <div><h1 className="text-3xl font-black sm:text-4xl">My Rescue Reports</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-stone-300">Track every animal report you have submitted from this account.</p></div>
         <Button as={Link} to="/report" className="bg-emerald-500 hover:bg-emerald-400"><Siren size={16}/> Report animal</Button>
       </div>
     </section>
