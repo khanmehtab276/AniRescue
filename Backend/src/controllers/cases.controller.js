@@ -1451,27 +1451,117 @@ const setPriority = async (req, res) => {
   }
 };
 
-// 14. MAP DATA (public — minimal fields only, no description text)
+// 14. ROLE-SCOPED MAP DATA
 const getMapData = async (req, res) => {
+  const role = (req.user.role || "").toUpperCase();
+  const cacheKey = `map_data:${role}:${req.user.id}`;
+
   try {
-    if (apiCache.has("map_data")) {
-      return res.json(apiCache.get("map_data"));
+    // Map data contains exact coordinates, so never use a shared cache key.
+    if (apiCache.has(cacheKey)) {
+      return res.json(apiCache.get(cacheKey));
     }
 
-    const result = await pool.query(
-      `SELECT id, species, priority, latitude, longitude, status
+    let result;
+
+    if (role === "USER") {
+      result = await pool.query(
+        `SELECT id, species, priority, latitude, longitude, status
+         FROM rescue_cases
+         WHERE reporter_id = $1
+           AND status NOT IN ('RESOLVED', 'REJECTED_JUNK', 'CANCELLED')
+           AND latitude IS NOT NULL
+           AND longitude IS NOT NULL
+         ORDER BY created_at DESC`,
+        [req.user.id],
+      );
+    } else if (role === "VOLUNTEER") {
+      result = await pool.query(
+        `SELECT id, species, priority, latitude, longitude, status
          FROM rescue_cases
          WHERE status NOT IN ('RESOLVED', 'REJECTED_JUNK', 'CANCELLED')
-           AND latitude IS NOT NULL AND longitude IS NOT NULL`,
-    );
+           AND latitude IS NOT NULL
+           AND longitude IS NOT NULL
+           AND (
+             (status = 'VALIDATION_PASSED' AND assigned_volunteer_id IS NULL)
+             OR assigned_volunteer_id = $1
+           )
+         ORDER BY created_at DESC`,
+        [req.user.id],
+      );
+    } else if (role === "NGO") {
+      const ngoResult = await pool.query(
+        `SELECT jurisdiction_lat, jurisdiction_lng, jurisdiction_radius_km
+         FROM users
+         WHERE id = $1
+           AND role = 'NGO'`,
+        [req.user.id],
+      );
 
-    apiCache.set("map_data", result.rows);
+      const ngo = ngoResult.rows[0];
 
-    res.json(result.rows);
+      if (
+        !ngo ||
+        ngo.jurisdiction_lat === null ||
+        ngo.jurisdiction_lng === null ||
+        !ngo.jurisdiction_radius_km
+      ) {
+        return res.json([]);
+      }
+
+      result = await pool.query(
+        `SELECT id, species, priority, latitude, longitude, status
+         FROM (
+           SELECT
+             id,
+             species,
+             priority,
+             latitude,
+             longitude,
+             status,
+             (6371 * acos(LEAST(1, GREATEST(-1,
+               cos(radians($1)) *
+               cos(radians(latitude)) *
+               cos(radians(longitude) - radians($2)) +
+               sin(radians($1)) *
+               sin(radians(latitude))
+             )))) AS distance_km
+           FROM rescue_cases
+           WHERE status NOT IN ('RESOLVED', 'REJECTED_JUNK', 'CANCELLED')
+             AND latitude IS NOT NULL
+             AND longitude IS NOT NULL
+         ) AS nearby
+         WHERE distance_km <= $3
+         ORDER BY id DESC`,
+        [
+          ngo.jurisdiction_lat,
+          ngo.jurisdiction_lng,
+          ngo.jurisdiction_radius_km,
+        ],
+      );
+    } else if (role === "ADMIN") {
+      result = await pool.query(
+        `SELECT id, species, priority, latitude, longitude, status
+         FROM rescue_cases
+         WHERE status NOT IN ('RESOLVED', 'REJECTED_JUNK', 'CANCELLED')
+           AND latitude IS NOT NULL
+           AND longitude IS NOT NULL
+         ORDER BY created_at DESC`,
+      );
+    } else {
+      return res.status(403).json({
+        error: "You are not authorized to access rescue map data.",
+      });
+    }
+
+    const rows = result.rows;
+    apiCache.set(cacheKey, rows);
+
+    return res.json(rows);
   } catch (err) {
     console.error("Map data fetch error:", err);
 
-    res.status(500).json({
+    return res.status(500).json({
       error: "Failed to retrieve active map entries.",
     });
   }
