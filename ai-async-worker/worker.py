@@ -402,14 +402,45 @@ def main():
 
                     # ------------------------------------------
                     # STEP 1:
-                    # PROCESSING_ANALYSIS
+                    # LOAD CASE + MAKE PROCESSING IDEMPOTENT
                     # ------------------------------------------
+
+                    cursor.execute(
+                        """
+                        SELECT status, ai_validated_at
+                        FROM rescue_cases
+                        WHERE id = %s
+                        """,
+                        (report_id,)
+                    )
+
+                    case_row = cursor.fetchone()
+
+                    if not case_row:
+                        raise ValueError(f"Case {report_id} no longer exists.")
+
+                    if case_row[1] is not None:
+                        print(
+                            f"ℹ️ Case {report_id} was already AI-validated; "
+                            "acknowledging duplicate delivery."
+                        )
+                        ch.basic_ack(delivery_tag=method.delivery_tag)
+                        return
+
+                    if case_row[0] not in ("PENDING_VALIDATION", "PROCESSING_ANALYSIS"):
+                        print(
+                            f"ℹ️ Case {report_id} is already in state {case_row[0]}; "
+                            "acknowledging stale delivery."
+                        )
+                        ch.basic_ack(delivery_tag=method.delivery_tag)
+                        return
 
                     cursor.execute(
                         """
                         UPDATE rescue_cases
                         SET status = 'PROCESSING_ANALYSIS'
                         WHERE id = %s
+                          AND ai_validated_at IS NULL
                         """,
                         (report_id,)
                     )
