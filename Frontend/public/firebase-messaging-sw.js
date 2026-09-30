@@ -4,8 +4,9 @@
  * so it never competes with the PWA's caching service worker.
  *
  * The backend sends FCM messages with a `notification` block plus a
- * `data` block (which includes caseId). Web push delivers that as
- * JSON: { notification: { title, body }, data: { ... } }.
+ * `data` block (which includes caseId). Background/closed-app web push
+ * is rendered as an OS notification here. Foreground messages are
+ * handled by Firebase Messaging's onMessage() listener in PushBridge.
  */
 
 self.addEventListener('install', () => self.skipWaiting());
@@ -23,35 +24,17 @@ self.addEventListener('push', (event) => {
   const notification = payload.notification || {};
   const data = payload.data || {};
 
-  const title = notification.title || 'AniRescue';
-  const body = notification.body || '';
+  const title = notification.title || data.title || 'AniRescue';
+  const body = notification.body || data.body || '';
 
   event.waitUntil(
-    (async () => {
-      const windows = await self.clients.matchAll({
-        type: 'window',
-        includeUncontrolled: true,
-      });
-
-      const visible = windows.filter((client) => client.visibilityState === 'visible');
-
-      // App is open and in view: let the page show an in-app toast
-      // instead of also raising an OS notification.
-      if (visible.length > 0) {
-        visible.forEach((client) =>
-          client.postMessage({ type: 'ANIRESCUE_PUSH', title, body, data })
-        );
-        return;
-      }
-
-      await self.registration.showNotification(title, {
-        body,
-        data,
-        icon: '/pwa-192x192.png',
-        badge: '/pwa-192x192.png',
-        tag: data.caseId ? `case-${data.caseId}` : undefined,
-      });
-    })()
+    self.registration.showNotification(title, {
+      body,
+      data,
+      icon: '/pwa-192x192.png',
+      badge: '/pwa-192x192.png',
+      tag: data.caseId ? `case-${data.caseId}` : undefined,
+    }),
   );
 });
 
@@ -80,6 +63,6 @@ self.addEventListener('notificationclick', (event) => {
       }
 
       await self.clients.openWindow(target);
-    })()
+    })(),
   );
 });
