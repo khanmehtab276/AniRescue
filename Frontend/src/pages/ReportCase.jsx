@@ -64,10 +64,9 @@ export default function ReportCase() {
 
   const { user } = useAuth();
   const viewerRole = (user?.role || '').toLowerCase();
-  // Backend only lets the reporter open their own case detail if they are
-  // a USER (or ADMIN). VOLUNTEER/NGO reporters would get a 403 until the
-  // case is verified/in their area, so don't offer a dead-end link.
-  const canOpenOwnCase = viewerRole === 'user' || viewerRole === 'admin';
+  // Every role can report, and the backend always allows a reporter to
+  // access their own case detail.
+  const canOpenOwnCase = Boolean(user?.id);
 
   const {
     isOffline,
