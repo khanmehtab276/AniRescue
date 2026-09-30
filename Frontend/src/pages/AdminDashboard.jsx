@@ -507,7 +507,7 @@ function AdminCaseCard({
           <img
             src={image_payload}
             alt="Reported animal"
-            className="w-full max-h-64 object-cover"
+            className="w-full h-auto object-contain"
             loading="lazy"
           />
         </div>
@@ -703,7 +703,7 @@ function JunkReviewCard({
           <img
             src={image_payload}
             alt="Reported animal"
-            className="w-full max-h-64 object-cover"
+            className="w-full h-auto object-contain"
             loading="lazy"
           />
         </div>
