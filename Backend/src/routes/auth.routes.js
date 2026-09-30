@@ -6,6 +6,7 @@ const { authLimiter } = require("../middleware/rateLimiter");
 const {
   register,
   login,
+  logout,
   getCurrentUser,
   updateJurisdiction,
   updateAvailability,
@@ -16,6 +17,7 @@ const {
 router.post("/register", authLimiter, register);
 router.post("/login", authLimiter, login);
 router.get("/me", verifyToken, getCurrentUser);
+router.post("/logout", verifyToken, logout);
 
 router.put(
   "/jurisdiction",
