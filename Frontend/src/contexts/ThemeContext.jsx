@@ -5,7 +5,8 @@ const ThemeContext = createContext();
 export function ThemeProvider({ children }) {
   // 1. Initialize state with 3 options: 'light', 'dark', or 'system'
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('anirescue_theme') || 'light';
+    const saved = localStorage.getItem('anirescue_theme');
+    return saved === 'dark' ? 'dark' : 'light';
   });
 
   useEffect(() => {
