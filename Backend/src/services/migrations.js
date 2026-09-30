@@ -82,11 +82,11 @@ async function runMigrations() {
 
     const files = fs
       .readdirSync(MIGRATIONS_DIR)
-      .filter((file) => /^\\d+_.+\\.sql$/.test(file))
+      .filter((file) => /^\d+_.+\.sql$/.test(file))
       .sort((a, b) => Number(a) - Number(b));
 
     for (const file of files) {
-      const version = Number(file.match(/^\\d+/)[0]);
+      const version = Number(file.match(/^\d+/)[0]);
       if (applied.has(version)) continue;
 
       if (version <= 5) {
