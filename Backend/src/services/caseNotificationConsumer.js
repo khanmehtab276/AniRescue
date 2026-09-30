@@ -105,7 +105,7 @@ const startCaseNotificationConsumer = async () => {
             AND u.latitude IS NOT NULL
             AND u.longitude IS NOT NULL
             AND u.location_updated_at >=
-                CURRENT_TIMESTAMP - INTERVAL '5 minutes'
+                CURRENT_TIMESTAMP - ($4 * INTERVAL '1 minute')
             AND (
               6371 * acos(
                 LEAST(
@@ -217,11 +217,40 @@ const startCaseNotificationConsumer = async () => {
           error?.stack || error,
         );
 
-        /*
-         * Do not endlessly requeue a malformed notification.
-         * The YOLO result has already been processed successfully.
-         */
-        channel.ack(message);
+        const retryCount = Number(
+          message.properties?.headers?.["x-retry-count"] || 0,
+        );
+
+        if (retryCount < 3) {
+          try {
+            channel.sendToQueue(
+              CASE_NOTIFICATION_QUEUE,
+              message.content,
+              {
+                persistent: true,
+                contentType: "application/json",
+                headers: {
+                  ...(message.properties?.headers || {}),
+                  "x-retry-count": retryCount + 1,
+                },
+              },
+            );
+
+            await channel.waitForConfirms();
+            channel.ack(message);
+          } catch (requeueError) {
+            console.error(
+              "Failed to requeue case notification:",
+              requeueError?.message || requeueError,
+            );
+            channel.nack(message, false, true);
+          }
+        } else {
+          channel.ack(message);
+          console.error(
+            `🛑 Dropping case notification after ${retryCount} retries.`,
+          );
+        }
       }
     },
     { noAck: false },
