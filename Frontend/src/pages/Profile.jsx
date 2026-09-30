@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Activity,
@@ -16,7 +16,6 @@ import {
 import { useAuth } from '../contexts/AuthContext.jsx';
 import NotificationSettings from '../components/NotificationSettings.jsx';
 import API from '../utils/api';
-import Surface from '../components/ui/Surface.jsx';
 import { StatusBadge } from '../components/ui/Badge.jsx';
 
 const ROLE_META = {
