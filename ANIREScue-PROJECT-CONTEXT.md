@@ -1616,3 +1616,44 @@ The goal is not to make AniRescue bigger.
 The goal is to make the existing architecture:
 
 **complete, consistent, secure, stable, understandable, mobile-friendly, and presentation-ready.**
+
+
+## Latest Frontend + Notification Upgrade — September 2026
+
+The `frontend-ux-redesign` branch now includes a completed in-app notification layer on top of the existing FCM push pipeline.
+
+### Notification API
+- `GET /api/notifications?limit=...` — authenticated user's notifications plus unread count.
+- `PATCH /api/notifications/:id/read` — marks only the authenticated user's notification as read.
+- `PATCH /api/notifications/read-all` — marks all of the authenticated user's notifications as read.
+
+All notification reads are user-scoped in SQL; notification IDs cannot be used to read another user's notification.
+
+### Frontend notification UX
+- Persistent notification bell in the main navbar.
+- Unread count badge.
+- Recent notification dropdown.
+- Mark-one-read and mark-all-read actions.
+- Full `/notifications` inbox with All/Unread filtering.
+- Case notifications link directly to `/cases/:id`.
+- PushBridge refreshes the notification UI after foreground/background push events.
+- Existing notification permission controls remain in Profile.
+
+### Reporter notification coverage
+Reporters can now receive in-app/push updates for:
+- AI validation passed.
+- AI validation rejected / human review required.
+- Case claimed.
+- Case released.
+- Rescue evidence submitted.
+- Completion verified / case resolved.
+- Completion rejected.
+- Case cancelled.
+
+Volunteer assignment/claim and completion notifications remain supported by the existing event flow.
+
+### Important implementation rule
+Do not create a frontend notification feed backed by fake/local data. The notification UI must use the authenticated backend notification API and the existing `notifications` database table.
+
+### Validation note
+The GitHub branch was inspected after these changes. Local build execution from this environment is limited because outbound GitHub/DNS access is unavailable, so `npm run build` and runtime tests must be executed on the development machine after pulling the latest branch.
