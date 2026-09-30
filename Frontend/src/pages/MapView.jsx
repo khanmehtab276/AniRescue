@@ -85,8 +85,8 @@ function matches(item, filter) {
 function Stat({ icon, label, value }) {
   return (
     <div className="rounded-2xl border border-stone-200 bg-white p-3 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-stone-800 dark:bg-stone-900 dark:shadow-black/20">
-      <div className="flex items-center gap-2 text-emerald-700">{icon}<span className="text-[10px] font-black uppercase tracking-wider text-stone-400">{label}</span></div>
-      <p className="mt-2 text-xl font-black text-stone-800">{value}</p>
+      <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">{icon}<span className="text-[10px] font-black uppercase tracking-wider text-stone-400">{label}</span></div>
+      <p className="mt-2 text-xl font-black text-stone-800 dark:text-stone-100">{value}</p>
     </div>
   );
 }
