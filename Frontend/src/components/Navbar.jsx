@@ -26,6 +26,7 @@ const NAV = {
   ],
   admin: [
     { label: 'Control Center', path: '/admin', Icon: LayoutDashboard },
+    { label: 'Report Rescue', path: '/report', Icon: Siren, primary: true },
     { label: 'All Rescue Cases', path: '/admin', Icon: ClipboardList },
     { label: 'AI Validation', path: '/admin', Icon: Activity },
     { label: 'Verification', path: '/verification', Icon: ClipboardCheck },
