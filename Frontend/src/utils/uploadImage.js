@@ -1,35 +1,60 @@
+import API from './api.js';
+
 /**
- * Uploads an image file directly to Cloudinary (unsigned upload preset)
- * and returns the resulting secure_url.
- *
- * Extracted from ReportCase.jsx so the same upload path can be reused
- * for rescue-evidence photos without duplicating the fetch/error logic.
+ * Upload an image using a short-lived, server-generated Cloudinary
+ * signature. The Cloudinary API secret never reaches browser code.
  */
 export async function uploadImageToCloudinary(imageFile) {
-  const cloudinaryData = new FormData();
+  if (!(imageFile instanceof File)) {
+    throw new Error('A valid image file is required.');
+  }
 
-  cloudinaryData.append('file', imageFile);
-  cloudinaryData.append('upload_preset', 'anirescue_uploads');
+  if (!imageFile.type.startsWith('image/')) {
+    throw new Error('Only image files can be uploaded.');
+  }
 
-  const cloudRes = await fetch(
-    'https://api.cloudinary.com/v1_1/tsacc3bn/image/upload',
+  if (imageFile.size > 10 * 1024 * 1024) {
+    throw new Error('Image must be 10 MB or smaller.');
+  }
+
+  const signatureResponse = await API.post('/cases/upload-signature');
+  const {
+    cloudName,
+    apiKey,
+    timestamp,
+    signature,
+    resourceType = 'image',
+  } = signatureResponse.data || {};
+
+  if (!cloudName || !apiKey || !timestamp || !signature) {
+    throw new Error('Image upload authorization could not be created.');
+  }
+
+  const formData = new FormData();
+  formData.append('file', imageFile);
+  formData.append('api_key', apiKey);
+  formData.append('timestamp', String(timestamp));
+  formData.append('signature', signature);
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`,
     {
       method: 'POST',
-      body: cloudinaryData
-    }
+      body: formData,
+    },
   );
 
-  const cloudData = await cloudRes.json();
+  const data = await response.json();
 
-  if (!cloudRes.ok) {
+  if (!response.ok) {
     throw new Error(
-      cloudData.error?.message || 'Cloudinary image upload failed.'
+      data.error?.message || 'Cloudinary image upload failed.',
     );
   }
 
-  if (!cloudData.secure_url) {
+  if (!data.secure_url) {
     throw new Error('Cloudinary did not return an image URL.');
   }
 
-  return cloudData.secure_url;
+  return data.secure_url;
 }
