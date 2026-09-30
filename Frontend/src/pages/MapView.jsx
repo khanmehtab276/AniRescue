@@ -9,6 +9,7 @@ import L from 'leaflet';
 
 import API from '../utils/api.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { useTheme } from '../contexts/ThemeContext.jsx';
 import { getStatusConfig, TONE_CLASSES } from '../utils/statusConfig.js';
 
 const CENTER = [19.076, 72.8777];
@@ -83,7 +84,7 @@ function matches(item, filter) {
 
 function Stat({ icon, label, value }) {
   return (
-    <div className="rounded-2xl border border-stone-200 bg-white p-3 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+    <div className="rounded-2xl border border-stone-200 bg-white p-3 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-stone-800 dark:bg-stone-900 dark:shadow-black/20">
       <div className="flex items-center gap-2 text-emerald-700">{icon}<span className="text-[10px] font-black uppercase tracking-wider text-stone-400">{label}</span></div>
       <p className="mt-2 text-xl font-black text-stone-800">{value}</p>
     </div>
@@ -92,9 +93,17 @@ function Stat({ icon, label, value }) {
 
 export default function MapView() {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const role = (user?.role || 'USER').toLowerCase();
   const config = ROLE_CONFIG[role] || ROLE_CONFIG.user;
   const RoleIcon = config.icon;
+  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const tileUrl = isDark
+    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+  const tileAttribution = isDark
+    ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
   const [mapCases, setMapCases] = useState([]);
   const [filter, setFilter] = useState('all');
@@ -131,16 +140,16 @@ export default function MapView() {
     <main className="mx-auto max-w-6xl px-4 pb-24 pt-5 md:px-8 md:pb-8 md:pt-8">
       <header className="mb-5 flex items-start justify-between gap-4 animate-rescue-fade-up">
         <div className="flex min-w-0 gap-3">
-          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700 shadow-sm ring-1 ring-emerald-200">
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700 shadow-sm ring-1 ring-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:ring-emerald-800/60">
             <RoleIcon size={23} />
           </div>
           <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">{config.eyebrow}</p>
-            <h1 className="mt-1 text-2xl font-black tracking-tight text-stone-900 md:text-3xl">{config.title}</h1>
-            <p className="mt-1 max-w-2xl text-sm leading-5 text-stone-500">{config.description}</p>
+            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-400">{config.eyebrow}</p>
+            <h1 className="mt-1 text-2xl font-black tracking-tight text-stone-900 dark:text-stone-50 md:text-3xl">{config.title}</h1>
+            <p className="mt-1 max-w-2xl text-sm leading-5 text-stone-500 dark:text-stone-400">{config.description}</p>
           </div>
         </div>
-        <button onClick={loadMap} disabled={loading} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-stone-200 bg-white text-stone-500 shadow-sm transition-all hover:-translate-y-0.5 hover:text-emerald-700 active:scale-95" aria-label="Refresh map">
+        <button onClick={loadMap} disabled={loading} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-stone-200 bg-white text-stone-500 shadow-sm transition-all dark:border-stone-800 dark:bg-stone-900 dark:text-stone-400 hover:-translate-y-0.5 hover:text-emerald-700 active:scale-95" aria-label="Refresh map">
           <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
         </button>
       </header>
@@ -153,31 +162,31 @@ export default function MapView() {
       </section>
 
       <div className="mb-4 flex gap-2 overflow-x-auto pb-1 rescue-stagger">
-        <div className="flex h-9 shrink-0 items-center gap-2 rounded-xl bg-emerald-50 px-3 text-xs font-bold text-emerald-800"><Filter size={14} /> View</div>
+        <div className="flex h-9 shrink-0 items-center gap-2 rounded-xl bg-emerald-50 px-3 text-xs font-bold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"><Filter size={14} /> View</div>
         {config.filters.map(([value, label]) => (
-          <button key={value} onClick={() => setFilter(value)} className={`shrink-0 rounded-xl px-4 py-2 text-xs font-bold transition-all duration-200 active:scale-95 ${filter === value ? 'bg-emerald-700 text-white shadow-md shadow-emerald-700/20' : 'border border-stone-200 bg-white text-stone-600 hover:-translate-y-0.5 hover:border-emerald-200 hover:text-emerald-700'}`}>
+          <button key={value} onClick={() => setFilter(value)} className={`shrink-0 rounded-xl px-4 py-2 text-xs font-bold transition-all duration-200 active:scale-95 ${filter === value ? 'bg-emerald-700 text-white shadow-md shadow-emerald-700/20' : 'border border-stone-200 bg-white text-stone-600 hover:-translate-y-0.5 hover:border-emerald-200 hover:text-emerald-700 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300 dark:hover:border-emerald-700 dark:hover:text-emerald-300'}`}>
             {label}
           </button>
         ))}
       </div>
 
-      <section className="overflow-hidden rounded-[1.5rem] border border-stone-200 bg-white p-2 shadow-[0_14px_40px_rgba(41,37,36,0.08)] md:p-3">
-        <div className="relative h-[62vh] min-h-[480px] overflow-hidden rounded-[1.15rem] bg-emerald-50">
+      <section className="overflow-hidden rounded-[1.5rem] border border-stone-200 bg-white p-2 shadow-[0_14px_40px_rgba(41,37,36,0.08)] dark:border-stone-800 dark:bg-stone-900 dark:shadow-black/30 md:p-3">
+        <div className="relative h-[62vh] min-h-[480px] overflow-hidden rounded-[1.15rem] bg-emerald-50 dark:bg-stone-950">
           {loading && (
-            <div className="absolute inset-0 z-[1000] grid place-items-center bg-white/90 backdrop-blur-sm">
-              <div className="rounded-2xl border border-stone-200 bg-white px-5 py-4 text-center shadow-xl animate-rescue-pop">
+            <div className="absolute inset-0 z-[1000] grid place-items-center bg-white/90 backdrop-blur-sm dark:bg-stone-950/90">
+              <div className="rounded-2xl border border-stone-200 bg-white px-5 py-4 text-center shadow-xl dark:border-stone-800 dark:bg-stone-900 animate-rescue-pop">
                 <PawPrint size={28} className="mx-auto mb-2 animate-pulse text-emerald-600" />
-                <p className="text-sm font-bold text-stone-700">Loading rescue activity...</p>
+                <p className="text-sm font-bold text-stone-700 dark:text-stone-200">Loading rescue activity...</p>
               </div>
             </div>
           )}
 
           {!loading && error && (
-            <div className="absolute inset-0 z-[1000] grid place-items-center bg-white px-6 text-center">
+            <div className="absolute inset-0 z-[1000] grid place-items-center bg-white px-6 text-center dark:bg-stone-950">
               <div className="animate-rescue-fade-up">
                 <AlertTriangle size={38} className="mx-auto mb-3 text-amber-500" />
-                <p className="font-black text-stone-800">Map unavailable</p>
-                <p className="mt-1 text-sm text-stone-500">{error}</p>
+                <p className="font-black text-stone-800 dark:text-stone-100">Map unavailable</p>
+                <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{error}</p>
                 <button onClick={loadMap} className="mt-4 rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white active:scale-95">Try again</button>
               </div>
             </div>
@@ -185,7 +194,8 @@ export default function MapView() {
 
           {!loading && !error && (
             <MapContainer center={CENTER} zoom={12} minZoom={2} maxBounds={[[-85, -180], [85, 180]]} maxBoundsViscosity={1} className="h-full w-full">
-              <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              <TileLayer attribution={tileAttribution} url={tileUrl}
+                 />
               {visibleCases.map((item) => (
                 <Marker key={item.id} position={[Number(item.latitude), Number(item.longitude)]} icon={markerIcon(item.status, item.priority)}>
                   <Popup>
@@ -210,9 +220,9 @@ export default function MapView() {
 
           {!loading && !error && visibleCases.length === 0 && (
             <div className="pointer-events-none absolute inset-x-4 top-4 z-[500] flex justify-center">
-              <div className="rounded-2xl border border-stone-200 bg-white/95 px-4 py-3 text-center shadow-lg backdrop-blur-sm animate-rescue-pop">
-                <p className="text-sm font-black text-stone-700">No cases match this view</p>
-                <p className="mt-0.5 text-xs text-stone-500">Try another filter.</p>
+              <div className="rounded-2xl border border-stone-200 bg-white/95 px-4 py-3 text-center shadow-lg dark:border-stone-800 dark:bg-stone-900/95 backdrop-blur-sm animate-rescue-pop">
+                <p className="text-sm font-black text-stone-700 dark:text-stone-100">No cases match this view</p>
+                <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">Try another filter.</p>
               </div>
             </div>
           )}
@@ -226,15 +236,15 @@ export default function MapView() {
         </div>
       </section>
 
-      <div className="mt-4 flex items-start gap-2 rounded-2xl bg-emerald-50 px-4 py-3 text-xs leading-5 text-emerald-900 ring-1 ring-emerald-100">
+      <div className="mt-4 flex items-start gap-2 rounded-2xl bg-emerald-50 px-4 py-3 text-xs leading-5 text-emerald-900 ring-1 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-200 dark:ring-emerald-900">
         <Crosshair size={15} className="mt-0.5 shrink-0 text-emerald-700" />
         <p>{config.note}</p>
       </div>
 
       {!loading && !error && mapCases.length === 0 && (
-        <div className="mt-4 rounded-2xl border border-dashed border-stone-300 bg-stone-50 px-5 py-8 text-center">
+        <div className="mt-4 rounded-2xl border border-dashed border-stone-300 bg-stone-50 px-5 py-8 text-center dark:border-stone-700 dark:bg-stone-900">
           <MapPin size={26} className="mx-auto mb-2 text-stone-400" />
-          <p className="text-sm font-bold text-stone-700">{config.empty}</p>
+          <p className="text-sm font-bold text-stone-700 dark:text-stone-200">{config.empty}</p>
         </div>
       )}
     </main>
@@ -242,5 +252,5 @@ export default function MapView() {
 }
 
 function LegendItem({ color, label }) {
-  return <div className="flex items-center gap-2 text-xs font-semibold text-stone-600"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />{label}</div>;
+  return <div className="flex items-center gap-2 text-xs font-semibold text-stone-600 dark:text-stone-300"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />{label}</div>;
 }
