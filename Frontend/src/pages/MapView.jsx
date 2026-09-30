@@ -1,219 +1,246 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import { MapPin, AlertTriangle } from 'lucide-react';
+import {
+  AlertTriangle, Crosshair, Filter, HeartHandshake, MapPin, PawPrint,
+  RefreshCw, Shield, Siren, Users,
+} from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
 import API from '../utils/api.js';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { getStatusConfig, TONE_CLASSES } from '../utils/statusConfig.js';
 
-function LegendItem({ color, label }) {
+const CENTER = [19.076, 72.8777];
+
+const ROLE_CONFIG = {
+  user: {
+    title: 'Your Rescue Map',
+    eyebrow: 'My reports',
+    description: 'Follow the animals you have reported and their rescue progress.',
+    empty: 'You have no active mapped rescue reports.',
+    note: 'Only your own active reports are shown here.',
+    icon: PawPrint,
+    filters: [['all', 'All'], ['active', 'Active'], ['rescue', 'Rescue']],
+  },
+  volunteer: {
+    title: 'Rescue Dispatch',
+    eyebrow: 'Field response',
+    description: 'Find validated cases that need a responder and follow your active rescue.',
+    empty: 'No available or active mapped rescues right now.',
+    note: 'Available cases and your active rescue are shown here.',
+    icon: Siren,
+    filters: [['all', 'All'], ['available', 'Available'], ['urgent', 'Priority'], ['rescue', 'In rescue']],
+  },
+  ngo: {
+    title: 'NGO Rescue Map',
+    eyebrow: 'Local operations',
+    description: 'Monitor active rescue activity within your organisation’s operating area.',
+    empty: 'No active mapped cases are available for your operational view.',
+    note: 'Your NGO operational map is focused on active rescue work.',
+    icon: HeartHandshake,
+    filters: [['all', 'All'], ['available', 'Unassigned'], ['urgent', 'Priority'], ['rescue', 'In rescue']],
+  },
+  admin: {
+    title: 'Rescue Operations',
+    eyebrow: 'System overview',
+    description: 'Monitor active rescue activity across the AniRescue platform.',
+    empty: 'No active mapped rescue cases.',
+    note: 'You are viewing the system-wide active rescue picture.',
+    icon: Shield,
+    filters: [['all', 'All active'], ['available', 'Available'], ['urgent', 'Priority'], ['rescue', 'In rescue']],
+  },
+};
+
+const COLORS = {
+  info: '#64748b',
+  success: '#059669',
+  warning: '#f59e0b',
+  danger: '#e11d48',
+  neutral: '#64748b',
+};
+
+function markerIcon(status, priority) {
+  const tone = getStatusConfig(status).tone;
+  const color = priority === 'CRITICAL' ? '#e11d48' : priority === 'HIGH' ? '#f97316' : COLORS[tone] || COLORS.neutral;
+
+  return L.divIcon({
+    className: 'anirescue-map-marker',
+    html: `<div class="anirescue-marker-core" style="--marker-color:${color}"><span></span></div>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -17],
+  });
+}
+
+function matches(item, filter) {
+  if (filter === 'available') return item.status === 'VALIDATION_PASSED' && !item.assigned_volunteer_id;
+  if (filter === 'urgent') return item.priority === 'CRITICAL' || item.priority === 'HIGH';
+  if (filter === 'rescue') return item.status === 'IN_PROGRESS' || item.status === 'RESCUE_COMPLETED';
+  if (filter === 'active') return item.status !== 'RESCUE_COMPLETED';
+  return true;
+}
+
+function Stat({ icon, label, value }) {
   return (
-    <div className="flex items-center gap-1.5 text-xs font-medium text-stone-500 dark:text-stone-400">
-      <span
-        className="w-2.5 h-2.5 rounded-full shrink-0"
-        style={{ backgroundColor: color }}
-      />
-      {label}
+    <div className="rounded-2xl border border-stone-200 bg-white p-3 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+      <div className="flex items-center gap-2 text-emerald-700">{icon}<span className="text-[10px] font-black uppercase tracking-wider text-stone-400">{label}</span></div>
+      <p className="mt-2 text-xl font-black text-stone-800">{value}</p>
     </div>
   );
 }
 
-// Color-coded pins by urgency instead of Leaflet's default blue marker —
-// red/unassigned needs a volunteer now, amber/in-progress is being
-// handled, emerald/awaiting-verification is nearly resolved.
-const MARKER_HEX = {
-  info: '#64748b',    // slate — still in AI validation
-  success: '#059669', // emerald — verified/nearly resolved
-  warning: '#f59e0b', // amber — rescue in progress
-  danger: '#e11d48',  // rose — rejected (shouldn't normally appear on map)
-  neutral: '#64748b',
-};
-
-function buildMarkerIcon(status) {
-  const { tone } = getStatusConfig(status);
-  const color = MARKER_HEX[tone] || MARKER_HEX.neutral;
-
-  return L.divIcon({
-    className: '',
-    html: `<div style="width:18px;height:18px;border-radius:9999px;background:${color};border:3px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4);"></div>`,
-    iconSize: [18, 18],
-    iconAnchor: [9, 9],
-    popupAnchor: [0, -9],
-  });
-}
-
 export default function MapView() {
+  const { user } = useAuth();
+  const role = (user?.role || 'USER').toLowerCase();
+  const config = ROLE_CONFIG[role] || ROLE_CONFIG.user;
+  const RoleIcon = config.icon;
+
   const [mapCases, setMapCases] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Default map center
-  const defaultCenter = [19.0760, 72.8777];
+  const loadMap = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const { data } = await API.get('/cases/map');
+      const valid = (Array.isArray(data) ? data : []).filter((item) => {
+        const lat = Number(item.latitude);
+        const lng = Number(item.longitude);
+        return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+      });
+      setMapCases(valid);
+    } catch (err) {
+      console.error('Failed to load rescue map:', err);
+      setError(err.response?.data?.error || 'Unable to load rescue cases right now.');
+      setMapCases([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  useEffect(() => {
-    const fetchMapData = async () => {
-      try {
-        setIsLoading(true);
-        setError('');
+  useEffect(() => { loadMap(); }, [role]);
 
-        const response = await API.get('/cases/map');
-
-        const data = Array.isArray(response.data)
-          ? response.data
-          : [];
-
-        // Keep only cases with valid geographic coordinates
-        const validCases = data.filter((caseItem) => {
-          const latitude = Number(caseItem.latitude);
-          const longitude = Number(caseItem.longitude);
-
-          return (
-            Number.isFinite(latitude) &&
-            Number.isFinite(longitude) &&
-            latitude >= -90 &&
-            latitude <= 90 &&
-            longitude >= -180 &&
-            longitude <= 180
-          );
-        });
-
-        setMapCases(validCases);
-      } catch (error) {
-        console.error('Failed to load map pins:', error);
-        setError('Unable to load rescue cases right now.');
-        setMapCases([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchMapData();
-  }, []);
+  const visibleCases = useMemo(() => mapCases.filter((item) => matches(item, filter)), [mapCases, filter]);
+  const urgent = mapCases.filter((item) => item.priority === 'CRITICAL' || item.priority === 'HIGH').length;
+  const available = mapCases.filter((item) => item.status === 'VALIDATION_PASSED' && !item.assigned_volunteer_id).length;
 
   return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto mb-20 md:mb-0 transition-colors duration-300">
-
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm text-emerald-600 dark:text-emerald-400">
-          <MapPin size={22} strokeWidth={2.2} />
+    <main className="mx-auto max-w-6xl px-4 pb-24 pt-5 md:px-8 md:pb-8 md:pt-8">
+      <header className="mb-5 flex items-start justify-between gap-4 animate-rescue-fade-up">
+        <div className="flex min-w-0 gap-3">
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700 shadow-sm ring-1 ring-emerald-200">
+            <RoleIcon size={23} />
+          </div>
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">{config.eyebrow}</p>
+            <h1 className="mt-1 text-2xl font-black tracking-tight text-stone-900 md:text-3xl">{config.title}</h1>
+            <p className="mt-1 max-w-2xl text-sm leading-5 text-stone-500">{config.description}</p>
+          </div>
         </div>
+        <button onClick={loadMap} disabled={loading} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-stone-200 bg-white text-stone-500 shadow-sm transition-all hover:-translate-y-0.5 hover:text-emerald-700 active:scale-95" aria-label="Refresh map">
+          <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
+        </button>
+      </header>
 
-        <div>
-          <h2 className="text-2xl font-extrabold text-stone-900 dark:text-stone-100">
-            Live Rescue Map
-          </h2>
+      <section className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Stat icon={<MapPin size={16} />} label="Mapped" value={mapCases.length} />
+        <Stat icon={<Siren size={16} />} label={role === 'user' ? 'My reports' : 'Available'} value={role === 'user' ? mapCases.length : available} />
+        <Stat icon={<AlertTriangle size={16} />} label="Priority" value={urgent} />
+        <Stat icon={<Users size={16} />} label="View" value={role === 'admin' ? 'Global' : 'Role'} />
+      </section>
 
-          <p className="text-sm font-medium text-stone-500 dark:text-stone-400">
-            Active rescue cases with available location data.
-          </p>
-        </div>
+      <div className="mb-4 flex gap-2 overflow-x-auto pb-1 rescue-stagger">
+        <div className="flex h-9 shrink-0 items-center gap-2 rounded-xl bg-emerald-50 px-3 text-xs font-bold text-emerald-800"><Filter size={14} /> View</div>
+        {config.filters.map(([value, label]) => (
+          <button key={value} onClick={() => setFilter(value)} className={`shrink-0 rounded-xl px-4 py-2 text-xs font-bold transition-all duration-200 active:scale-95 ${filter === value ? 'bg-emerald-700 text-white shadow-md shadow-emerald-700/20' : 'border border-stone-200 bg-white text-stone-600 hover:-translate-y-0.5 hover:border-emerald-200 hover:text-emerald-700'}`}>
+            {label}
+          </button>
+        ))}
       </div>
 
-      {/* Legend — matches the same status/tone mapping used by badges and markers. */}
-      <div className="flex flex-wrap items-center gap-4 mb-4 px-1">
-        <LegendItem color={MARKER_HEX.info} label="AI review" />
-        <LegendItem color={MARKER_HEX.success} label="Verified — awaiting rescue" />
-        <LegendItem color={MARKER_HEX.warning} label="Rescue in progress" />
-        <LegendItem color={MARKER_HEX.info} label="Awaiting verification" />
-      </div>
-
-      {/* Map Container */}
-      <div className="rounded-2xl p-4 md:p-6 transition-colors duration-300 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm">
-
-        <div className="rounded-2xl overflow-hidden h-[60vh] md:h-[70vh] relative border border-stone-200 dark:border-stone-800 z-0">
-
-          {/* Loading */}
-          {isLoading && (
-            <div className="flex h-full items-center justify-center font-bold text-stone-500 dark:text-stone-400">
-              Loading rescue cases...
-            </div>
-          )}
-
-          {/* Error */}
-          {!isLoading && error && (
-            <div className="flex h-full items-center justify-center px-6 text-center">
-              <div>
-                <AlertTriangle size={36} className="mx-auto mb-3 text-amber-500" strokeWidth={2} />
-
-                <p className="font-bold text-stone-700 dark:text-stone-200">
-                  {error}
-                </p>
-
-                <p className="text-sm text-stone-500 dark:text-stone-400 mt-2">
-                  Please try again later.
-                </p>
+      <section className="overflow-hidden rounded-[1.5rem] border border-stone-200 bg-white p-2 shadow-[0_14px_40px_rgba(41,37,36,0.08)] md:p-3">
+        <div className="relative h-[62vh] min-h-[480px] overflow-hidden rounded-[1.15rem] bg-emerald-50">
+          {loading && (
+            <div className="absolute inset-0 z-[1000] grid place-items-center bg-white/90 backdrop-blur-sm">
+              <div className="rounded-2xl border border-stone-200 bg-white px-5 py-4 text-center shadow-xl animate-rescue-pop">
+                <PawPrint size={28} className="mx-auto mb-2 animate-pulse text-emerald-600" />
+                <p className="text-sm font-bold text-stone-700">Loading rescue activity...</p>
               </div>
             </div>
           )}
 
-          {/* Map */}
-          {!isLoading && !error && (
-            <MapContainer
-              center={defaultCenter}
-              zoom={12}
-              minZoom={2}
-              maxBounds={[[-85, -180], [85, 180]]}
-              maxBoundsViscosity={1.0}
-              className="w-full h-full"
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
+          {!loading && error && (
+            <div className="absolute inset-0 z-[1000] grid place-items-center bg-white px-6 text-center">
+              <div className="animate-rescue-fade-up">
+                <AlertTriangle size={38} className="mx-auto mb-3 text-amber-500" />
+                <p className="font-black text-stone-800">Map unavailable</p>
+                <p className="mt-1 text-sm text-stone-500">{error}</p>
+                <button onClick={loadMap} className="mt-4 rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white active:scale-95">Try again</button>
+              </div>
+            </div>
+          )}
 
-              {mapCases.map((caseItem) => {
-                const latitude = Number(caseItem.latitude);
-                const longitude = Number(caseItem.longitude);
-
-                return (
-                  <Marker
-                    key={caseItem.id}
-                    position={[latitude, longitude]}
-                    icon={buildMarkerIcon(caseItem.status)}
-                  >
-                    <Popup className="rounded-xl overflow-hidden shadow-lg">
-                      <div className="p-1 min-w-[180px]">
-
-                        <h4 className="font-bold text-stone-800 text-sm mb-1">
-                          {caseItem.species || 'Unknown Animal'}
-                        </h4>
-
-                        <div className="flex items-center justify-between gap-2">
-                          <span
-                            className={`inline-block px-2 py-1 text-[10px] font-bold rounded-full ${TONE_CLASSES[getStatusConfig(caseItem.status).tone]}`}
-                          >
-                            {getStatusConfig(caseItem.status).shortLabel}
-                          </span>
-
-                          {caseItem.priority && caseItem.priority !== 'STANDARD' && (
-                            <span className="text-[10px] font-semibold text-rose-600">
-                              {caseItem.priority}
-                            </span>
-                          )}
+          {!loading && !error && (
+            <MapContainer center={CENTER} zoom={12} minZoom={2} maxBounds={[[-85, -180], [85, 180]]} maxBoundsViscosity={1} className="h-full w-full">
+              <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              {visibleCases.map((item) => (
+                <Marker key={item.id} position={[Number(item.latitude), Number(item.longitude)]} icon={markerIcon(item.status, item.priority)}>
+                  <Popup>
+                    <div className="min-w-[205px] p-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-wider text-stone-400">Case #{item.id}</p>
+                          <h3 className="mt-0.5 text-sm font-black capitalize text-stone-800">{item.species || 'Animal in need'}</h3>
                         </div>
-
+                        <PawPrint size={18} className="text-emerald-600" />
                       </div>
-                    </Popup>
-                  </Marker>
-                );
-              })}
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${TONE_CLASSES[getStatusConfig(item.status).tone]}`}>{getStatusConfig(item.status).shortLabel}</span>
+                        {item.priority && item.priority !== 'STANDARD' && <span className="rounded-full bg-rose-50 px-2 py-1 text-[10px] font-black text-rose-700">{item.priority}</span>}
+                      </div>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
             </MapContainer>
           )}
 
+          {!loading && !error && visibleCases.length === 0 && (
+            <div className="pointer-events-none absolute inset-x-4 top-4 z-[500] flex justify-center">
+              <div className="rounded-2xl border border-stone-200 bg-white/95 px-4 py-3 text-center shadow-lg backdrop-blur-sm animate-rescue-pop">
+                <p className="text-sm font-black text-stone-700">No cases match this view</p>
+                <p className="mt-0.5 text-xs text-stone-500">Try another filter.</p>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Empty State */}
-        {!isLoading && !error && mapCases.length === 0 && (
-          <div className="text-center py-5">
-            <p className="text-sm font-semibold text-stone-600 dark:text-stone-300">
-              No active rescue cases with valid locations.
-            </p>
-          </div>
-        )}
+        <div className="flex flex-wrap gap-x-5 gap-y-2 px-2 pb-1 pt-3">
+          <LegendItem color="#e11d48" label="Critical" />
+          <LegendItem color="#f97316" label="High" />
+          <LegendItem color="#059669" label="Standard" />
+          <LegendItem color="#64748b" label="AI review" />
+        </div>
+      </section>
 
+      <div className="mt-4 flex items-start gap-2 rounded-2xl bg-emerald-50 px-4 py-3 text-xs leading-5 text-emerald-900 ring-1 ring-emerald-100">
+        <Crosshair size={15} className="mt-0.5 shrink-0 text-emerald-700" />
+        <p>{config.note}</p>
       </div>
-    </div>
+
+      {!loading && !error && mapCases.length === 0 && (
+        <div className="mt-4 rounded-2xl border border-dashed border-stone-300 bg-stone-50 px-5 py-8 text-center">
+          <MapPin size={26} className="mx-auto mb-2 text-stone-400" />
+          <p className="text-sm font-bold text-stone-700">{config.empty}</p>
+        </div>
+      )}
+    </main>
   );
+}
+
+function LegendItem({ color, label }) {
+  return <div className="flex items-center gap-2 text-xs font-semibold text-stone-600"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />{label}</div>;
 }
