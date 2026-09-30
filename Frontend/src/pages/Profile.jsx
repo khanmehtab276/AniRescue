@@ -99,7 +99,7 @@ function Header({ user, role, meta }) {
 
 function UserProfile({ user, cases }) {
   const active = cases.filter((c) => !['RESOLVED', 'REJECTED_JUNK', 'CANCELLED'].includes(c.status)).length;
-  const completed = cases.filter((c) => ['RESOLVED', 'CANCELLED'].includes(c.status)).length;
+  const completed = cases.filter((c) => c.status === 'RESOLVED').length;
 
   return (
     <>
@@ -169,7 +169,7 @@ function NGOProfile({ user, cases }) {
       <Section eyebrow="Organization info" title="Operating details">
         <InfoRow label="Operating base" value={user.organization_address} />
         <InfoRow label="Service radius" value={configured ? `${user.jurisdiction_radius_km} km` : 'Not configured'} />
-        <InfoRow label="Verification status" value={user.account_status === 'ACTIVE' ? '✓ Verified NGO' : (user.account_status || 'Pending')} />
+        <InfoRow label="Account status" value={(user.account_status || 'PENDING').toUpperCase()} />
       </Section>
       <Section eyebrow="Organization" title="Contact information">
         <InfoRow label="Organization" value={user.organization_name} />
@@ -199,7 +199,7 @@ function AdminProfile({ user, cases }) {
       <Section eyebrow="System controls" title="Account & access">
         <InfoRow label="Account status" value={(user.account_status || 'ACTIVE').toUpperCase()} />
         <InfoRow label="Access level" value="Global Administrator" />
-        <InfoRow label="Security logs" value="Audit trail available in administrative workflows" />
+        <InfoRow label="Case audit trail" value="Available from individual case history" />
       </Section>
       <Section eyebrow="Global operations" title="Platform activity">
         <div className="grid gap-3 sm:grid-cols-3">
