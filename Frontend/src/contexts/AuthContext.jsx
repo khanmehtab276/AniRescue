@@ -83,7 +83,17 @@ export function AuthProvider({ children }) {
           jurisdiction_lat: userData.jurisdiction_lat ?? null,
           jurisdiction_lng: userData.jurisdiction_lng ?? null,
           jurisdiction_radius_km: userData.jurisdiction_radius_km ?? null,
-
+          availability_status: userData.availability_status ?? null,
+          latitude: userData.latitude ?? null,
+          longitude: userData.longitude ?? null,
+          location_updated_at: userData.location_updated_at ?? null,
+          volunteer_phone: userData.volunteer_phone ?? null,
+          volunteer_address: userData.volunteer_address ?? null,
+          organization_name: userData.organization_name ?? null,
+          contact_person: userData.contact_person ?? null,
+          organization_phone: userData.organization_phone ?? null,
+          organization_address: userData.organization_address ?? null,
+          maximum_coverage_radius_km: userData.maximum_coverage_radius_km ?? null,
           };
 
         setUser(normalizedUser);
@@ -210,6 +220,17 @@ export function AuthProvider({ children }) {
         jurisdiction_lat: userData.jurisdiction_lat ?? null,
         jurisdiction_lng: userData.jurisdiction_lng ?? null,
         jurisdiction_radius_km: userData.jurisdiction_radius_km ?? null,
+        availability_status: userData.availability_status ?? null,
+        latitude: userData.latitude ?? null,
+        longitude: userData.longitude ?? null,
+        location_updated_at: userData.location_updated_at ?? null,
+        volunteer_phone: userData.volunteer_phone ?? null,
+        volunteer_address: userData.volunteer_address ?? null,
+        organization_name: userData.organization_name ?? null,
+        contact_person: userData.contact_person ?? null,
+        organization_phone: userData.organization_phone ?? null,
+        organization_address: userData.organization_address ?? null,
+        maximum_coverage_radius_km: userData.maximum_coverage_radius_km ?? null,
       };
 
       setUser(normalizedUser);
