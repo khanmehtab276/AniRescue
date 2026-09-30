@@ -78,9 +78,9 @@ export default function Profile() {
 
   return (
 
-    <div className="min-h-[75vh] px-4 pb-10">
+    <div className="min-h-[75vh] px-4 pb-24 sm:px-6 lg:px-8 lg:pb-10">
 
-      <div className="max-w-2xl mx-auto">
+      <div className="mx-auto max-w-6xl">
 
         {/* Profile Header */}
 
@@ -242,11 +242,11 @@ export default function Profile() {
           <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
 
             {role === 'ngo'
-              ? 'Your NGO profile and organization information will appear here.'
+              ? 'Your operating area, rescue queue, volunteer coordination and verification tools are available from the NGO workspace.'
               : role === 'volunteer'
-                ? 'Your volunteer information, availability and rescue activity will appear here.'
+                ? 'Your availability, location freshness and assigned rescue activity are managed from the Rescue Hub.'
                 : role === 'admin'
-                  ? 'Administrative account information and system management options will appear here.'
+                  ? 'Global case operations, AI review, verification and user management are available from the Control Center.'
                   : 'Track every case you\'ve reported and its rescue status.'}
 
           </p>
