@@ -1,24 +1,37 @@
 const admin = require("firebase-admin");
 const fs = require("fs");
 
-const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+let firebaseAdmin = null;
 
-if (!serviceAccountPath) {
-  throw new Error("FIREBASE_SERVICE_ACCOUNT_PATH is not configured.");
+function getFirebaseAdmin() {
+  if (firebaseAdmin) return firebaseAdmin;
+
+  const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+
+  if (!serviceAccountPath || !fs.existsSync(serviceAccountPath)) {
+    return null;
+  }
+
+  try {
+    const serviceAccount = require(serviceAccountPath);
+
+    if (admin.getApps().length === 0) {
+      admin.initializeApp({
+        credential: admin.cert(serviceAccount),
+      });
+    }
+
+    firebaseAdmin = admin;
+    return firebaseAdmin;
+  } catch (error) {
+    console.error(
+      "Firebase Admin initialization failed. Push notifications will remain disabled:",
+      error?.message || error,
+    );
+    return null;
+  }
 }
 
-if (!fs.existsSync(serviceAccountPath)) {
-  throw new Error(
-    `Firebase service account file not found: ${serviceAccountPath}`,
-  );
-}
-
-const serviceAccount = require(serviceAccountPath);
-
-if (admin.getApps().length === 0) {
-  admin.initializeApp({
-    credential: admin.cert(serviceAccount),
-  });
-}
-
-module.exports = admin;
+module.exports = {
+  getFirebaseAdmin,
+};
