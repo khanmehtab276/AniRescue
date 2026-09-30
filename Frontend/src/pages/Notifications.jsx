@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Bell, CheckCheck, Inbox, RefreshCw } from "lucide-react";
+import { Bell, CheckCheck, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import API from "../utils/api";
 import Surface from "../components/ui/Surface.jsx";
