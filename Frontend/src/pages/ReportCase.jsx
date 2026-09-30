@@ -451,7 +451,7 @@ export default function ReportCase() {
                   }}
                   className={`flex-1 py-2.5 rounded-lg text-xs uppercase tracking-wide font-bold transition-all duration-300 ${
                     locationMode === 'auto'
-                      ? 'bg-[#1a1f2e] dark:bg-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.3)]'
+                      ? 'bg-emerald-700 text-white shadow-[0_4px_10px_rgba(5,150,105,0.20)]'
                       : 'text-stone-500 hover:bg-black/5 dark:hover:bg-white/5'
                   }`}
                 >
@@ -465,7 +465,7 @@ export default function ReportCase() {
                   }
                   className={`flex-1 py-2.5 rounded-lg text-xs uppercase tracking-wide font-bold transition-all duration-300 ${
                     locationMode === 'custom'
-                      ? 'bg-[#1a1f2e] dark:bg-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.3)]'
+                      ? 'bg-emerald-700 text-white shadow-[0_4px_10px_rgba(5,150,105,0.20)]'
                       : 'text-stone-500 hover:bg-black/5 dark:hover:bg-white/5'
                   }`}
                 >
@@ -610,7 +610,7 @@ export default function ReportCase() {
             >
               <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3/4 h-5 bg-rose-500 blur-lg rounded-full transition-all duration-300 group-hover:bg-rose-400"></div>
 
-              <div className="relative z-10 w-full bg-[#1a1f2e] dark:bg-black text-white p-4 rounded-xl font-bold text-lg transition-all border-t border-white/20 shadow-[0_8px_20px_rgba(0,0,0,0.4)] flex justify-center items-center gap-2">
+              <div className="relative z-10 w-full bg-emerald-700 text-white p-4 rounded-xl font-bold text-lg transition-all border-t border-white/20 shadow-[0_8px_20px_rgba(0,0,0,0.4)] flex justify-center items-center gap-2">
                 {isSubmitting
                   ? 'Processing...'
                   : isOffline
