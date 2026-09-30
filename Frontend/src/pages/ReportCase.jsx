@@ -324,7 +324,7 @@ export default function ReportCase() {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-lg mx-auto mb-20 md:mb-0 transition-colors duration-300">
+    <div className="mx-auto max-w-5xl px-4 py-6 pb-24 sm:px-6 lg:px-8 lg:py-10 lg:pb-10 transition-colors duration-300">
       <div className="rounded-2xl p-6 md:p-8 relative transition-colors duration-300 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm">
 
         <h2 className="text-2xl font-extrabold mb-6 text-stone-800 dark:text-stone-100 text-center">
@@ -396,7 +396,7 @@ export default function ReportCase() {
             onSubmit={handleSubmit}
           >
 
-            {/* IMAGE */}
+            <div className="space-y-6">{/* IMAGE */}
             <div>
               <input
                 type="file"
@@ -594,7 +594,7 @@ export default function ReportCase() {
               </p>
             </div>
 
-            {/* SUBMIT */}
+            </div><div className="space-y-6"><div className="rounded-2xl border border-stone-200 bg-stone-50 p-5 dark:border-stone-800 dark:bg-stone-950">{/* SUBMIT */}
             <button
               type="submit"
               disabled={
@@ -621,7 +621,7 @@ export default function ReportCase() {
               </div>
             </button>
 
-          </form>
+          </div></div></form>
         )}
       </div>
     </div>
