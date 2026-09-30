@@ -13,6 +13,7 @@ const NAV = {
   ],
   volunteer: [
     { label: 'Rescue Hub', path: '/volunteer', Icon: LayoutDashboard },
+    { label: 'Report Rescue', path: '/report', Icon: Siren, primary: true },
     { label: 'Available Cases', path: '/volunteer/cases', Icon: Search },
     { label: 'Active Rescue', path: '/volunteer/active', Icon: Activity },
     { label: 'Rescue History', path: '/volunteer/history', Icon: ClipboardList },
@@ -20,6 +21,7 @@ const NAV = {
   ],
   ngo: [
     { label: 'Operations', path: '/ngo', Icon: LayoutDashboard },
+    { label: 'Report Rescue', path: '/report', Icon: Siren, primary: true },
     { label: 'Rescue Cases', path: '/ngo/cases', Icon: ClipboardList },
     { label: 'Volunteers', path: '/ngo/volunteers', Icon: Users },
     { label: 'Verification', path: '/verification', Icon: ClipboardCheck },
