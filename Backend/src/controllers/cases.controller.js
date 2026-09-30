@@ -825,8 +825,10 @@ const submitRescueEvidence = async (req, res) => {
              evidence_notes = $2,
              completed_at = NOW()
          WHERE id = $3
+           AND status = 'IN_PROGRESS'
+           AND assigned_volunteer_id = $4
          RETURNING *`,
-      [evidenceImageUrl, notes || null, id],
+      [evidenceImageUrl, notes || null, id, req.user.id],
     );
 
     // The assigned volunteer has finished the rescue.
@@ -1245,6 +1247,7 @@ const verifyCompletion = async (req, res) => {
         `UPDATE rescue_cases
            SET status = 'RESOLVED', verified_by = $1, resolved_at = NOW()
            WHERE id = $2
+             AND status = 'RESCUE_COMPLETED'
            RETURNING *`,
         [req.user.id, id],
       );
@@ -1270,6 +1273,7 @@ const verifyCompletion = async (req, res) => {
         `UPDATE rescue_cases
            SET status = 'IN_PROGRESS', rejection_reason = $1
            WHERE id = $2
+             AND status = 'RESCUE_COMPLETED'
            RETURNING *`,
         [reason, id],
       );
