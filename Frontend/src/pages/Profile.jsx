@@ -153,7 +153,7 @@ function VolunteerProfile({ user, cases }) {
             <p className="mt-1 text-xs text-stone-500">You are not currently assigned to an in-progress rescue.</p>
           </div>
         )}
-        <div className="mt-3"><ActionRow icon={CheckCircle2} title="Rescue history" text={`${completed} completed rescue(s)`} to="/volunteer/history" /></div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2"><ActionRow icon={ClipboardList} title="My reports" text="Track cases reported from this account" to="/my-reports" /><ActionRow icon={CheckCircle2} title="Rescue history" text={`${completed} completed rescue(s)`} to="/volunteer/history" /></div>
       </Section>
     </>
   );
@@ -182,6 +182,7 @@ function NGOProfile({ user, cases }) {
           <ActivityRow icon={Users} label="Volunteers on cases" value={volunteers} tone="sky" />
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <ActionRow icon={ClipboardList} title="My reports" text="Track cases reported from this account" to="/my-reports" />
           <ActionRow icon={ClipboardList} title="View operations" text="Open your jurisdiction-scoped case feed" to="/ngo/cases" />
           <ActionRow icon={Users} title="View volunteers" text="Coordinate available rescue volunteers" to="/ngo/volunteers" />
         </div>
@@ -208,6 +209,7 @@ function AdminProfile({ user, cases }) {
           <ActivityRow icon={Users} label="Case assignments" value={cases.filter((c) => c.assigned_volunteer_id).length} tone="sky" />
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <ActionRow icon={ClipboardList} title="My reports" text="Track cases reported from this account" to="/my-reports" />
           <ActionRow icon={ClipboardList} title="Open case management" text="Manage the global rescue case list" to="/admin/cases" />
           <ActionRow icon={ShieldCheck} title="Review verification" text="Handle cases awaiting verification" to="/verification" />
         </div>
