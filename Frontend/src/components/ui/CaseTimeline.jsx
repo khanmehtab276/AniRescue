@@ -12,18 +12,13 @@ const ACTION_LABELS = {
 };
 
 /**
- * Renders the case_status_history rows returned by GET /api/cases/:id
- * as a vertical timeline. AI-driven transitions (PENDING_VALIDATION ->
- * VALIDATION_PASSED/REJECTED_JUNK) aren't in the history table yet
- * (the worker writes directly to the DB), so we synthesize a single
- * "AI verification" entry from the case's current status when no
- * history exists for that step — this is stated honestly, not implied
- * as a logged event.
+ * Renders only the case_status_history rows returned by GET /api/cases/:id.
+ * AI worker transitions are intentionally not fabricated into the audit trail
+ * because the backend does not currently record them in case_status_history.
  *
- * `friendly` swaps the operational wording (used by
- * volunteer/NGO/admin) for the plain-language version aimed at the
- * person who reported the case — same underlying status, same
- * history, different words.
+ * The final current-state row is derived from the actual case.status so the
+ * user can always see where the case is now without confusing it with a
+ * historical event.
  */
 export default function CaseTimeline({ caseItem, history = [], friendly = false }) {
   const entries = history.map((row) => ({
