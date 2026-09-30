@@ -162,3 +162,15 @@
 .dark .anirescue-marker-core span { border-color: #1c1917; }
 
 .leaflet-container { font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif; }
+
+
+.dark .leaflet-control-zoom a,
+.dark .leaflet-control-attribution {
+  background: #1c1917;
+  color: #d6d3d1;
+  border-color: #44403c;
+}
+.dark .leaflet-control-zoom a:hover { background: #292524; color: #fff; }
+.dark .leaflet-popup-content-wrapper,
+.dark .leaflet-popup-tip { background: #1c1917; color: #f5f5f4; }
+.dark .leaflet-popup-close-button { color: #a8a29e !important; }
