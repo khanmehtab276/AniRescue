@@ -1018,6 +1018,16 @@ const assignCase = async (req, res) => {
       }
     }
 
+    if (result.rows[0].reporter_id && result.rows[0].reporter_id !== req.user.id) {
+      await notifyUser({
+        userId: result.rows[0].reporter_id,
+        caseId,
+        notificationType: "CASE_ASSIGNED",
+        title: "A Volunteer Was Assigned",
+        message: `A volunteer has been assigned to Rescue Case #${caseId}.`,
+      });
+    }
+
     apiCache.flushAll();
 
     await logCaseHistory({
