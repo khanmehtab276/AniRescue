@@ -13,6 +13,8 @@ from PIL import Image
 from pathlib import Path
 from urllib.parse import urlparse
 
+Image.MAX_IMAGE_PIXELS = 20_000_000
+
 # --------------------------------------------------
 # WORKER PATH CONFIGURATION
 # --------------------------------------------------
@@ -55,7 +57,12 @@ MAX_RETRIES = 3
 IMAGE_DOWNLOAD_TIMEOUT = 15
 
 CLOUDINARY_DELIVERY_HOST = "res.cloudinary.com"
-CLOUDINARY_CLOUD_NAME = "tsacc3bn"
+CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME")
+
+if not CLOUDINARY_CLOUD_NAME:
+    raise RuntimeError("CLOUDINARY_CLOUD_NAME is missing from environment variables.")
+
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
 # --------------------------------------------------
 # DATABASE CONNECTION
@@ -188,6 +195,13 @@ def resolve_image_input(image_source):
 
         response.raise_for_status()
 
+        content_length = response.headers.get("Content-Length")
+        if content_length and int(content_length) > MAX_IMAGE_BYTES:
+            raise ValueError("Downloaded image exceeds the 10 MB processing limit.")
+
+        if len(response.content) > MAX_IMAGE_BYTES:
+            raise ValueError("Downloaded image exceeds the 10 MB processing limit.")
+
         # Convert downloaded image to RGB JPEG.
         # This also normalizes formats such as PNG/WebP.
         img = Image.open(
@@ -296,6 +310,7 @@ def main():
             )
 
             channel = connection.channel()
+            channel.confirm_delivery()
 
             channel.queue_declare(
                 queue=QUEUE_NAME,
