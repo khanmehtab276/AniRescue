@@ -1308,6 +1308,18 @@ const verifyCompletion = async (req, res) => {
       }
     }
 
+    if (currentCase.reporter_id && currentCase.reporter_id !== req.user.id) {
+      await notifyUser({
+        userId: currentCase.reporter_id,
+        caseId: id,
+        notificationType: approved ? "CASE_RESOLVED" : "COMPLETION_REJECTED",
+        title: approved ? "Rescue Completed" : "Rescue Needs Review",
+        message: approved
+          ? `Case #${id} has been verified and resolved. Thank you for reporting it.`
+          : `The rescue evidence for Case #${id} needs another review. The rescue remains in progress.`,
+      });
+    }
+
     apiCache.flushAll();
 
     await logCaseHistory({
