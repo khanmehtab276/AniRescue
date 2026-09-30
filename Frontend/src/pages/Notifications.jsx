@@ -12,13 +12,17 @@ export default function Notifications() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError("");
     try {
       const { data } = await API.get("/notifications?limit=100");
       setItems(Array.isArray(data.notifications) ? data.notifications : []);
       setUnreadCount(Number(data.unreadCount) || 0);
+    } catch (err) {
+      setError(err.response?.data?.error || "We could not load your notifications.");
     } finally {
       setLoading(false);
     }
@@ -101,6 +105,12 @@ export default function Notifications() {
           <div className="space-y-3">
             {[1, 2, 3].map((key) => <div key={key} className="h-28 animate-pulse rounded-2xl bg-stone-100 dark:bg-stone-900" />)}
           </div>
+        ) : error ? (
+          <Surface className="p-10">
+            <EmptyState icon="⚠️" title="Could not load notifications" message={error}>
+              <Button onClick={load}>Try again</Button>
+            </EmptyState>
+          </Surface>
         ) : visible.length ? (
           <div className="space-y-3">
             {visible.map((item) => {
