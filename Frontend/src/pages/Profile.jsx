@@ -84,25 +84,25 @@ export default function Profile() {
 
         {/* Profile Header */}
 
-        <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="p-8 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm">
 
           <div className="flex flex-col items-center text-center">
 
             {/* Avatar */}
 
-            <div className="w-24 h-24 rounded-full flex items-center justify-center text-4xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+            <div className="w-24 h-24 rounded-full flex items-center justify-center text-4xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800">
 
               {currentRole.icon}
 
             </div>
 
-            <h1 className="mt-5 text-2xl font-extrabold text-slate-800 dark:text-slate-100">
+            <h1 className="mt-5 text-2xl font-extrabold text-stone-800 dark:text-stone-100">
 
               {user.name || 'User'}
 
             </h1>
 
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
 
               {user.email}
 
@@ -110,7 +110,7 @@ export default function Profile() {
 
             <div className="flex flex-wrap justify-center gap-2 mt-4">
 
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-stone-200 dark:bg-stone-800 text-stone-700 dark:text-stone-300">
 
                 {currentRole.title}
 
@@ -129,7 +129,7 @@ export default function Profile() {
 
             </div>
 
-            <p className="mt-4 max-w-md text-sm text-slate-500 dark:text-slate-400">
+            <p className="mt-4 max-w-md text-sm text-stone-500 dark:text-stone-400">
 
               {currentRole.description}
 
@@ -142,9 +142,9 @@ export default function Profile() {
 
         {/* Account Information */}
 
-        <div className="mt-6 p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="mt-6 p-6 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm">
 
-          <h2 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">
+          <h2 className="text-lg font-extrabold text-stone-800 dark:text-stone-100">
 
             Account Information
 
@@ -154,13 +154,13 @@ export default function Profile() {
 
             <div>
 
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              <p className="text-xs font-bold uppercase tracking-wider text-stone-400">
 
                 Full Name
 
               </p>
 
-              <p className="mt-1 font-semibold text-slate-800 dark:text-slate-100">
+              <p className="mt-1 font-semibold text-stone-800 dark:text-stone-100">
 
                 {user.name || 'Not available'}
 
@@ -170,13 +170,13 @@ export default function Profile() {
 
             <div>
 
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              <p className="text-xs font-bold uppercase tracking-wider text-stone-400">
 
                 Email
 
               </p>
 
-              <p className="mt-1 font-semibold text-slate-800 dark:text-slate-100 break-all">
+              <p className="mt-1 font-semibold text-stone-800 dark:text-stone-100 break-all">
 
                 {user.email}
 
@@ -186,13 +186,13 @@ export default function Profile() {
 
             <div>
 
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              <p className="text-xs font-bold uppercase tracking-wider text-stone-400">
 
                 Account Type
 
               </p>
 
-              <p className="mt-1 font-semibold text-slate-800 dark:text-slate-100">
+              <p className="mt-1 font-semibold text-stone-800 dark:text-stone-100">
 
                 {currentRole.title}
 
@@ -202,13 +202,13 @@ export default function Profile() {
 
             <div>
 
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              <p className="text-xs font-bold uppercase tracking-wider text-stone-400">
 
                 Account Status
 
               </p>
 
-              <p className="mt-1 font-semibold text-slate-800 dark:text-slate-100">
+              <p className="mt-1 font-semibold text-stone-800 dark:text-stone-100">
 
                 {accountStatus}
 
@@ -225,9 +225,9 @@ export default function Profile() {
 
         {/* Role-specific section */}
 
-        <div className="mt-6 p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="mt-6 p-6 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm">
 
-          <h2 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">
+          <h2 className="text-lg font-extrabold text-stone-800 dark:text-stone-100">
 
             {role === 'ngo'
               ? 'Organization'
@@ -239,7 +239,7 @@ export default function Profile() {
 
           </h2>
 
-          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
 
             {role === 'ngo'
               ? 'Your NGO profile and organization information will appear here.'
@@ -298,7 +298,7 @@ export default function Profile() {
 
         <button
           onClick={handleLogout}
-          className="w-full mt-6 py-4 rounded-xl text-base font-bold text-rose-600 dark:text-rose-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:text-rose-700 dark:hover:text-rose-300 active:scale-[0.99] transition-all"
+          className="w-full mt-6 py-4 rounded-xl text-base font-bold text-rose-600 dark:text-rose-400 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm hover:text-rose-700 dark:hover:text-rose-300 active:scale-[0.99] transition-all"
         >
 
           🚪 Logout

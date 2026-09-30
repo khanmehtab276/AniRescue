@@ -94,7 +94,7 @@ export default function Navbar() {
 
         {/* Navigation */}
 
-        <nav className="flex-1 flex items-center gap-1 p-1.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto no-scrollbar">
+        <nav className="flex-1 flex items-center gap-1 p-1.5 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm overflow-x-auto no-scrollbar">
 
           {navLinks.map((link) => {
 
@@ -113,7 +113,7 @@ export default function Navbar() {
                       : 'bg-emerald-600 text-white'
                     : isUrgent
                       ? 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'
-                      : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      : 'text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800'
                 }`}
               >
                 <link.Icon size={15} strokeWidth={2.5} />
@@ -124,13 +124,13 @@ export default function Navbar() {
 
           })}
 
-          <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 mx-1 flex-shrink-0" />
+          <div className="w-px h-6 bg-stone-200 dark:bg-stone-800 mx-1 flex-shrink-0" />
 
           {user ? (
             <button
               type="button"
               onClick={handleLogout}
-              className="flex-shrink-0 p-2 rounded-xl text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="flex-shrink-0 p-2 rounded-xl text-stone-400 dark:text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800"
               aria-label="Log out"
               title="Log out"
             >
@@ -143,7 +143,7 @@ export default function Navbar() {
             className={`flex-shrink-0 p-2 rounded-xl transition-colors duration-150 ${
               location.pathname === (user ? '/profile' : '/login')
                 ? 'bg-emerald-600 text-white'
-                : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                : 'text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800'
             }`}
             aria-label={user ? 'Profile' : 'Login'}
           >
@@ -157,7 +157,7 @@ export default function Navbar() {
 
         <button
           onClick={cycleTheme}
-          className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm text-slate-500 dark:text-slate-400"
+          className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm text-stone-500 dark:text-stone-400"
           aria-label="Toggle Theme"
         >
           <ThemeIcon size={17} strokeWidth={2.5} />

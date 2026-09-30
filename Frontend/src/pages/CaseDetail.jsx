@@ -248,7 +248,7 @@ export default function CaseDetail() {
       <button
         type="button"
         onClick={() => navigate(-1)}
-        className="mb-4 text-sm font-bold text-slate-500 dark:text-slate-400"
+        className="mb-4 text-sm font-bold text-stone-500 dark:text-stone-400"
       >
         ← Back
       </button>
@@ -256,17 +256,17 @@ export default function CaseDetail() {
       <Surface className="p-5 mb-5">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div>
-            <h1 className="text-xl font-black text-slate-800 dark:text-slate-100">
+            <h1 className="text-xl font-black text-stone-800 dark:text-stone-100">
               {caseItem.species || 'Animal Rescue Case'}
             </h1>
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+            <p className="text-xs font-bold text-stone-500 dark:text-stone-400">
               CASE-{caseItem.id} • Reported {new Date(caseItem.created_at).toLocaleDateString()}
             </p>
           </div>
 
           <div className="flex flex-col items-end gap-1.5">
-            <StatusBadge status={caseItem.status} />
-            <PriorityBadge priority={caseItem.priority} />
+            <StatusBadge status={caseItem.status} friendly={role === 'USER'} />
+            {role !== 'USER' && <PriorityBadge priority={caseItem.priority} />}
           </div>
         </div>
 
@@ -279,20 +279,20 @@ export default function CaseDetail() {
         )}
 
         {caseItem.issue_description && (
-          <p className="text-sm text-slate-600 dark:text-slate-300 mb-3">
+          <p className="text-sm text-stone-600 dark:text-stone-300 mb-3">
             {caseItem.issue_description}
           </p>
         )}
 
         {caseItem.manual_address && (
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-stone-500 dark:text-stone-400">
             📍 {caseItem.manual_address}
           </p>
         )}
 
         {caseItem.evidence_image_payload && (
-          <div className="mt-4 pt-4 border-t border-slate-200/60 dark:border-slate-700/40">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
+          <div className="mt-4 pt-4 border-t border-stone-200/60 dark:border-stone-700/40">
+            <p className="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-2">
               Rescue Evidence
             </p>
             <img
@@ -301,7 +301,7 @@ export default function CaseDetail() {
               className="w-full h-48 object-cover rounded-xl"
             />
             {caseItem.evidence_notes && (
-              <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">
+              <p className="text-sm text-stone-600 dark:text-stone-300 mt-2">
                 {caseItem.evidence_notes}
               </p>
             )}
@@ -317,7 +317,7 @@ export default function CaseDetail() {
 
       {/* ROLE-SPECIFIC ACTIONS */}
       <Surface className="p-5 mb-5 space-y-3">
-        <p className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+        <p className="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500">
           Actions
         </p>
 
@@ -346,7 +346,7 @@ export default function CaseDetail() {
 
               {nearby && (
                 nearby.volunteers.length === 0 ? (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <p className="text-sm text-stone-500 dark:text-stone-400">
                     No available volunteers with a recent location were found within {nearby.radiusKm} km
                     {role === 'NGO' ? ' on your volunteer roster' : ''}.
                   </p>
@@ -355,13 +355,13 @@ export default function CaseDetail() {
                     {nearby.volunteers.map((volunteer) => (
                       <li
                         key={volunteer.id}
-                        className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-100 dark:bg-slate-800"
+                        className="flex items-center justify-between gap-3 p-3 rounded-xl bg-stone-100 dark:bg-stone-800"
                       >
                         <div className="min-w-0">
-                          <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                          <p className="text-sm font-bold text-stone-800 dark:text-stone-100 truncate">
                             {volunteer.full_name || 'Volunteer'}
                           </p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                          <p className="text-xs text-stone-500 dark:text-stone-400">
                             {Number(volunteer.distance_km).toFixed(1)} km away
                           </p>
                         </div>
@@ -405,14 +405,14 @@ export default function CaseDetail() {
                     type="file"
                     accept="image/*"
                     onChange={(e) => setEvidenceFile(e.target.files?.[0] || null)}
-                    className="w-full text-sm text-slate-600 dark:text-slate-300"
+                    className="w-full text-sm text-stone-600 dark:text-stone-300"
                   />
                   <textarea
                     value={evidenceNotes}
                     onChange={(e) => setEvidenceNotes(e.target.value)}
                     placeholder="Notes about the rescue (optional)"
                     rows={3}
-                    className="w-full p-3 rounded-xl text-sm bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+                    className="w-full p-3 rounded-xl text-sm bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-200"
                   />
                   <div className="flex gap-2">
                     <Button type="submit" disabled={isActing} className="flex-1">
@@ -456,7 +456,7 @@ export default function CaseDetail() {
                     onChange={(e) => setRejectionReason(e.target.value)}
                     placeholder="Why is this being sent back?"
                     rows={2}
-                    className="w-full p-3 rounded-xl text-sm bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+                    className="w-full p-3 rounded-xl text-sm bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-200"
                   />
                   <div className="flex gap-2">
                     <Button
@@ -479,7 +479,7 @@ export default function CaseDetail() {
         {/* NGO/ADMIN: priority */}
         {(role === 'NGO' || role === 'ADMIN') && (
           <div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1.5">Priority</p>
+            <p className="text-xs text-stone-500 dark:text-stone-400 mb-1.5">Priority</p>
             <div className="flex gap-1.5">
               {PRIORITY_OPTIONS.map((p) => (
                 <button
@@ -490,7 +490,7 @@ export default function CaseDetail() {
                   className={`flex-1 py-2 rounded-lg text-[11px] font-bold transition-all ${
                     (caseItem.priority || 'STANDARD') === p
                       ? 'bg-[#1a1f2e] dark:bg-black text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                      : 'bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400'
                   }`}
                 >
                   {p}
@@ -510,7 +510,7 @@ export default function CaseDetail() {
 
         {/* USER: nothing to do but track */}
         {role === 'USER' && isReporterMe && (
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-stone-500 dark:text-stone-400">
             You'll see updates here as this case moves through verification and rescue.
           </p>
         )}
@@ -520,7 +520,7 @@ export default function CaseDetail() {
           caseItem.status === 'VALIDATION_PASSED' &&
           caseItem.assigned_volunteer_id &&
           !isAssignedToMe && (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-stone-500 dark:text-stone-400">
               This case has already been claimed by another volunteer.
             </p>
           )}
@@ -528,10 +528,10 @@ export default function CaseDetail() {
 
       {/* TIMELINE */}
       <Surface className="p-5">
-        <p className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">
+        <p className="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-4">
           Timeline
         </p>
-        <CaseTimeline caseItem={caseItem} history={history} />
+        <CaseTimeline caseItem={caseItem} history={history} friendly={role === 'USER'} />
       </Surface>
 
       <div className="mt-4 text-center">

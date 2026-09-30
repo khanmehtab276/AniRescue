@@ -1,15 +1,21 @@
 import { getStatusConfig, getPriorityConfig, TONE_CLASSES } from '../../utils/statusConfig';
 import { StatusIcon } from './statusIcons.jsx';
 
-export function StatusBadge({ status, compact = false }) {
+export function StatusBadge({ status, compact = false, friendly = false }) {
   const config = getStatusConfig(status);
+
+  const text = friendly
+    ? config.friendlyLabel || config.label
+    : compact
+      ? config.shortLabel
+      : config.label;
 
   return (
     <span
       className={`inline-flex items-center gap-1 shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full ${TONE_CLASSES[config.tone]}`}
     >
       <StatusIcon name={config.iconName} size={12} strokeWidth={2.5} />
-      {compact ? config.shortLabel : config.label}
+      {text}
     </span>
   );
 }

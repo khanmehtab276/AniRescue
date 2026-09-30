@@ -1,7 +1,7 @@
 import Surface from './Surface.jsx';
 
 const TONE_TEXT = {
-  neutral: 'text-slate-900 dark:text-slate-100',
+  neutral: 'text-stone-900 dark:text-stone-100',
   info: 'text-blue-600 dark:text-blue-400',
   warning: 'text-amber-600 dark:text-amber-400',
   success: 'text-emerald-600 dark:text-emerald-400',
@@ -9,7 +9,7 @@ const TONE_TEXT = {
 };
 
 const TONE_ICON_BG = {
-  neutral: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400',
+  neutral: 'bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400',
   info: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
   warning: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400',
   success: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400',
@@ -34,7 +34,7 @@ export default function BentoStats({ items }) {
 
       <Surface className="col-span-2 sm:col-span-1 p-5 flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+          <p className="text-xs font-semibold uppercase tracking-wide text-stone-400 dark:text-stone-500">
             {primary.label}
           </p>
           <p className={`mt-1 text-3xl font-extrabold ${TONE_TEXT[primary.tone] || TONE_TEXT.neutral}`}>
@@ -53,7 +53,7 @@ export default function BentoStats({ items }) {
         {rest.map((item) => (
           <Surface key={item.label} className="p-4 flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400 dark:text-stone-500">
                 {item.label}
               </p>
               {item.Icon && (

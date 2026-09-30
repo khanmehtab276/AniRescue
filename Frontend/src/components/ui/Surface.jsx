@@ -23,13 +23,13 @@ export default function Surface({
   const base = 'rounded-2xl transition-colors duration-200';
 
   const flat =
-    'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800';
+    'bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800';
 
   const elevated =
-    'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm shadow-slate-200/60 dark:shadow-black/20';
+    'bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm shadow-stone-200/60 dark:shadow-black/20';
 
   const subtle =
-    'bg-slate-100/70 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800/60';
+    'bg-stone-100/70 dark:bg-stone-800/40 border border-stone-200/60 dark:border-stone-800/60';
 
   const variantClass =
     inset || variant === 'subtle' ? subtle : variant === 'flat' ? flat : elevated;

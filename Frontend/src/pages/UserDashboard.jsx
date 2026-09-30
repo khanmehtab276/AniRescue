@@ -59,7 +59,7 @@ export default function UserDashboard() {
           <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
             My AniRescue
           </p>
-          <h1 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">
+          <h1 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100">
             Hi, {user?.name?.split(' ')[0] || 'there'}
           </h1>
         </div>
@@ -109,11 +109,12 @@ export default function UserDashboard() {
           message="Cases you report will show up here so you can track their rescue status."
         />
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 rescue-stagger">
           {cases.map((caseItem) => (
             <CaseCard
               key={caseItem.id}
               caseItem={caseItem}
+              friendly
               action={
                 <Link
                   to={`/cases/${caseItem.id}`}
@@ -129,10 +130,10 @@ export default function UserDashboard() {
 
       {/* Honest placeholder, not fake functionality */}
       <Surface inset className="mt-8 p-5 text-center">
-        <p className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+        <p className="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500">
           Coming Soon
         </p>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
           Adoption feed and rescuer badges are on the roadmap.
         </p>
       </Surface>

@@ -61,7 +61,7 @@ export default function NotificationSettings() {
 
   return (
     <Surface className="mt-6 p-6">
-      <h2 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">
+      <h2 className="text-lg font-extrabold text-stone-800 dark:text-stone-100">
         Notifications
       </h2>
 
@@ -70,7 +70,7 @@ export default function NotificationSettings() {
           <Icon size={20} strokeWidth={2.2} />
         </span>
 
-        <p className="text-sm text-slate-500 dark:text-slate-400">{text}</p>
+        <p className="text-sm text-stone-500 dark:text-stone-400">{text}</p>
       </div>
 
       {permission === 'default' && (

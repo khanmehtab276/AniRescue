@@ -1,7 +1,7 @@
 import Surface from './Surface.jsx';
 
 const COLOR_CLASSES = {
-  neutral: 'text-slate-800 dark:text-slate-100',
+  neutral: 'text-stone-800 dark:text-stone-100',
   info: 'text-blue-500',
   warning: 'text-amber-500',
   success: 'text-emerald-500',
@@ -15,7 +15,7 @@ export default function StatCard({ label, value, tone = 'neutral' }) {
         {value}
       </p>
 
-      <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+      <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-stone-500 dark:text-stone-400">
         {label}
       </p>
     </Surface>

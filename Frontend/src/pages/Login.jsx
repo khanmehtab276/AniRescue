@@ -30,6 +30,7 @@ export default function Login() {
   const { location: detectedLocation, getLocation, isLoading: isLocating } = useLocation();
 
   const [error, setError] = useState(null);
+  const [notice, setNotice] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const { login } = useAuth();
@@ -46,6 +47,7 @@ export default function Login() {
     e.preventDefault();
 
     setError(null);
+    setNotice(null);
 
     if (isRegistering && formData.role === 'VOLUNTEER' && !formData.phone.trim()) {
       setError('Phone number is required for volunteer registration.');
@@ -109,6 +111,29 @@ export default function Login() {
       );
 
       const data = response.data;
+
+      /*
+       * Volunteer and NGO accounts are created as PENDING. The backend
+       * still returns a token, but every protected route rejects it
+       * until the account is activated — so signing them in would drop
+       * them onto a dashboard where every request fails with no
+       * explanation. Don't store the session; tell them what's
+       * actually happening instead.
+       */
+      if (
+        isRegistering &&
+        data.user &&
+        data.user.account_status &&
+        data.user.account_status !== 'ACTIVE'
+      ) {
+        setIsRegistering(false);
+        setFormData(EMPTY_FORM);
+        setNotice(
+          'Thanks for registering. Your account has been created and is waiting to be activated by an AniRescue administrator. You\'ll be able to sign in once that happens.'
+        );
+        return;
+      }
+
       const token = data.token;
 
       if (!token) {
@@ -145,11 +170,6 @@ export default function Login() {
           userData.account_status || 'ACTIVE'
       };
 
-      console.log(
-        'Authenticated user:',
-        normalizedUser
-      );
-
       login(
         normalizedUser,
         token
@@ -182,23 +202,19 @@ export default function Login() {
         err.response?.data?.error ||
         err.response?.data?.message;
 
-      if (backendError) {
-        setError(backendError);
-      } else if (!err.response) {
+      if (!err.response) {
         setError(
-          'Cannot connect to the server. Please ensure the backend is running.'
-        );
-      } else if (err.response.status === 401) {
-        setError(
-          'Invalid email or password.'
+          'Cannot reach AniRescue right now. Check your connection and try again.'
         );
       } else if (
         err.response.status === 403 &&
         err.response.data?.account_status === 'PENDING'
       ) {
         setError(
-          'Your account is awaiting approval. Volunteer and NGO accounts must be activated before you can sign in.'
+          'Your account is still waiting to be activated by an AniRescue administrator. Volunteer and NGO accounts can sign in once that happens.'
         );
+      } else if (backendError) {
+        setError(backendError);
       } else {
         setError(
           'Something went wrong. Please try again.'
@@ -211,34 +227,44 @@ export default function Login() {
   };
 
   const inputCSS =
-    'w-full px-4 py-3 rounded-xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none transition-all duration-300 border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-emerald-500/50';
+    'w-full px-4 py-3 rounded-xl bg-white dark:bg-stone-900 text-stone-800 dark:text-stone-100 outline-none transition-all duration-300 border border-stone-200 dark:border-stone-800 focus:ring-2 focus:ring-emerald-500/50';
 
   return (
     <div className="flex items-center justify-center min-h-[75vh] px-4 transition-colors duration-300">
 
-      <div className="w-full max-w-md p-8 md:p-10 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+      <div className="w-full max-w-md p-8 md:p-10 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm">
 
         {/* Icon */}
-        <div className="w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center text-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+        <div className="w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center text-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800">
           {isRegistering ? '🐾' : '👤'}
         </div>
 
         {/* Heading */}
-        <h2 className="text-2xl font-extrabold text-center text-slate-800 dark:text-slate-100 mb-2">
+        <h2 className="text-2xl font-extrabold text-center text-stone-800 dark:text-stone-100 mb-2">
           {isRegistering
             ? 'Create Account'
             : 'System Access'}
         </h2>
 
-        <p className="text-sm font-medium text-center text-slate-500 dark:text-slate-400 mb-8">
+        <p className="text-sm font-medium text-center text-stone-500 dark:text-stone-400 mb-8">
           {isRegistering
             ? 'Create your AniRescue user account'
             : 'Sign in to access your AniRescue account'}
         </p>
 
+        {/* Notice */}
+        {notice && (
+          <div
+            role="status"
+            className="p-3 mb-6 text-sm font-semibold text-center text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800/50"
+          >
+            {notice}
+          </div>
+        )}
+
         {/* Error */}
         {error && (
-          <div className="p-3 mb-6 text-sm font-bold text-center text-rose-500 bg-rose-100 dark:bg-rose-900/30 rounded-xl shadow-sm border border-rose-200 dark:border-rose-800/50">
+          <div role="alert" className="p-3 mb-6 text-sm font-bold text-center text-rose-500 bg-rose-100 dark:bg-rose-900/30 rounded-xl shadow-sm border border-rose-200 dark:border-rose-800/50">
             {error}
           </div>
         )}
@@ -252,7 +278,7 @@ export default function Login() {
           {/* Name */}
           {isRegistering && (
             <div>
-              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 ml-1 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 mb-2 ml-1 uppercase tracking-wider">
                 Full Name
               </label>
 
@@ -272,11 +298,11 @@ export default function Login() {
           {/* Role */}
           {isRegistering && (
             <div>
-              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 ml-1 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 mb-2 ml-1 uppercase tracking-wider">
                 I am a...
               </label>
 
-              <div className="flex gap-1.5 p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <div className="flex gap-1.5 p-1.5 rounded-xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800">
                 {REGISTER_ROLES.map((option) => (
                   <button
                     key={option.value}
@@ -290,7 +316,7 @@ export default function Login() {
                     className={`flex-1 py-2.5 rounded-lg text-[11px] font-bold transition-all duration-300 flex flex-col items-center gap-1 ${
                       formData.role === option.value
                         ? 'bg-[#1a1f2e] dark:bg-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.3)]'
-                        : 'text-slate-500 dark:text-slate-400'
+                        : 'text-stone-500 dark:text-stone-400'
                     }`}
                   >
                     <span className="text-base">{option.icon}</span>
@@ -406,7 +432,7 @@ export default function Login() {
               </Field>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 ml-1 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 mb-2 ml-1 uppercase tracking-wider">
                   Organization Location
                 </label>
 
@@ -430,7 +456,7 @@ export default function Login() {
                       getLocation();
                     }}
                     disabled={isLocating}
-                    className="w-full py-3 rounded-xl text-sm font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 disabled:opacity-50"
+                    className="w-full py-3 rounded-xl text-sm font-bold bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-200 disabled:opacity-50"
                   >
                     {isLocating ? 'Detecting...' : 'Use My Current Location'}
                   </button>
@@ -442,7 +468,7 @@ export default function Login() {
 
           {/* Email */}
           <div>
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 ml-1 uppercase tracking-wider">
+            <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 mb-2 ml-1 uppercase tracking-wider">
               Email Address
             </label>
 
@@ -460,7 +486,7 @@ export default function Login() {
 
           {/* Password */}
           <div>
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 ml-1 uppercase tracking-wider">
+            <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 mb-2 ml-1 uppercase tracking-wider">
               Password
             </label>
 
@@ -499,7 +525,7 @@ export default function Login() {
         {/* Register / Login switch */}
         <div className="mt-8 text-center">
 
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+          <p className="text-sm font-medium text-stone-500 dark:text-stone-400">
 
             {isRegistering
               ? 'Already have an account? '
@@ -540,7 +566,7 @@ export default function Login() {
 function Field({ label, children }) {
   return (
     <div>
-      <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 ml-1 uppercase tracking-wider">
+      <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 mb-2 ml-1 uppercase tracking-wider">
         {label}
       </label>
 

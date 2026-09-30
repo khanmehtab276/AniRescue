@@ -2,7 +2,8 @@ import { Suspense, lazy } from 'react';
 import {
   BrowserRouter as Router,
   Routes,
-  Route
+  Route,
+  useLocation
 } from 'react-router-dom';
 
 import Navbar from './components/Navbar.jsx';
@@ -62,6 +63,27 @@ const VerificationQueue = lazy(
 );
 
 /* =========================================================
+   ROUTE TRANSITION
+   Re-keys on the path so each page fades in when you navigate.
+   Motion is disabled globally under prefers-reduced-motion.
+   ========================================================= */
+
+function RouteTransition({ children }) {
+  const location = useLocation();
+
+  return (
+    <div
+      id="main-content"
+      tabIndex={-1}
+      key={location.pathname}
+      className="animate-rescue-fade-up outline-none"
+    >
+      {children}
+    </div>
+  );
+}
+
+/* =========================================================
    APP
    ========================================================= */
 
@@ -73,22 +95,32 @@ export default function App() {
 
           <Router>
 
+            <a
+              href="#main-content"
+              className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-emerald-600 focus:text-white focus:font-bold"
+            >
+              Skip to content
+            </a>
+
             <Navbar />
             <PushBridge />
 
             <Suspense
               fallback={
-                <div className="min-h-[75vh] flex items-center justify-center bg-[#e2e8f0] dark:bg-[#0f172a]">
-
+                <div
+                  role="status"
+                  className="min-h-[60vh] flex items-center justify-center"
+                >
                   <div
-                    className="w-12 h-12 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin"
-                    aria-label="Loading"
+                    className="w-10 h-10 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin"
+                    aria-hidden="true"
                   />
-
+                  <span className="sr-only">Loading</span>
                 </div>
               }
             >
 
+              <RouteTransition>
               <Routes>
 
                 {/* =================================================
@@ -105,15 +137,10 @@ export default function App() {
                   element={<Login />}
                 />
 
-                <Route
-                  path="/map"
-                  element={<MapView />}
-                />
-
 
                 {/* =================================================
                     AUTHENTICATED RESCUE REPORTING
-                    
+
                     All authenticated roles can submit a rescue case.
                     Backend authorization remains the final security
                     layer.
@@ -191,7 +218,7 @@ export default function App() {
 
                 {/* =================================================
                     VOLUNTEER AREA
-                    
+
                     Admin is also allowed because admin has broader
                     operational access.
                     ================================================= */}
@@ -217,7 +244,7 @@ export default function App() {
 
                 {/* =================================================
                     ADMIN AREA
-                    
+
                     STRICTLY ADMIN ONLY
                     ================================================= */}
 
@@ -239,7 +266,7 @@ export default function App() {
 
                 {/* =================================================
                     NGO AREA
-                    
+
                     NGO functionality will be verified against the
                     current backend implementation separately.
                     ================================================= */}
@@ -280,6 +307,11 @@ export default function App() {
                 >
 
                   <Route
+                    path="/map"
+                    element={<MapView />}
+                  />
+
+                  <Route
                     path="/cases/:id"
                     element={<CaseDetail />}
                   />
@@ -315,6 +347,7 @@ export default function App() {
                 />
 
               </Routes>
+              </RouteTransition>
 
             </Suspense>
 

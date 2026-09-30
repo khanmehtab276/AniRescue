@@ -116,7 +116,7 @@ export default function VolunteerDashboard() {
           <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
             Volunteer Hub
           </p>
-          <h1 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">
+          <h1 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100">
             Which rescue needs you now?
           </h1>
         </div>
@@ -149,7 +149,7 @@ export default function VolunteerDashboard() {
               className={`flex-1 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all duration-300 ${
                 activeTab === tab.id
                   ? 'bg-[#1a1f2e] dark:bg-black text-white'
-                  : 'text-slate-500 dark:text-slate-400'
+                  : 'text-stone-500 dark:text-stone-400'
               }`}
             >
               {tab.label} ({tabCounts[tab.id]})
@@ -179,7 +179,7 @@ export default function VolunteerDashboard() {
           }
         />
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 rescue-stagger">
           {displayedCases.map((caseItem) => (
             <CaseCard
               key={caseItem.id}

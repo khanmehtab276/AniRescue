@@ -4,6 +4,7 @@ import {
   useState,
   useEffect
 } from 'react';
+import { PawPrint } from 'lucide-react';
 
 import API from '../utils/api';
 
@@ -238,15 +239,22 @@ export function AuthProvider({ children }) {
         children
       ) : (
 
-        <div className="flex h-screen w-full items-center justify-center bg-[#e2e8f0] dark:bg-[#0f172a]">
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex h-screen w-full items-center justify-center bg-stone-50 dark:bg-stone-950"
+        >
 
-          <div className="flex flex-col items-center gap-4 p-8 rounded-[2rem] bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[10px_10px_20px_#cbd5e1,_-10px_-10px_20px_#f8fafc] dark:shadow-[10px_10px_20px_#070a13,_-10px_-10px_20px_#172441]">
+          <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm">
 
-            <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441]">
+            <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-900/20">
 
-              <span className="text-2xl animate-bounce">
-                🐾
-              </span>
+              <PawPrint
+                size={26}
+                strokeWidth={2}
+                className="text-emerald-600 dark:text-emerald-400"
+                aria-hidden="true"
+              />
 
               <div className="absolute inset-0 rounded-full border-2 border-emerald-500/20 border-t-emerald-500 animate-spin" />
 
@@ -254,11 +262,11 @@ export function AuthProvider({ children }) {
 
             <div className="text-center">
 
-              <p className="text-sm font-extrabold text-gray-800 dark:text-gray-100">
+              <p className="text-sm font-extrabold text-stone-800 dark:text-stone-100">
                 AniRescue
               </p>
 
-              <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 animate-pulse mt-1">
+              <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-1">
                 Authenticating session...
               </p>
 

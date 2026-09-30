@@ -9,7 +9,7 @@ import { getStatusConfig, TONE_CLASSES } from '../utils/statusConfig.js';
 
 function LegendItem({ color, label }) {
   return (
-    <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+    <div className="flex items-center gap-1.5 text-xs font-medium text-stone-500 dark:text-stone-400">
       <span
         className="w-2.5 h-2.5 rounded-full shrink-0"
         style={{ backgroundColor: color }}
@@ -96,16 +96,16 @@ export default function MapView() {
 
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
-        <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm text-emerald-600 dark:text-emerald-400">
+        <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm text-emerald-600 dark:text-emerald-400">
           <MapPin size={22} strokeWidth={2.2} />
         </div>
 
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">
+          <h2 className="text-2xl font-extrabold text-stone-900 dark:text-stone-100">
             Live Rescue Map
           </h2>
 
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+          <p className="text-sm font-medium text-stone-500 dark:text-stone-400">
             Active rescue cases with available location data.
           </p>
         </div>
@@ -120,13 +120,13 @@ export default function MapView() {
       </div>
 
       {/* Map Container */}
-      <div className="rounded-2xl p-4 md:p-6 transition-colors duration-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+      <div className="rounded-2xl p-4 md:p-6 transition-colors duration-300 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm">
 
-        <div className="rounded-2xl overflow-hidden h-[60vh] md:h-[70vh] relative border border-slate-200 dark:border-slate-800 z-0">
+        <div className="rounded-2xl overflow-hidden h-[60vh] md:h-[70vh] relative border border-stone-200 dark:border-stone-800 z-0">
 
           {/* Loading */}
           {isLoading && (
-            <div className="flex h-full items-center justify-center font-bold text-slate-500 dark:text-slate-400">
+            <div className="flex h-full items-center justify-center font-bold text-stone-500 dark:text-stone-400">
               Loading rescue cases...
             </div>
           )}
@@ -137,11 +137,11 @@ export default function MapView() {
               <div>
                 <AlertTriangle size={36} className="mx-auto mb-3 text-amber-500" strokeWidth={2} />
 
-                <p className="font-bold text-slate-700 dark:text-slate-200">
+                <p className="font-bold text-stone-700 dark:text-stone-200">
                   {error}
                 </p>
 
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                <p className="text-sm text-stone-500 dark:text-stone-400 mt-2">
                   Please try again later.
                 </p>
               </div>
@@ -176,7 +176,7 @@ export default function MapView() {
                     <Popup className="rounded-xl overflow-hidden shadow-lg">
                       <div className="p-1 min-w-[180px]">
 
-                        <h4 className="font-bold text-slate-800 text-sm mb-1">
+                        <h4 className="font-bold text-stone-800 text-sm mb-1">
                           {caseItem.species || 'Unknown Animal'}
                         </h4>
 
@@ -207,7 +207,7 @@ export default function MapView() {
         {/* Empty State */}
         {!isLoading && !error && mapCases.length === 0 && (
           <div className="text-center py-5">
-            <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+            <p className="text-sm font-semibold text-stone-600 dark:text-stone-300">
               No active rescue cases with valid locations.
             </p>
           </div>

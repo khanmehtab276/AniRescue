@@ -77,10 +77,10 @@ export default function VerificationQueue() {
         <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
           Verification
         </p>
-        <h1 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">
+        <h1 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100">
           Awaiting Your Review
         </h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
+        <p className="text-sm text-stone-500 dark:text-stone-400">
           Rescue evidence submitted by volunteers, pending sign-off.
         </p>
       </div>
@@ -94,15 +94,15 @@ export default function VerificationQueue() {
           message="No rescue completions are currently waiting for verification."
         />
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 rescue-stagger">
           {cases.map((caseItem) => (
             <Surface key={caseItem.id} className="p-5">
               <div className="flex items-start justify-between gap-3 mb-3">
                 <Link to={`/cases/${caseItem.id}`} className="min-w-0">
-                  <h3 className="font-bold text-slate-800 dark:text-slate-100">
+                  <h3 className="font-bold text-stone-800 dark:text-stone-100">
                     {caseItem.species || 'Animal Rescue Case'} — CASE-{caseItem.id}
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-stone-500 dark:text-stone-400">
                     Completed {new Date(caseItem.completed_at).toLocaleString()}
                   </p>
                 </Link>
@@ -118,7 +118,7 @@ export default function VerificationQueue() {
               )}
 
               {caseItem.evidence_notes && (
-                <p className="text-sm text-slate-600 dark:text-slate-300 mb-3">
+                <p className="text-sm text-stone-600 dark:text-stone-300 mb-3">
                   {caseItem.evidence_notes}
                 </p>
               )}
@@ -130,7 +130,7 @@ export default function VerificationQueue() {
                     onChange={(e) => setReason(e.target.value)}
                     placeholder="Why send this back?"
                     rows={2}
-                    className="w-full p-3 rounded-xl text-sm bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+                    className="w-full p-3 rounded-xl text-sm bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-200"
                   />
                   <div className="flex gap-2">
                     <Button

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { PawPrint, HardHat, Building2 } from 'lucide-react';
+import { PawPrint, HardHat, Building2, Camera, ShieldCheck, HeartHandshake } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import Surface from '../components/ui/Surface.jsx';
 import Button from '../components/ui/Button.jsx';
@@ -18,36 +18,41 @@ export default function Landing() {
   const dashboardPath = DASHBOARD_PATH[role] || '/dashboard';
 
   return (
-    <main className="min-h-screen px-4 pb-24">
+    <main className="relative min-h-screen px-4 pb-24 overflow-hidden">
 
-      <div className="max-w-md mx-auto">
+      {/* Warm wash behind the hero — decorative only */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[520px]">
+        <div className="absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full bg-emerald-200/50 dark:bg-emerald-900/20 blur-3xl" />
+        <div className="absolute top-10 -right-24 w-[360px] h-[360px] rounded-full bg-amber-200/50 dark:bg-amber-900/15 blur-3xl" />
+      </div>
+
+      <div className="relative max-w-md md:max-w-4xl mx-auto">
 
         {/* Hero — ONE clear action, not a Report+Map button pair */}
-        <section className="pt-10 pb-12 text-center">
+        <section className="pt-10 pb-12 text-center animate-rescue-fade-up">
 
-          <div className="inline-flex items-center justify-center w-16 h-16 mb-6 rounded-2xl bg-emerald-600 text-white">
-            <PawPrint size={30} strokeWidth={2.2} />
+          <div className="inline-flex items-center justify-center w-16 h-16 mb-6 rounded-2xl bg-emerald-600 text-white shadow-sm">
+            <PawPrint size={30} strokeWidth={2.2} aria-hidden="true" />
           </div>
 
-          <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-400">
             AniRescue
           </p>
 
-          <h1 className="text-4xl md:text-5xl font-extrabold leading-tight text-slate-900 dark:text-slate-100">
-            Coordinated
-            <span className="block text-emerald-600 dark:text-emerald-400">
-              Animal Rescue
+          <h1 className="text-4xl md:text-6xl font-extrabold leading-tight text-stone-900 dark:text-stone-100">
+            Every report can help
+            <span className="block text-emerald-700 dark:text-emerald-400">
+              save an animal.
             </span>
           </h1>
 
-          <p className="mt-5 text-sm leading-6 text-slate-500 dark:text-slate-400">
-            AniRescue connects people who report animal emergencies with
-            the volunteers and organizations who respond — backed by
-            AI-assisted image validation and a verified rescue workflow
-            from report to resolution.
+          <p className="mt-5 mx-auto max-w-xl text-sm md:text-base leading-6 text-stone-600 dark:text-stone-400">
+            AniRescue connects people who spot an animal in trouble with the
+            volunteers and organizations who can help — with an AI check on
+            every photo and a verified outcome for every rescue.
           </p>
 
-          <div className="mt-8">
+          <div className="mt-8 mx-auto max-w-xs">
             {user ? (
               <Button as={Link} to={dashboardPath} size="lg" className="w-full">
                 Go to My Dashboard
@@ -58,6 +63,18 @@ export default function Landing() {
               </Button>
             )}
           </div>
+
+          {/* The journey, at a glance */}
+          <ol
+            aria-label="How a report becomes a rescue"
+            className="mt-12 mx-auto max-w-xl flex items-start justify-center gap-2 sm:gap-4 rescue-stagger"
+          >
+            <JourneyStop Icon={Camera} label="Report" />
+            <JourneyLink />
+            <JourneyStop Icon={ShieldCheck} label="Verified" />
+            <JourneyLink />
+            <JourneyStop Icon={HeartHandshake} label="Rescued" />
+          </ol>
 
         </section>
 
@@ -70,12 +87,12 @@ export default function Landing() {
               How it works
             </p>
 
-            <h2 className="mt-1 text-2xl font-extrabold text-slate-900 dark:text-slate-100">
+            <h2 className="mt-1 text-2xl font-extrabold text-stone-900 dark:text-stone-100">
               From Report to Resolution
             </h2>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 md:space-y-0 md:grid md:grid-cols-2 md:gap-3">
 
             <Step
               number="01"
@@ -115,7 +132,7 @@ export default function Landing() {
             </p>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 md:space-y-0 md:grid md:grid-cols-3 md:gap-3">
 
             <FeatureCard
               Icon={PawPrint}
@@ -159,11 +176,11 @@ function FeatureCard({ Icon, title, description }) {
         </Surface>
 
         <div>
-          <h3 className="font-bold text-slate-900 dark:text-slate-100">
+          <h3 className="font-bold text-stone-900 dark:text-stone-100">
             {title}
           </h3>
 
-          <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-sm leading-6 text-stone-500 dark:text-stone-400">
             {description}
           </p>
         </div>
@@ -187,15 +204,39 @@ function Step({ number, title, description }) {
       </div>
 
       <div>
-        <h3 className="font-bold text-slate-900 dark:text-slate-100">
+        <h3 className="font-bold text-stone-900 dark:text-stone-100">
           {title}
         </h3>
 
-        <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+        <p className="mt-1 text-xs leading-5 text-stone-500 dark:text-stone-400">
           {description}
         </p>
       </div>
 
     </Surface>
+  );
+}
+
+
+/* =========================================================
+   JOURNEY (hero)
+========================================================= */
+
+function JourneyStop({ Icon, label }) {
+  return (
+    <li className="flex flex-col items-center gap-2 w-20">
+      <span className="w-14 h-14 rounded-2xl flex items-center justify-center bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm text-emerald-700 dark:text-emerald-400">
+        <Icon size={24} strokeWidth={2} aria-hidden="true" />
+      </span>
+      <span className="text-xs font-bold text-stone-700 dark:text-stone-300">
+        {label}
+      </span>
+    </li>
+  );
+}
+
+function JourneyLink() {
+  return (
+    <li aria-hidden="true" className="mt-7 h-px w-6 sm:w-12 bg-emerald-600/40" />
   );
 }

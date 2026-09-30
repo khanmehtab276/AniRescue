@@ -28,10 +28,10 @@ export default function AvailabilityToggle({
     <Surface className="p-4 mb-6">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+          <p className="text-xs font-bold uppercase tracking-wide text-stone-400 dark:text-stone-500">
             Your availability
           </p>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+          <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
             {summary}
           </p>
         </div>
@@ -44,7 +44,7 @@ export default function AvailabilityToggle({
           <div
             role="group"
             aria-label="Availability"
-            className="flex shrink-0 gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800"
+            className="flex shrink-0 gap-1 p-1 rounded-xl bg-stone-100 dark:bg-stone-800"
           >
             <button
               type="button"
@@ -54,7 +54,7 @@ export default function AvailabilityToggle({
               className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors disabled:cursor-default ${
                 isAvailable
                   ? 'bg-emerald-600 text-white'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100'
+                  : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-100'
               }`}
             >
               <Radio size={14} strokeWidth={2.5} /> Available
@@ -67,8 +67,8 @@ export default function AvailabilityToggle({
               aria-pressed={isOffline}
               className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors disabled:cursor-default ${
                 isOffline
-                  ? 'bg-slate-700 dark:bg-slate-600 text-white'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100'
+                  ? 'bg-stone-700 dark:bg-stone-600 text-white'
+                  : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-100'
               }`}
             >
               <PowerOff size={14} strokeWidth={2.5} /> Offline
