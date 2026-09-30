@@ -59,6 +59,11 @@
     }
   }
 
+  @keyframes rescue-popover {
+    from { opacity: 0; transform: translateY(-6px) scale(0.97); filter: blur(2px); }
+    to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  }
+
   @keyframes rescue-pop {
     0% {
       opacity: 0;
@@ -88,6 +93,10 @@
 
   .animate-rescue-fade-up {
     animation: rescue-fade-up 0.35s ease-out both;
+  }
+
+  .animate-rescue-popover {
+    animation: rescue-popover 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   .animate-rescue-pop {
