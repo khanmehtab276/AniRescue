@@ -63,7 +63,6 @@ export default function ReportCase() {
   } = useLocation();
 
   const { user } = useAuth();
-  const viewerRole = (user?.role || '').toLowerCase();
   // Every role can report, and the backend always allows a reporter to
   // access their own case detail.
   const canOpenOwnCase = Boolean(user?.id);
