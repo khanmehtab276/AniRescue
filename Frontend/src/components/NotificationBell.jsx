@@ -147,7 +147,7 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="fixed right-2 top-[4.5rem] z-[70] w-[calc(100vw-1rem)] max-w-[390px] overflow-hidden rounded-3xl border border-stone-200/80 bg-white/95 shadow-2xl shadow-stone-950/15 backdrop-blur-2xl dark:border-stone-800 dark:bg-stone-900/95 sm:absolute sm:right-0 sm:top-[3.25rem] sm:w-[min(92vw,390px)]">
+        <div className="fixed right-2 top-[4.5rem] z-[70] w-[calc(100vw-1rem)] max-w-[390px] overflow-hidden rounded-3xl border border-stone-200/80 bg-white/72 shadow-2xl shadow-stone-950/20 ring-1 ring-black/5 backdrop-blur-3xl backdrop-saturate-150 animate-rescue-popover dark:border-stone-800 dark:bg-stone-900/72 sm:absolute sm:right-0 sm:top-[3.25rem] sm:w-[min(92vw,390px)]">
           <div className="flex items-center justify-between border-b border-stone-100 px-4 py-4 dark:border-stone-800">
             <div>
               <p className="text-sm font-black text-stone-900 dark:text-white">Notifications</p>
