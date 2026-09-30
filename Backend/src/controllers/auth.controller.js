@@ -293,6 +293,12 @@ const login = async (req, res) => {
   }
 };
 
+const logout = async (req, res) => {
+  clearAuthCookies(res);
+  res.set("Cache-Control", "no-store");
+  res.status(204).end();
+};
+
 // CURRENT USER
 const getCurrentUser = async (req, res) => {
   try {
@@ -576,4 +582,4 @@ const registerDeviceToken = async (req, res) => {
   }
 };
 
-module.exports = { register, login, getCurrentUser, updateJurisdiction, updateAvailability, updateLocation, registerDeviceToken};
+module.exports = { register, login, logout, getCurrentUser, updateJurisdiction, updateAvailability, updateLocation, registerDeviceToken };
