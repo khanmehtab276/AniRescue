@@ -4,7 +4,7 @@ const apiCache = require("../utils/cache");
 const { normalizeEnum } = require("../utils/helpers");
 const { logCaseHistory } = require("../utils/caseHistory");
 const { haversineKm } = require("../utils/geo");
-const { createNotification } = require("../utils/notifications");
+const { createNotification, notifyUser } = require("../utils/notifications");
 const { sendPushNotification } = require("../utils/pushNotifications");
 const {
   canCancel,
@@ -596,6 +596,16 @@ const claimCase = async (req, res) => {
       }
     }
 
+    if (result.rows[0].reporter_id && result.rows[0].reporter_id !== claimantID) {
+      await notifyUser({
+        userId: result.rows[0].reporter_id,
+        caseId,
+        notificationType: "CASE_CLAIMED",
+        title: "Your Rescue Case Was Claimed",
+        message: `Rescue Case #${caseId} has been taken up for rescue.`,
+      });
+    }
+
     apiCache.flushAll();
 
     await logCaseHistory({
@@ -623,7 +633,7 @@ const cancelCase = async (req, res) => {
 
   try {
     const caseResult = await pool.query(
-      `SELECT status, assigned_volunteer_id FROM rescue_cases WHERE id = $1`,
+      `SELECT status, assigned_volunteer_id, reporter_id FROM rescue_cases WHERE id = $1`,
       [id],
     );
 
@@ -749,6 +759,16 @@ const submitRescueEvidence = async (req, res) => {
            AND availability_status = 'ON_RESCUE'`,
         [currentCase.assigned_volunteer_id],
       );
+    }
+
+    if (result.rows[0].reporter_id && result.rows[0].reporter_id !== req.user.id) {
+      await notifyUser({
+        userId: result.rows[0].reporter_id,
+        caseId: id,
+        notificationType: "EVIDENCE_SUBMITTED",
+        title: "Rescue Update",
+        message: `Rescue evidence has been submitted for Case #${id}. It is awaiting verification.`,
+      });
     }
 
     apiCache.flushAll();
@@ -1076,6 +1096,17 @@ const releaseCase = async (req, res) => {
            AND availability_status = 'ON_RESCUE'`,
         [req.user.id],
       );
+    }
+
+    const reporterId = result.rows[0].reporter_id;
+    if (reporterId && reporterId !== req.user.id) {
+      await notifyUser({
+        userId: reporterId,
+        caseId: id,
+        notificationType: "CASE_RELEASED",
+        title: "Rescue Case Released",
+        message: `Case #${id} is available again for rescue assignment.`,
+      });
     }
 
     apiCache.flushAll();
