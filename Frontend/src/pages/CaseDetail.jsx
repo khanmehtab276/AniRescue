@@ -274,7 +274,7 @@ export default function CaseDetail() {
           <img
             src={caseItem.image_payload}
             alt="Reported animal"
-            className="w-full h-56 object-cover rounded-xl mb-4"
+            className="w-full h-auto object-contain rounded-xl mb-4"
           />
         )}
 
