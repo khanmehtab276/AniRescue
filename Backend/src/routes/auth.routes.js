@@ -7,6 +7,7 @@ const {
   register,
   login,
   logout,
+  getCsrfToken,
   getCurrentUser,
   updateJurisdiction,
   updateAvailability,
@@ -17,6 +18,7 @@ const {
 router.post("/register", authLimiter, register);
 router.post("/login", authLimiter, login);
 router.get("/me", verifyToken, getCurrentUser);
+router.get("/csrf", verifyToken, getCsrfToken);
 router.post("/logout", verifyToken, logout);
 
 router.put(
