@@ -37,9 +37,9 @@ const submitFeedback = async (req, res) => {
     });
   }
 
-  if (message.length < 10 || message.length > 2000) {
+  if (message.length > 2000) {
     return res.status(400).json({
-      error: "Feedback must be between 10 and 2000 characters.",
+      error: "Feedback cannot be longer than 2000 characters.",
     });
   }
 
@@ -148,7 +148,7 @@ const submitFeedback = async (req, res) => {
          (user_id, category, rating, message, case_id)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id, category, rating, message, case_id, created_at`,
-      [req.user.id, category, rating, message, caseId],
+      [req.user.id, category, rating, message || null, caseId],
     );
 
     // Admin notification is deliberately non-blocking: feedback is already
