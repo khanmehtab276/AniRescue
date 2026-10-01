@@ -25,6 +25,14 @@ const sendPushNotification = async ({
     data: Object.fromEntries(
       Object.entries(data).map(([key, value]) => [key, String(value)]),
     ),
+    webpush: {
+      notification: {
+        icon: "/pwa-192x192.png",
+        badge: "/pwa-192x192.png",
+        silent: false,
+        renotify: true,
+      },
+    },
   };
 
   return admin.messaging().send(message);
