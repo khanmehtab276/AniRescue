@@ -1,21 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell, BellRing, CheckCheck, ChevronRight, Inbox } from "lucide-react";
+import { AlertTriangle, Bell, BellRing, CheckCheck, ChevronRight, CircleCheck, HeartHandshake, Inbox, MapPin, Search, UserCheck } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../utils/api";
 import { useAuth } from "../contexts/AuthContext.jsx";
 
 const TYPE_META = {
-  CASE_AVAILABLE: { label: "Nearby rescue", tone: "amber" },
-  CASE_CLAIMED: { label: "Case claimed", tone: "emerald" },
-  CASE_ASSIGNED: { label: "Case assigned", tone: "sky" },
-  COMPLETION_VERIFIED: { label: "Rescue verified", tone: "emerald" },
-  COMPLETION_REJECTED: { label: "Verification update", tone: "rose" },
-  VALIDATION_PASSED: { label: "AI validation", tone: "emerald" },
-  VALIDATION_REJECTED: { label: "AI review", tone: "rose" },
-  EVIDENCE_SUBMITTED: { label: "Rescue update", tone: "sky" },
-  CASE_RESOLVED: { label: "Case resolved", tone: "emerald" },
-  CASE_RELEASED: { label: "Case released", tone: "amber" },
-  CASE_CANCELLED: { label: "Case cancelled", tone: "rose" },
+  CASE_AVAILABLE: { label: "Nearby rescue", tone: "amber", Icon: MapPin },
+  CASE_CLAIMED: { label: "Case claimed", tone: "emerald", Icon: UserCheck },
+  CASE_ASSIGNED: { label: "Case assigned", tone: "sky", Icon: HeartHandshake },
+  COMPLETION_VERIFIED: { label: "Rescue verified", tone: "emerald", Icon: CircleCheck },
+  COMPLETION_REJECTED: { label: "Verification update", tone: "rose", Icon: AlertTriangle },
+  VALIDATION_PASSED: { label: "AI validation", tone: "emerald", Icon: Search },
+  VALIDATION_REJECTED: { label: "AI review", tone: "rose", Icon: AlertTriangle },
+  EVIDENCE_SUBMITTED: { label: "Rescue update", tone: "sky", Icon: HeartHandshake },
+  CASE_RESOLVED: { label: "Case resolved", tone: "emerald", Icon: CircleCheck },
+  CASE_RELEASED: { label: "Case released", tone: "amber", Icon: UserCheck },
+  CASE_CANCELLED: { label: "Case cancelled", tone: "rose", Icon: AlertTriangle },
 };
 
 function relativeTime(value) {
@@ -51,7 +51,7 @@ function toneClasses(tone) {
 }
 
 export function notificationMeta(type) {
-  return TYPE_META[type] || { label: "AniRescue update", tone: "emerald" };
+  return TYPE_META[type] || { label: "AniRescue update", tone: "emerald", Icon: Bell };
 }
 
 export function formatNotificationTime(value) {
@@ -91,6 +91,20 @@ export default function NotificationBell() {
       window.removeEventListener("anirescue:notifications-updated", handleUpdate);
     };
   }, [load]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
 
   useEffect(() => {
     const handlePointer = (event) => {
@@ -194,7 +208,7 @@ export default function NotificationBell() {
                     className={`flex w-full gap-3 rounded-2xl p-3 text-left transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/80 ${item.is_read ? "" : "bg-emerald-50/60 dark:bg-emerald-950/10"}`}
                   >
                     <span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl ${toneClasses(meta.tone)}`}>
-                      <Bell size={15} />
+                      <meta.Icon size={16} strokeWidth={2.1} />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-start justify-between gap-2">
