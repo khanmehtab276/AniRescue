@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS feedback (
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   category VARCHAR(40) NOT NULL DEFAULT 'PLATFORM',
   rating SMALLINT NOT NULL,
-  message TEXT NOT NULL,
+  message TEXT,
   case_id INTEGER REFERENCES rescue_cases(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -44,7 +44,7 @@ ALTER TABLE feedback
 
 ALTER TABLE feedback
   ADD CONSTRAINT feedback_message_length_check
-  CHECK (char_length(btrim(message)) BETWEEN 10 AND 2000);
+  CHECK (message IS NULL OR char_length(btrim(message)) BETWEEN 1 AND 2000);
 
 CREATE INDEX IF NOT EXISTS idx_feedback_created_at
   ON feedback (created_at DESC);
