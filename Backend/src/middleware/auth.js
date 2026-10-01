@@ -34,6 +34,10 @@ function cookieOptions({ httpOnly = false, maxAge } = {}) {
     "Path=/",
     isProduction ? "Secure" : "",
     isProduction ? "SameSite=None" : "SameSite=Lax",
+    // The frontend (Firebase Hosting) and API (Render) are different sites.
+    // Partition the production cookies by the top-level AniRescue site so
+    // browser privacy protections do not discard the authenticated session.
+    isProduction ? "Partitioned" : "",
   ];
 
   if (httpOnly) parts.push("HttpOnly");
