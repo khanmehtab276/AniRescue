@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useToast } from '../contexts/ToastContext.jsx';
@@ -24,6 +25,7 @@ export default function CaseDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [isActing, setIsActing] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   // Evidence submission form (volunteer)
   const [evidenceFile, setEvidenceFile] = useState(null);
@@ -137,8 +139,11 @@ export default function CaseDetail() {
   };
 
   const handleRelease = async () => {
-    if (!window.confirm('Release this case? It will return to the available pool for other volunteers.')) return;
+    setConfirmAction({ kind: 'release', title: 'Release this case?', message: 'The case will return to the available rescue pool for another volunteer.' });
+  };
 
+  const confirmRelease = async () => {
+    setConfirmAction(null);
     setIsActing(true);
 
     try {
@@ -172,8 +177,11 @@ export default function CaseDetail() {
   };
 
   const handleAssign = async (volunteer) => {
-    if (!window.confirm(`Assign this case to ${volunteer.full_name || 'this volunteer'}?`)) return;
+    setConfirmAction({ kind: 'assign', volunteer, title: 'Assign this rescue?', message: `${volunteer.full_name || 'This volunteer'} will receive the rescue assignment and notification.` });
+  };
 
+  const confirmAssign = async (volunteer) => {
+    setConfirmAction(null);
     setIsActing(true);
 
     try {
@@ -189,8 +197,11 @@ export default function CaseDetail() {
   };
 
   const handleCancel = async () => {
-    if (!window.confirm('Cancel this case? This cannot be undone.')) return;
+    setConfirmAction({ kind: 'cancel', title: 'Cancel this case?', message: 'This will stop the current rescue workflow. You can’t undo this action.' });
+  };
 
+  const confirmCancel = async () => {
+    setConfirmAction(null);
     setIsActing(true);
 
     try {
@@ -218,9 +229,35 @@ export default function CaseDetail() {
     }
   };
 
+  const runConfirmAction = () => {
+    if (confirmAction?.kind === 'release') return confirmRelease();
+    if (confirmAction?.kind === 'cancel') return confirmCancel();
+    if (confirmAction?.kind === 'assign') return confirmAssign(confirmAction.volunteer);
+    return undefined;
+  };
+
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-6 pb-24 sm:px-6 lg:px-8 lg:py-10 lg:pb-10">
+      <>
+      {confirmAction && (
+        <div className="fixed inset-0 z-[120] flex items-end justify-center bg-stone-950/35 p-3 backdrop-blur-md sm:items-center sm:p-6" role="presentation" onMouseDown={() => setConfirmAction(null)}>
+          <div className="w-full max-w-md animate-rescue-pop rounded-3xl border border-stone-200 bg-white p-5 shadow-2xl dark:border-stone-800 dark:bg-stone-900" role="dialog" aria-modal="true" aria-labelledby="confirm-action-title" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="flex items-start gap-3">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300"><AlertTriangle size={20} /></span>
+              <div className="min-w-0">
+                <h2 id="confirm-action-title" className="text-lg font-black text-stone-900 dark:text-white">{confirmAction.title}</h2>
+                <p className="mt-1 text-sm leading-6 text-stone-500 dark:text-stone-400">{confirmAction.message}</p>
+              </div>
+              <button type="button" onClick={() => setConfirmAction(null)} className="rescue-focus-ring ml-auto rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800" aria-label="Close confirmation"><X size={17} /></button>
+            </div>
+            <div className="mt-5 flex gap-2">
+              <Button variant="secondary" className="flex-1" onClick={() => setConfirmAction(null)}>Not now</Button>
+              <Button variant={confirmAction.kind === 'cancel' ? 'danger' : 'primary'} className="flex-1" onClick={runConfirmAction}>Continue</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    <div className="mx-auto max-w-7xl px-4 py-6 pb-24 sm:px-6 lg:px-8 lg:py-10 lg:pb-10">
         <CaseCardSkeleton />
       </div>
     );
@@ -541,5 +578,6 @@ export default function CaseDetail() {
       </div>
 
     </div>
+    </>
   );
 }
