@@ -1,5 +1,5 @@
 -- =====================================================================
--- Migration 006: Platform feedback
+-- Migration 010: Platform feedback
 -- =====================================================================
 -- All active roles may submit platform/rescue-experience feedback.
 -- Only ADMIN users may read the global feedback queue.
