@@ -141,11 +141,6 @@ export default function Feedback() {
     event.preventDefault();
     const trimmed = message.trim();
 
-    if (trimmed.length < 10) {
-      setNotice({ type: "error", text: "Please write at least 10 characters so your feedback is useful." });
-      return;
-    }
-
     setSubmitting(true);
     setNotice(null);
 
@@ -182,7 +177,7 @@ export default function Feedback() {
               <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-400">Help us improve</p>
               <h1 className="mt-1 text-3xl font-black tracking-tight text-stone-900 dark:text-white">Share your AniRescue experience</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500 dark:text-stone-400">
-                Your feedback helps improve reporting, rescue coordination and the experience for every role.
+                Your rating helps improve reporting, rescue coordination and the experience for every role. Written comments are optional.
               </p>
             </div>
           </div>
@@ -217,9 +212,9 @@ export default function Feedback() {
             </div>
 
             <div className="mt-6">
-              <label htmlFor="feedback-message" className="text-xs font-black uppercase tracking-wider text-stone-500 dark:text-stone-400">Tell us more</label>
+              <label htmlFor="feedback-message" className="text-xs font-black uppercase tracking-wider text-stone-500 dark:text-stone-400">Tell us more <span className="font-semibold normal-case tracking-normal text-stone-400">(optional)</span></label>
               <textarea id="feedback-message" value={message} onChange={(event) => setMessage(event.target.value)} maxLength={2000} rows={6} disabled={submitting}
-                placeholder="What worked well? What should we improve?"
+                placeholder="Anything you would like us to improve? (Optional)"
                 className="mt-2 w-full resize-y rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3.5 text-sm leading-6 text-stone-800 outline-none transition placeholder:text-stone-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-100" />
               <div className="mt-2 flex justify-end text-[10px] font-bold text-stone-400">{message.length}/2000</div>
             </div>
