@@ -1,7 +1,11 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { pool } = require("../config/db");
-const { setAuthCookies, clearAuthCookies } = require("../middleware/auth");
+const {
+  setAuthCookies,
+  clearAuthCookies,
+  ensureCsrfToken,
+} = require("../middleware/auth");
 const { normalizeEnum } = require("../utils/helpers");
 const {
   notifyVolunteerAboutNearbyCases,
@@ -195,11 +199,17 @@ const register = async (req, res) => {
           { expiresIn: "30d" },
         );
 
-        setAuthCookies(res, token);
+        const csrfToken = setAuthCookies(res, token);
+
+        return res.status(201).json({
+          authenticated: true,
+          csrfToken,
+          user,
+        });
       }
 
-      res.status(201).json({
-        authenticated: accountStatus === "ACTIVE",
+      return res.status(201).json({
+        authenticated: false,
         user,
       });
     } catch (err) {
@@ -280,10 +290,10 @@ const login = async (req, res) => {
     );
 
     delete user.password_hash;
-    setAuthCookies(res, token);
+    const csrfToken = setAuthCookies(res, token);
 
     res.set("Cache-Control", "no-store");
-    res.json({ authenticated: true, user });
+    res.json({ authenticated: true, csrfToken, user });
   } catch (err) {
     console.error("Login error:", err);
 
@@ -297,6 +307,20 @@ const logout = async (req, res) => {
   clearAuthCookies(res);
   res.set("Cache-Control", "no-store");
   res.status(204).end();
+};
+
+// CSRF TOKEN
+const getCsrfToken = async (req, res) => {
+  try {
+    const csrfToken = ensureCsrfToken(req, res);
+    res.set("Cache-Control", "no-store");
+    return res.json({ csrfToken });
+  } catch (err) {
+    console.error("CSRF token error:", err);
+    return res.status(500).json({
+      error: "Failed to initialize CSRF protection.",
+    });
+  }
 };
 
 // CURRENT USER
@@ -602,4 +626,14 @@ const registerDeviceToken = async (req, res) => {
   }
 };
 
-module.exports = { register, login, logout, getCurrentUser, updateJurisdiction, updateAvailability, updateLocation, registerDeviceToken };
+module.exports = {
+  register,
+  login,
+  logout,
+  getCsrfToken,
+  getCurrentUser,
+  updateJurisdiction,
+  updateAvailability,
+  updateLocation,
+  registerDeviceToken,
+};
