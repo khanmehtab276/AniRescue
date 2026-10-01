@@ -7,7 +7,7 @@ const MIGRATIONS_DIR = path.join(__dirname, "..", "migrations");
 const MIGRATION_LOCK_KEY = "anirescue:migrations";
 
 function getMigrations() {
-  return fs
+  const migrations = fs
     .readdirSync(MIGRATIONS_DIR)
     .filter((file) => /^\d+_.+\.sql$/.test(file))
     .map((file) => {
@@ -15,6 +15,34 @@ function getMigrations() {
       return { version: Number(match[1]), name: file };
     })
     .sort((a, b) => a.version - b.version);
+
+  for (let i = 0; i < migrations.length; i += 1) {
+    const expectedVersion = i + 1;
+
+    if (migrations[i].version !== expectedVersion) {
+      throw new Error(
+        `Migration numbering must be contiguous starting at 001. Expected ${String(
+          expectedVersion
+        ).padStart(3, "0")} but found ${String(migrations[i].version).padStart(
+          3,
+          "0"
+        )} (${migrations[i].name}).`
+      );
+    }
+
+    if (
+      i > 0 &&
+      migrations[i - 1].version === migrations[i].version
+    ) {
+      throw new Error(
+        `Duplicate migration version ${migrations[i].version}: "${migrations[
+          i - 1
+        ].name}" and "${migrations[i].name}".`
+      );
+    }
+  }
+
+  return migrations;
 }
 
 function withoutTransactionWrappers(sql) {
@@ -41,8 +69,7 @@ async function main() {
       MIGRATION_LOCK_KEY,
     ]);
 
-    // The migration metadata table is bootstrapped before migration 001 so
-    // the runner can inspect applied versions on a completely empty database.
+    // Bootstrap the ledger so migration 001 can be recorded on an empty DB.
     await client.query(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
         version INTEGER PRIMARY KEY,
