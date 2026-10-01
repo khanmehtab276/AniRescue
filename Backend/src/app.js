@@ -48,15 +48,17 @@ const corsOptions = {
 };
 
 app.use(helmet());
-app.use(cors(corsOptions));
-app.options(/.*/, cors(corsOptions));
 
+// Generate request IDs before CORS so rejected requests remain traceable.
 app.use((req, res, next) => {
   const requestId = req.get("X-Request-ID") || crypto.randomUUID();
   req.requestId = requestId;
   res.set("X-Request-ID", requestId);
   next();
 });
+
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ limit: "100kb", extended: false }));
