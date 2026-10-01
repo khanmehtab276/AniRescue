@@ -4,9 +4,13 @@ const { pool } = require("../config/db");
 
 const isProduction = process.env.NODE_ENV === "production";
 const SESSION_COOKIE = isProduction
+  ? "__Host-anirescue_session_v2"
+  : "anirescue_session_v2";
+const CSRF_COOKIE = "anirescue_csrf_v2";
+const LEGACY_SESSION_COOKIE = isProduction
   ? "__Host-anirescue_session"
   : "anirescue_session";
-const CSRF_COOKIE = "anirescue_csrf";
+const LEGACY_CSRF_COOKIE = "anirescue_csrf";
 const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
 function parseCookies(header = "") {
@@ -29,7 +33,7 @@ function parseCookies(header = "") {
   }, {});
 }
 
-function cookieOptions({ httpOnly = false, maxAge } = {}) {
+function cookieOptions({ httpOnly = false, maxAge, partitioned = isProduction } = {}) {
   const parts = [
     "Path=/",
     isProduction ? "Secure" : "",
@@ -37,7 +41,7 @@ function cookieOptions({ httpOnly = false, maxAge } = {}) {
     // The frontend (Firebase Hosting) and API (Render) are different sites.
     // Partition the production cookies by the top-level AniRescue site so
     // browser privacy protections do not discard the authenticated session.
-    isProduction ? "Partitioned" : "",
+    partitioned ? "Partitioned" : "",
   ];
 
   if (httpOnly) parts.push("HttpOnly");
@@ -64,8 +68,12 @@ function setAuthCookies(res, token) {
 
 function clearAuthCookies(res) {
   res.setHeader("Set-Cookie", [
+    // Clear the current partitioned cookies.
     `${SESSION_COOKIE}=; ${cookieOptions({ httpOnly: true, maxAge: 0 })}`,
     `${CSRF_COOKIE}=; ${cookieOptions({ maxAge: 0 })}`,
+    // Also remove the pre-v2 unpartitioned cookies from existing sessions.
+    `${LEGACY_SESSION_COOKIE}=; ${cookieOptions({ httpOnly: true, maxAge: 0, partitioned: false })}`,
+    `${LEGACY_CSRF_COOKIE}=; ${cookieOptions({ maxAge: 0, partitioned: false })}`,
   ]);
 }
 
