@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, Search, HandHeart } from 'lucide-react';
+import { Camera, CheckCircle2, HandHeart, Map, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import useLocation from '../hooks/useLocation';
 import useOfflineSync from '../hooks/useOfflineSync';
@@ -452,7 +452,7 @@ export default function ReportCase() {
                   ) : (
                     <div className="p-10 flex flex-col items-center justify-center h-56">
                       <div className="w-16 h-16 rounded-full flex items-center justify-center text-3xl mb-4 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm">
-                        📸
+                        <Camera size={28} strokeWidth={2} aria-hidden="true" />
                       </div>
 
                       <p className="text-sm text-stone-500 font-bold">
@@ -577,7 +577,7 @@ export default function ReportCase() {
                         <div className="rounded-2xl h-32 flex flex-col items-center justify-center text-center p-4 border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900">
 
                           <span className="text-3xl mb-2 grayscale opacity-50">
-                            🗺️
+                            <Map size={28} strokeWidth={2} aria-hidden="true" />
                           </span>
 
                           <p className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wide">
