@@ -1,7 +1,34 @@
 import axios from 'axios';
 
+function resolveApiBaseUrl() {
+  const configuredUrl = String(import.meta.env.VITE_API_URL || '/api').trim();
+  const normalizedUrl = configuredUrl.replace(/\/+$/, '');
+
+  // The backend mounts all application routes under /api. Keep the
+  // frontend resilient if a deployment environment provides only the
+  // backend origin instead of the full API base path.
+  if (/^https?:\/\//i.test(normalizedUrl)) {
+    try {
+      const url = new URL(normalizedUrl);
+
+      if (!url.pathname || url.pathname === '/') {
+        url.pathname = '/api';
+      } else if (!url.pathname.replace(/\/+$/, '').endsWith('/api')) {
+        url.pathname = `${url.pathname.replace(/\/+$/, '')}/api`;
+      }
+
+      return url.toString().replace(/\/+$/, '');
+    } catch {
+      // Fall back to the configured value if it is not a valid absolute URL.
+    }
+  }
+
+  if (normalizedUrl === '') return '/api';
+  return normalizedUrl.endsWith('/api') ? normalizedUrl : `${normalizedUrl}/api`;
+}
+
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: resolveApiBaseUrl(),
   withCredentials: true,
   timeout: 15000,
   headers: {
