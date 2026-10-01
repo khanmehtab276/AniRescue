@@ -7,6 +7,7 @@ const compression = require("compression");
 const authRoutes = require("./routes/auth.routes");
 const casesRoutes = require("./routes/cases.routes");
 const notificationsRoutes = require("./routes/notifications.routes");
+const feedbackRoutes = require("./routes/feedback.routes");
 const { requireCsrf } = require("./middleware/auth");
 const { apiLimiter } = require("./middleware/rateLimiter");
 const { pool } = require("./config/db");
@@ -74,6 +75,7 @@ app.use("/api", requireCsrf);
 app.use("/api/auth", authRoutes);
 app.use("/api/cases", casesRoutes);
 app.use("/api/notifications", notificationsRoutes);
+app.use("/api/feedback", feedbackRoutes);
 
 app.get("/", (req, res) => {
   res.json({
