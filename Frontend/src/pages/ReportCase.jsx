@@ -66,6 +66,7 @@ export default function ReportCase() {
   const [imagePreview, setImagePreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionResult, setSubmissionResult] = useState(null);
+  const [isReadyToTransmit, setIsReadyToTransmit] = useState(false);
 
   const [locationMode, setLocationMode] = useState('auto');
   const [manualAddress, setManualAddress] = useState('');
@@ -94,7 +95,7 @@ export default function ReportCase() {
   // Neutral world view center as fallback when user location is unavailable
   const defaultMapCenter = [0, 0];
 
-  const reportReady = Boolean(imageFile && ((locationMode === 'auto' && location) || (locationMode === 'custom' && (pinnedLocation || manualAddress.trim()))));
+  const reportReady = Boolean(imageFile && ((locationMode === 'auto' && location) || (locationMode === 'custom' && (pinnedLocation || manualAddress.trim()))) && isReadyToTransmit);
   const photoReady = Boolean(imageFile);
   const locationReady = Boolean(locationMode === 'auto' ? location : (pinnedLocation || manualAddress.trim()));
   const detailsReady = Boolean(description.trim());
@@ -103,7 +104,7 @@ export default function ReportCase() {
     { label: 'Photo', done: photoReady, Icon: Camera },
     { label: 'Location', done: locationReady, Icon: Map },
     { label: 'Details', done: detailsReady, Icon: Search },
-    { label: 'Ready', done: coreReady, Icon: HandHeart },
+    { label: 'Review', done: isReadyToTransmit, Icon: HandHeart },
   ];
   const completedSteps = reportSteps.filter((step) => step.done).length;
   const progressState = completedSteps === 0
@@ -139,7 +140,7 @@ export default function ReportCase() {
         : completedSteps === 3
           ? {
               label: 'Almost there. Landmark is optional.',
-              message: 'Add a nearby landmark if it makes the location easier to find, then you’re ready to send.',
+              message: 'Add a nearby landmark if useful, then review the report once before broadcasting it.',
               bar: 'bg-orange-500',
               soft: 'bg-orange-50 dark:bg-orange-950/20',
               border: 'border-orange-200 dark:border-orange-900/50',
@@ -155,6 +156,12 @@ export default function ReportCase() {
               text: 'text-emerald-700 dark:text-emerald-400',
               icon: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300',
             };
+
+  useEffect(() => {
+    if (!coreReady) {
+      setIsReadyToTransmit(false);
+    }
+  }, [coreReady, imageFile, location, pinnedLocation, manualAddress, description]);
 
   useEffect(() => {
     if (gpsError) {
@@ -731,6 +738,15 @@ export default function ReportCase() {
                     </div>
                     <p className={`mt-2 text-[11px] leading-4 font-medium ${progressState.text}`}>{progressState.message}</p>
                   </div>
+                  {coreReady && !isReadyToTransmit && (
+                    <button
+                      type="button"
+                      onClick={() => setIsReadyToTransmit(true)}
+                      className="w-full rounded-xl border border-stone-300 bg-stone-900 px-4 py-3 text-sm font-extrabold text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-stone-800 dark:border-stone-700 dark:bg-white dark:text-stone-900 dark:hover:bg-stone-100"
+                    >
+                      Review report & prepare to send
+                    </button>
+                  )}
                   <button type="submit" disabled={isSubmitting || isOffline || !reportReady} className={`w-full rounded-xl px-4 py-4 text-sm font-extrabold text-white shadow-lg transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${progressState.bar}`}>
                     {isSubmitting ? 'Transmitting rescue case…' : isOffline ? 'Waiting for connection…' : 'Transmit rescue case'}
                   </button>
@@ -777,6 +793,15 @@ export default function ReportCase() {
                     </div>
                     <p className={`mt-2 text-[11px] leading-4 font-medium ${progressState.text}`}>{progressState.message}</p>
                   </div>
+                  {coreReady && !isReadyToTransmit && (
+                    <button
+                      type="button"
+                      onClick={() => setIsReadyToTransmit(true)}
+                      className="w-full rounded-xl border border-stone-300 bg-stone-900 px-4 py-3 text-sm font-extrabold text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-stone-800 dark:border-stone-700 dark:bg-white dark:text-stone-900 dark:hover:bg-stone-100"
+                    >
+                      Review report & prepare to send
+                    </button>
+                  )}
                   <button type="submit" disabled={isSubmitting || isOffline || !reportReady} className={`group relative w-full overflow-hidden rounded-xl disabled:cursor-not-allowed disabled:opacity-50 ${progressState.bar}`}>
                     <span className="absolute inset-0 bg-black/10 transition-opacity duration-300 group-hover:opacity-0" />
                     <span className="relative flex min-h-14 items-center justify-center gap-2 rounded-xl border border-white/20 px-4 py-3 text-base font-extrabold text-white shadow-[0_12px_28px_rgba(0,0,0,0.14)] transition-all duration-300 group-hover:-translate-y-0.5">
