@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Activity, Building2, ClipboardCheck, ClipboardList, LayoutDashboard, LogOut, Map as MapIcon, Menu, Moon, PawPrint, Search, Shield, Siren, Sun, User, Users, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import NotificationBell from './NotificationBell.jsx';
@@ -72,6 +72,20 @@ export default function Navbar() {
   const links = user ? (NAV[role] || []) : [];
   const meta = ROLE_META[role];
   const ThemeIcon = theme === 'light' ? Sun : Moon;
+
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [menuOpen]);
 
   const handleLogout = async () => {
     setMenuOpen(false);
