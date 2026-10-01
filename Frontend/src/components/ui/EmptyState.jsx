@@ -1,7 +1,7 @@
 import Surface from './Surface.jsx';
 import { PawPrint } from 'lucide-react';
 
-export default function EmptyState({ icon = <PawPrint size={30} strokeWidth={2}, title, message, children }) {
+export default function EmptyState({ icon = <PawPrint size={30} strokeWidth={2} />, title, message, children }) {
   return (
     <Surface inset className="p-10 text-center">
       <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">{icon}</div>
