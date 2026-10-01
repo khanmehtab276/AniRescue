@@ -52,6 +52,10 @@
           {
             "key": "Permissions-Policy",
             "value": "geolocation=(self), camera=(self), microphone=(), notifications=(self)"
+          },
+          {
+            "key": "Strict-Transport-Security",
+            "value": "max-age=31536000; includeSubDomains"
           }
         ]
       }
