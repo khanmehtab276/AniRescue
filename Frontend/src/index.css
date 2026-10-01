@@ -214,3 +214,92 @@
 .dark .leaflet-popup-content-wrapper,
 .dark .leaflet-popup-tip { background: #1c1917; color: #f5f5f4; }
 .dark .leaflet-popup-close-button { color: #a8a29e !important; }
+
+
+/* =========================================================
+   ANIRESCUE VISUAL SYSTEM
+   A restrained multi-color palette keeps meaning clear:
+   red = emergency, amber/yellow = attention, blue = location,
+   violet = AI, emerald = rescue/success.
+========================================================= */
+:root {
+  --ani-emerald: #059669;
+  --ani-blue: #2563eb;
+  --ani-violet: #7c3aed;
+  --ani-amber: #d97706;
+  --ani-red: #dc2626;
+  --ani-surface-light: #fffdf9;
+  --ani-surface-dark: #1c1917;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background-image:
+    radial-gradient(circle at 8% 12%, rgb(16 185 129 / 0.055), transparent 24rem),
+    radial-gradient(circle at 92% 18%, rgb(245 158 11 / 0.055), transparent 22rem),
+    radial-gradient(circle at 50% 100%, rgb(37 99 235 / 0.035), transparent 28rem);
+}
+.dark body {
+  background-image:
+    radial-gradient(circle at 8% 12%, rgb(16 185 129 / 0.07), transparent 24rem),
+    radial-gradient(circle at 92% 18%, rgb(245 158 11 / 0.055), transparent 22rem),
+    radial-gradient(circle at 50% 100%, rgb(59 130 246 / 0.045), transparent 28rem);
+}
+
+/* A quiet animal-rescue texture instead of large distracting background photos. */
+.anirescue-animal-wash::before {
+  content: '🐕   🐈   🐾';
+  position: absolute;
+  right: 1.5rem;
+  top: 1rem;
+  font-size: clamp(2rem, 5vw, 4rem);
+  letter-spacing: 0.35rem;
+  opacity: 0.055;
+  pointer-events: none;
+  filter: grayscale(0.15);
+}
+.dark .anirescue-animal-wash::before { opacity: 0.075; }
+
+/* Typography: stronger display hierarchy without changing the readable body face. */
+.anirescue-display {
+  font-family: 'Manrope', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.025em;
+}
+.anirescue-label {
+  font-family: 'Manrope', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.08em;
+}
+.anirescue-mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Shared role/state accents that can be reused by all role workspaces. */
+.anirescue-accent-blue { color: var(--ani-blue); }
+.anirescue-accent-violet { color: var(--ani-violet); }
+.anirescue-accent-amber { color: var(--ani-amber); }
+.anirescue-accent-red { color: var(--ani-red); }
+.anirescue-accent-emerald { color: var(--ani-emerald); }
+
+.anirescue-card {
+  border: 1px solid rgb(231 229 228 / 0.9);
+  background: rgb(255 255 255 / 0.92);
+  box-shadow: 0 12px 34px rgb(28 25 23 / 0.055);
+  backdrop-filter: blur(10px);
+}
+.dark .anirescue-card {
+  border-color: rgb(68 64 60 / 0.9);
+  background: rgb(28 25 23 / 0.92);
+  box-shadow: 0 18px 45px rgb(0 0 0 / 0.22);
+}
+
+/* Keyboard users should always have a visible focus target. */
+:focus-visible {
+  outline: 2px solid rgb(37 99 235);
+  outline-offset: 3px;
+}
+
+/* Don't let decorative transitions interfere with reduced-motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
