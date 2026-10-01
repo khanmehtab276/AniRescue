@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import API from '../utils/api';
+import API, { setCsrfToken } from '../utils/api';
 import useLocation from '../hooks/useLocation.js';
 
 const REGISTER_ROLES = [
@@ -111,6 +111,10 @@ export default function Login() {
       );
 
       const data = response.data;
+
+      if (data.csrfToken) {
+        setCsrfToken(data.csrfToken);
+      }
 
       /*
        * Volunteer and NGO accounts are created as PENDING. The backend
