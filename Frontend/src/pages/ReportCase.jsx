@@ -375,24 +375,6 @@ export default function ReportCase() {
           <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-stone-500 dark:text-stone-400">
             Share the photo and location. We’ll take care of the rescue workflow from there.
           </p>
-          <div className="mx-auto mt-6 grid max-w-2xl grid-cols-3 gap-2 sm:flex sm:items-center sm:justify-center sm:gap-5">
-            {reportSteps.map(({ label, done, Icon }, index) => (
-              <div key={label} className="flex min-w-0 items-center sm:flex-1">
-                <div className={`flex min-w-0 items-center gap-2.5 ${done ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-400 dark:text-stone-500'}`}>
-                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border transition-all duration-300 ${done ? 'border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40' : 'border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-950'}`}>
-                    <Icon size={15} aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0 text-left">
-                    <p className="truncate text-[10px] font-black uppercase tracking-wider sm:text-[11px]">{label}</p>
-                    <p className="hidden text-[10px] font-semibold text-stone-400 dark:text-stone-500 sm:block">{done ? 'Complete' : 'Add this'}</p>
-                  </div>
-                </div>
-                {index < reportSteps.length - 1 && (
-                  <span className={`mx-1 hidden h-px min-w-3 flex-1 transition-colors sm:mx-2 sm:block ${done ? 'bg-emerald-300 dark:bg-emerald-800' : 'bg-stone-200 dark:bg-stone-800'}`} aria-hidden="true" />
-                )}
-              </div>
-            ))}
-          </div>
         </div>
 
         {submissionResult ? (
