@@ -185,7 +185,7 @@ export default function Login() {
 
       if (!err.response) {
         setError(
-          'Cannot reach AniRescue right now. Check your connection and try again.'
+          'We can’t reach AniRescue right now. Check your connection and try again in a moment. 💚'
         );
       } else if (
         err.response.status === 403 &&
@@ -198,7 +198,7 @@ export default function Login() {
         setError(backendError);
       } else {
         setError(
-          'Something went wrong. Please try again.'
+          'Something went wrong. Please try again in a moment.'
         );
       }
 
@@ -223,14 +223,14 @@ export default function Login() {
         {/* Heading */}
         <h2 className="text-2xl font-extrabold text-center text-stone-800 dark:text-stone-100 mb-2">
           {isRegistering
-            ? 'Create Account'
-            : 'System Access'}
+            ? 'Create your account 🐾'
+            : 'Welcome back 👋'}
         </h2>
 
         <p className="text-sm font-medium text-center text-stone-500 dark:text-stone-400 mb-8">
           {isRegistering
-            ? 'Create your AniRescue user account'
-            : 'Sign in to access your AniRescue account'}
+            ? 'Join the rescue network and help animals get the right help.'
+            : 'Sign in and pick up where you left off.'}
         </p>
 
         {/* Notice */}
