@@ -713,40 +713,34 @@ export default function ReportCase() {
               </div>
             </div>
 
-            {/* MOBILE TRANSMIT RESCUE CASE */}
+            {/* TRANSMIT RESCUE CASE — single responsive progress/action container */}
             <div className="lg:hidden">
-              <div className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-500 dark:bg-stone-900 ${progressState.border}`}>
-                <div className={`relative overflow-hidden border-b px-4 py-3 transition-colors duration-500 ${progressState.soft} ${progressState.border}`}>
+              <div className={\`overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-500 dark:bg-stone-900 \${progressState.border}\`}>
+                <div className={\`relative overflow-hidden border-b px-4 py-3 transition-colors duration-500 \${progressState.soft} \${progressState.border}\`}>
                   <div className="absolute inset-x-0 bottom-0 h-1 bg-stone-200/70 dark:bg-stone-800/70">
-                    <div className={`h-full rounded-full transition-all duration-700 ease-out ${progressState.bar}`} style={{ width: `${(completedSteps / reportSteps.length) * 100}%` }} />
+                    <div className={\`h-full rounded-full transition-all duration-700 ease-out \${progressState.bar}\`} style={{ width: \`${(completedSteps / reportSteps.length) * 100}%\` }} />
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-colors duration-500 ${progressState.icon}`}>
+                    <span className={\`grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-colors duration-500 \${progressState.icon}\`}>
                       <HandHeart size={18} aria-hidden="true" />
                     </span>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-3">
                         <h3 className="text-sm font-extrabold text-stone-800 dark:text-stone-100">Transmit rescue case</h3>
-                        <span className={`text-[11px] font-black whitespace-nowrap ${progressState.text}`}>{completedSteps}/4</span>
+                        <span className={\`text-[11px] font-black whitespace-nowrap \${progressState.text}\`}>{completedSteps}/4</span>
                       </div>
-                      <p className={`mt-0.5 text-[11px] font-bold transition-colors duration-500 ${progressState.text}`}>{progressState.label}</p>
+                      <p className={\`mt-0.5 text-[11px] font-bold transition-colors duration-500 \${progressState.text}\`}>{progressState.label}</p>
                     </div>
                   </div>
                 </div>
                 <div className="space-y-3 p-4">
-                  <div className={`rounded-xl border p-3 transition-all duration-500 ${progressState.border} ${progressState.soft}`}>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-bold text-stone-500 dark:text-stone-400">Report progress</span>
-                      <span className={`text-[11px] font-black ${progressState.text}`}>{completedSteps}/4 ready</span>
-                    </div>
-                    <div className="mt-2 flex gap-1.5">
-                      {reportSteps.map((step) => (
-                        <div key={step.label} className={`h-2 flex-1 overflow-hidden rounded-full transition-all duration-500 ${step.done ? progressState.bar : 'bg-stone-200 dark:bg-stone-800'}`} />
-                      ))}
-                    </div>
-                    <p className={`mt-2 text-[11px] leading-4 font-medium ${progressState.text}`}>{progressState.message}</p>
+                  <div className="flex gap-1.5" aria-label="Report progress">
+                    {reportSteps.map((step) => (
+                      <div key={step.label} className={\`h-2 flex-1 overflow-hidden rounded-full transition-all duration-500 \${step.done ? progressState.bar : 'bg-stone-200 dark:bg-stone-800'}\`} />
+                    ))}
                   </div>
-                  <button type="submit" disabled={isSubmitting || isOffline || !reportReady} className={`w-full rounded-xl px-4 py-4 text-sm font-extrabold text-white shadow-lg transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${progressState.bar}`}>
+                  <p className={\`text-[11px] leading-4 font-medium \${progressState.text}\`}>{progressState.message}</p>
+                  <button type="submit" disabled={isSubmitting || isOffline || !reportReady} className={\`w-full rounded-xl px-4 py-4 text-sm font-extrabold text-white shadow-lg transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 \${progressState.bar}\`}>
                     {isSubmitting ? 'Transmitting rescue case…' : isOffline ? 'Waiting for connection…' : 'Transmit rescue case'}
                   </button>
                   <p className="text-center text-[10px] leading-4 text-stone-400 dark:text-stone-500">
@@ -756,43 +750,34 @@ export default function ReportCase() {
               </div>
             </div>
 
-            {/* DESKTOP TRANSMIT RESCUE CASE */}
-            <div className="hidden space-y-6 lg:block">
-              <div className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-500 dark:bg-stone-900 lg:sticky lg:top-24 ${progressState.border}`}>
-                <div className={`relative overflow-hidden border-b px-5 py-4 transition-colors duration-500 ${progressState.soft} ${progressState.border}`}>
+            <div className="hidden lg:block">
+              <div className={\`overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-500 dark:bg-stone-900 lg:sticky lg:top-24 \${progressState.border}\`}>
+                <div className={\`relative overflow-hidden border-b px-5 py-4 transition-colors duration-500 \${progressState.soft} \${progressState.border}\`}>
                   <div className="absolute inset-x-0 bottom-0 h-1 bg-stone-200/70 dark:bg-stone-800/70">
-                    <div className={`h-full rounded-full transition-all duration-700 ease-out ${progressState.bar}`} style={{ width: `${(completedSteps / reportSteps.length) * 100}%` }} />
+                    <div className={\`h-full rounded-full transition-all duration-700 ease-out \${progressState.bar}\`} style={{ width: \`${(completedSteps / reportSteps.length) * 100}%\` }} />
                   </div>
                   <div className="flex items-start gap-3">
-                    <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl transition-colors duration-500 ${progressState.icon}`}>
+                    <span className={\`grid h-10 w-10 shrink-0 place-items-center rounded-xl transition-colors duration-500 \${progressState.icon}\`}>
                       <HandHeart size={19} aria-hidden="true" />
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-3">
                         <h3 className="font-extrabold text-stone-800 dark:text-stone-100">Transmit rescue case</h3>
-                        <span className={`text-xs font-black ${progressState.text}`}>{completedSteps}/4</span>
+                        <span className={\`text-xs font-black \${progressState.text}\`}>{completedSteps}/4</span>
                       </div>
-                      <p className={`mt-1 text-xs font-bold ${progressState.text}`}>{progressState.label}</p>
+                      <p className={\`mt-1 text-xs font-bold \${progressState.text}\`}>{progressState.label}</p>
                       <p className="mt-1 text-xs leading-5 text-stone-500 dark:text-stone-400">Send the report for validation and rescue coordination.</p>
                     </div>
                   </div>
                 </div>
                 <div className="space-y-4 p-5">
-                  <div className={`rounded-xl border px-4 py-3 transition-all duration-500 ${progressState.border} ${progressState.soft}`}>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-xs font-bold text-stone-500 dark:text-stone-400">Report readiness</span>
-                      <span className={`text-xs font-black ${progressState.text}`}>
-                        {reportReady ? 'Ready to transmit' : 'More information needed'}
-                      </span>
-                    </div>
-                    <div className="mt-3 flex gap-1.5">
-                      {reportSteps.map((step) => (
-                        <div key={step.label} className={`h-2 flex-1 overflow-hidden rounded-full transition-all duration-500 ${step.done ? progressState.bar : 'bg-stone-200 dark:bg-stone-800'}`} />
-                      ))}
-                    </div>
-                    <p className={`mt-2 text-[11px] leading-4 font-medium ${progressState.text}`}>{progressState.message}</p>
+                  <div className="flex gap-1.5" aria-label="Report progress">
+                    {reportSteps.map((step) => (
+                      <div key={step.label} className={\`h-2 flex-1 overflow-hidden rounded-full transition-all duration-500 \${step.done ? progressState.bar : 'bg-stone-200 dark:bg-stone-800'}\`} />
+                    ))}
                   </div>
-                  <button type="submit" disabled={isSubmitting || isOffline || !reportReady} className={`group relative w-full overflow-hidden rounded-xl disabled:cursor-not-allowed disabled:opacity-50 ${progressState.bar}`}>
+                  <p className={\`text-[11px] leading-4 font-medium \${progressState.text}\`}>{progressState.message}</p>
+                  <button type="submit" disabled={isSubmitting || isOffline || !reportReady} className={\`group relative w-full overflow-hidden rounded-xl disabled:cursor-not-allowed disabled:opacity-50 \${progressState.bar}\`}>
                     <span className="absolute inset-0 bg-black/10 transition-opacity duration-300 group-hover:opacity-0" />
                     <span className="relative flex min-h-14 items-center justify-center gap-2 rounded-xl border border-white/20 px-4 py-3 text-base font-extrabold text-white shadow-[0_12px_28px_rgba(0,0,0,0.14)] transition-all duration-300 group-hover:-translate-y-0.5">
                       {isSubmitting ? 'Transmitting rescue case…' : isOffline ? 'Waiting for connection…' : 'Transmit rescue case'}
