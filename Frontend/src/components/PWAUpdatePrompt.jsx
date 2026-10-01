@@ -41,7 +41,7 @@ export default function PWAUpdatePrompt() {
               <button
                 type="button"
                 onClick={() => updateSW?.(true)}
-                className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+                className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
               >
                 Update
               </button>
