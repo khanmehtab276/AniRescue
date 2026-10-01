@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { Link } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import {
   AlertTriangle, Crosshair, Filter, HeartHandshake, MapPin, PawPrint,
   RefreshCw, Shield, Siren, Users,
@@ -9,6 +10,7 @@ import L from 'leaflet';
 
 import API from '../utils/api.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import useLocation from '../hooks/useLocation';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import { getStatusConfig, TONE_CLASSES } from '../utils/statusConfig.js';
 
@@ -60,6 +62,20 @@ const COLORS = {
   danger: '#e11d48',
   neutral: '#64748b',
 };
+
+function MapViewportController({ center, request }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!center || !request) return;
+    map.flyTo(center, Math.max(map.getZoom(), 13), {
+      duration: 0.65,
+      easeLinearity: 0.25,
+    });
+  }, [map, center, request]);
+
+  return null;
+}
 
 function markerIcon(status, priority) {
   const tone = getStatusConfig(status).tone;
@@ -114,6 +130,9 @@ export default function MapView() {
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedCase, setSelectedCase] = useState(null);
+  const [recenterRequest, setRecenterRequest] = useState(0);
+  const { location: currentLocation, getLocation, isLoading: locating } = useLocation();
 
   const loadMap = async () => {
     try {
@@ -199,10 +218,18 @@ export default function MapView() {
 
           {!loading && !error && (
             <MapContainer center={CENTER} zoom={12} minZoom={2} maxBounds={[[-85, -180], [85, 180]]} maxBoundsViscosity={1} className="h-full w-full">
-              <TileLayer attribution={tileAttribution} url={tileUrl}
-                 />
+              <MapViewportController
+                center={currentLocation ? [currentLocation.lat, currentLocation.lng] : null}
+                request={recenterRequest}
+              />
+              <TileLayer attribution={tileAttribution} url={tileUrl} />
               {visibleCases.map((item) => (
-                <Marker key={item.id} position={[Number(item.latitude), Number(item.longitude)]} icon={markerIcon(item.status, item.priority)}>
+                <Marker
+                  key={item.id}
+                  position={[Number(item.latitude), Number(item.longitude)]}
+                  icon={markerIcon(item.status, item.priority)}
+                  eventHandlers={{ click: () => setSelectedCase(item) }}
+                >
                   <Popup>
                     <div className="min-w-[205px] p-1">
                       <div className="flex items-start justify-between gap-3">
@@ -221,6 +248,30 @@ export default function MapView() {
                 </Marker>
               ))}
             </MapContainer>
+          )}
+
+          {!loading && !error && (
+            <div className="absolute right-3 top-3 z-[500] flex flex-col gap-2">
+              <button type="button" onClick={() => { if (!currentLocation) getLocation(); setRecenterRequest((value) => value + 1); }} disabled={locating} className="rescue-focus-ring grid h-11 w-11 place-items-center rounded-xl border border-stone-200 bg-white/95 text-stone-600 shadow-lg backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:text-emerald-700 disabled:opacity-60 dark:border-stone-800 dark:bg-stone-900/95 dark:text-stone-300 dark:hover:text-emerald-300" aria-label="Center map on my location" title="My location">
+                <Crosshair size={18} className={locating ? "animate-spin" : ""} />
+              </button>
+            </div>
+          )}
+
+          {!loading && !error && selectedCase && (
+            <div className="absolute inset-x-3 bottom-3 z-[500] animate-rescue-fade-up md:left-1/2 md:right-auto md:w-[min(92%,430px)] md:-translate-x-1/2">
+              <div className="rounded-2xl border border-stone-200 bg-white/95 p-4 shadow-2xl backdrop-blur-sm dark:border-stone-800 dark:bg-stone-900/95">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-stone-400">Case #{selectedCase.id}</p>
+                    <h3 className="mt-0.5 truncate text-sm font-black capitalize text-stone-900 dark:text-stone-100">{selectedCase.species || "Animal in need"}</h3>
+                    <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">{getStatusConfig(selectedCase.status).shortLabel}{selectedCase.priority && selectedCase.priority !== "STANDARD" ? " · " + selectedCase.priority : ""}</p>
+                  </div>
+                  <button type="button" onClick={() => setSelectedCase(null)} className="rescue-focus-ring rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-100" aria-label="Close selected case">×</button>
+                </div>
+                <Link to={"/cases/" + selectedCase.id} className="rescue-focus-ring mt-3 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-black text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-[0.98]">Open case</Link>
+              </div>
+            </div>
           )}
 
           {!loading && !error && visibleCases.length === 0 && (
