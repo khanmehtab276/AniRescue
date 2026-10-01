@@ -1,4 +1,5 @@
 const { pool } = require("../config/db");
+const { notifyUser } = require("../utils/notifications");
 
 const ALLOWED_CATEGORIES = new Set([
   "PLATFORM",
@@ -149,6 +150,25 @@ const submitFeedback = async (req, res) => {
        RETURNING id, category, rating, message, case_id, created_at`,
       [req.user.id, category, rating, message, caseId],
     );
+
+    // Admin notification is deliberately non-blocking: feedback is already
+    // persisted and must remain successful even if push delivery is unavailable.
+    pool.query(
+      `SELECT id FROM users WHERE role = 'ADMIN' AND account_status = 'ACTIVE'`,
+    )
+      .then(async (adminResult) => {
+        for (const admin of adminResult.rows) {
+          await notifyUser({
+            userId: admin.id,
+            notificationType: "FEEDBACK_RECEIVED",
+            title: "New platform feedback",
+            message: "A " + String(req.user.role || "user").toLowerCase() + " user submitted new feedback.",
+          });
+        }
+      })
+      .catch((error) => {
+        console.error("Feedback admin notification failed (non-fatal):", error?.message || error);
+      });
 
     return res.status(201).json({
       success: true,
