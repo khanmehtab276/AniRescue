@@ -91,6 +91,13 @@ export default function ReportCase() {
   // Neutral world view center as fallback when user location is unavailable
   const defaultMapCenter = [0, 0];
 
+  const reportReady = Boolean(imageFile && ((locationMode === 'auto' && location) || (locationMode === 'custom' && (pinnedLocation || manualAddress.trim()))));
+  const reportSteps = [
+    { label: 'Photo', done: Boolean(imageFile), Icon: Camera },
+    { label: 'Location', done: Boolean(locationMode === 'auto' ? location : (pinnedLocation || manualAddress.trim())), Icon: Map },
+    { label: 'Details', done: Boolean(description.trim()), Icon: Search },
+  ];
+
   useEffect(() => {
     if (gpsError) {
       setLocationMode('custom');
@@ -357,9 +364,26 @@ export default function ReportCase() {
     <div className="mx-auto max-w-5xl px-4 py-6 pb-24 sm:px-6 lg:px-8 lg:py-10 lg:pb-10 transition-colors duration-300">
       <div className="rounded-2xl p-6 md:p-8 relative transition-colors duration-300 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm">
 
-        <h2 className="text-2xl font-extrabold mb-6 text-stone-800 dark:text-stone-100 text-center">
-          Emergency Report
-        </h2>
+        <div className="mb-6 text-center">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300">
+            <HandHeart size={24} aria-hidden="true" />
+          </div>
+          <h2 className="mt-3 text-2xl font-extrabold text-stone-800 dark:text-stone-100">Report an animal 🐾</h2>
+          <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-stone-500 dark:text-stone-400">
+            Share the photo and location. We’ll take care of the rescue workflow from there.
+          </p>
+          <div className="mx-auto mt-5 grid max-w-lg grid-cols-3 gap-2">
+            {reportSteps.map(({ label, done, Icon }) => (
+              <div key={label} className={`rounded-xl border px-2 py-2.5 text-left transition-colors ${done ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-900/60 dark:bg-emerald-950/20' : 'border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-950'}`}>
+                <div className="flex items-center gap-2">
+                  <Icon size={14} className={done ? 'text-emerald-600' : 'text-stone-400'} aria-hidden="true" />
+                  <span className="text-[10px] font-black uppercase tracking-wider text-stone-500 dark:text-stone-400">{label}</span>
+                </div>
+                <p className="mt-1 text-[10px] font-bold text-stone-400">{done ? 'Ready ✓' : 'Still needed'}</p>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {submissionResult ? (
           <div className="text-center space-y-6 animate-rescue-fade-up" role="status" aria-live="polite">
@@ -407,7 +431,7 @@ export default function ReportCase() {
                   to={`/cases/${submissionResult.reportId}`}
                   className="block w-full bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-xl font-bold text-center transition-colors"
                 >
-                  View Case
+                  Track my rescue
                 </Link>
               )}
 
@@ -416,7 +440,7 @@ export default function ReportCase() {
                 onClick={resetForm}
                 className="w-full p-4 rounded-xl font-bold text-stone-700 dark:text-stone-200 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors"
               >
-                Report Another Case
+                Report another case 🐾
               </button>
             </div>
           </div>
@@ -636,13 +660,7 @@ export default function ReportCase() {
                   disabled={
                     isSubmitting ||
                     isOffline ||
-                    !imageFile ||
-                    (locationMode === 'auto' && !location) ||
-                    (
-                      locationMode === 'custom' &&
-                      !pinnedLocation &&
-                      !manualAddress.trim()
-                    )
+                    !reportReady
                   }
                   className="w-full relative group mt-6 disabled:opacity-50"
                 >
@@ -650,10 +668,10 @@ export default function ReportCase() {
 
                   <div className="relative z-10 w-full bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 p-4 rounded-xl font-bold text-lg transition-all border-t border-white/20 shadow-[0_8px_20px_rgba(0,0,0,0.4)] flex justify-center items-center gap-2">
                     {isSubmitting
-                      ? 'Processing...'
+                      ? 'Sending your report...'
                       : isOffline
-                        ? 'Waiting for Internet'
-                        : 'Transmit Rescue Alert'}
+                        ? 'Waiting for connection…'
+                        : 'Send rescue report 🐾'}
                   </div>
                 </button>
 
