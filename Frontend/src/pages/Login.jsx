@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import API from '../utils/api';
 import useLocation from '../hooks/useLocation.js';
 
@@ -84,24 +84,24 @@ export default function Login() {
 
     const payload = isRegistering
       ? {
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          role: formData.role,
-          ...(formData.role === 'VOLUNTEER' && {
-            phone: formData.phone,
-            address: formData.address || undefined,
-          }),
-          ...(formData.role === 'NGO' && {
-            organizationName: formData.organizationName,
-            contactPerson: formData.contactPerson,
-            phone: formData.phone,
-            address: formData.address,
-            latitude: detectedLocation.lat,
-            longitude: detectedLocation.lng,
-            maximumCoverageRadiusKm: Number(formData.maximumCoverageRadiusKm),
-          }),
-        }
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+        ...(formData.role === 'VOLUNTEER' && {
+          phone: formData.phone,
+          address: formData.address || undefined,
+        }),
+        ...(formData.role === 'NGO' && {
+          organizationName: formData.organizationName,
+          contactPerson: formData.contactPerson,
+          phone: formData.phone,
+          address: formData.address,
+          latitude: detectedLocation.lat,
+          longitude: detectedLocation.lng,
+          maximumCoverageRadiusKm: Number(formData.maximumCoverageRadiusKm),
+        }),
+      }
       : { email: formData.email, password: formData.password };
 
     try {
@@ -294,11 +294,10 @@ export default function Login() {
                         role: option.value
                       })
                     }
-                    className={`flex-1 py-2.5 rounded-lg text-[11px] font-bold transition-all duration-300 flex flex-col items-center gap-1 ${
-                      formData.role === option.value
+                    className={`flex-1 py-2.5 rounded-lg text-[11px] font-bold transition-all duration-300 flex flex-col items-center gap-1 ${formData.role === option.value
                         ? 'bg-[#1a1f2e] dark:bg-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.3)]'
                         : 'text-stone-500 dark:text-stone-400'
-                    }`}
+                      }`}
                   >
                     <span className="text-base">{option.icon}</span>
                     {option.label}

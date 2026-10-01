@@ -13,7 +13,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import API from '../utils/api';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext.jsx';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -252,11 +252,10 @@ export default function AdminDashboard() {
             <button
               key={value}
               onClick={() => setActiveTab(value)}
-              className={`shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                activeTab === value
+              className={`shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === value
                   ? 'bg-stone-900 dark:bg-stone-100 dark:text-stone-900 text-white shadow-lg'
                   : 'bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-800 shadow-sm'
-              }`}
+                }`}
             >
               {label}
             </button>
@@ -595,21 +594,21 @@ function AdminCaseCard({
          */}
         {(status === 'PENDING_VALIDATION' ||
           status === 'PROCESSING_ANALYSIS') && (
-          <div
-            role="status"
-            className="flex items-center justify-center gap-2 rounded-xl bg-blue-100 dark:bg-blue-900/20 px-4 py-3 text-center text-sm font-bold text-blue-700 dark:text-blue-400"
-          >
-            <Loader2
-              size={16}
-              strokeWidth={2.5}
-              className="animate-spin"
-              aria-hidden="true"
-            />
-            {status === 'PROCESSING_ANALYSIS'
-              ? 'AI analysis in progress'
-              : 'Waiting for AI validation'}
-          </div>
-        )}
+            <div
+              role="status"
+              className="flex items-center justify-center gap-2 rounded-xl bg-blue-100 dark:bg-blue-900/20 px-4 py-3 text-center text-sm font-bold text-blue-700 dark:text-blue-400"
+            >
+              <Loader2
+                size={16}
+                strokeWidth={2.5}
+                className="animate-spin"
+                aria-hidden="true"
+              />
+              {status === 'PROCESSING_ANALYSIS'
+                ? 'AI analysis in progress'
+                : 'Waiting for AI validation'}
+            </div>
+          )}
 
         {status === 'VALIDATION_PASSED' && (
           <div className="rounded-xl bg-amber-100 dark:bg-amber-900/20 px-4 py-3 text-center text-sm font-bold text-amber-700 dark:text-amber-400">
