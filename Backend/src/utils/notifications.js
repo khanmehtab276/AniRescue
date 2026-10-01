@@ -67,6 +67,7 @@ const notifyUser = async ({
           data: {
             caseId: caseId ?? "",
             notificationType,
+            notificationId: notification.id,
           },
         });
       } catch (pushError) {
