@@ -549,7 +549,6 @@ export default function ReportCase() {
                             zoom={13}
                             scrollWheelZoom={true}
                             className="w-full h-full"
-                            scrollWheelZoom
                             maxBounds={[[-85.05112878, -180], [85.05112878, 180]]}
                             maxBoundsViscosity={1}
                             worldCopyJump={false}
