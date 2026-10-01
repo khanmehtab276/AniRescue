@@ -24,7 +24,7 @@ const Feedback = lazy(() => import("./pages/Feedback.jsx"));
 
 function RouteTransition({ children }) {
   const location = useLocation();
-  return <div id="main-content" tabIndex={-1} key={location.pathname} className="animate-rescue-fade-up outline-none">{children}</div>;
+  return <div id="main-content" tabIndex={-1} key={location.pathname} className="relative min-h-[calc(100vh-4rem)] animate-rescue-fade-up outline-none anirescue-animal-wash">{children}</div>;
 }
 
 const ALL = ["user", "volunteer", "ngo", "admin"];
