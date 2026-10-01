@@ -66,8 +66,12 @@ CREATE TABLE rescue_cases (
   manual_address TEXT,
   is_custom_location BOOLEAN DEFAULT FALSE,
   image_payload TEXT NOT NULL,
-  reporter_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-  assigned_volunteer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_rescue_cases_reporter
+    FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_rescue_cases_volunteer
+    FOREIGN KEY (assigned_volunteer_id) REFERENCES users(id) ON DELETE SET NULL,
+  reporter_id INTEGER,
+  assigned_volunteer_id INTEGER,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   resolution_image_payload TEXT,
   resolution_notes TEXT,
