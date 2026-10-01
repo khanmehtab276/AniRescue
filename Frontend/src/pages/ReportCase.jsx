@@ -95,55 +95,66 @@ export default function ReportCase() {
   const defaultMapCenter = [0, 0];
 
   const reportReady = Boolean(imageFile && ((locationMode === 'auto' && location) || (locationMode === 'custom' && (pinnedLocation || manualAddress.trim()))));
+  const photoReady = Boolean(imageFile);
+  const locationReady = Boolean(locationMode === 'auto' ? location : (pinnedLocation || manualAddress.trim()));
+  const detailsReady = Boolean(description.trim());
+  const coreReady = photoReady && locationReady && detailsReady;
   const reportSteps = [
-    { label: 'Photo', done: Boolean(imageFile), Icon: Camera },
-    { label: 'Location', done: Boolean(locationMode === 'auto' ? location : (pinnedLocation || manualAddress.trim())), Icon: Map },
-    { label: 'Details', done: Boolean(description.trim()), Icon: Search },
+    { label: 'Photo', done: photoReady, Icon: Camera },
+    { label: 'Location', done: locationReady, Icon: Map },
+    { label: 'Details', done: detailsReady, Icon: Search },
+    { label: 'Ready', done: coreReady, Icon: HandHeart },
   ];
   const completedSteps = reportSteps.filter((step) => step.done).length;
   const progressState = completedSteps === 0
     ? {
-        accent: 'red',
-        label: 'Let’s get started',
-        message: 'Add a photo and location so we can begin the rescue workflow.',
-        bar: 'bg-red-500',
+        label: 'Awaiting life-saving details...',
+        message: 'Start with a clear photo. We’ll handle the animal assessment with AI.',
+        bar: 'bg-red-600',
         soft: 'bg-red-50 dark:bg-red-950/20',
         border: 'border-red-200 dark:border-red-900/50',
-        text: 'text-red-600 dark:text-red-400',
-        icon: 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-300',
+        text: 'text-red-700 dark:text-red-400',
+        icon: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300',
       }
     : completedSteps === 1
       ? {
-          accent: 'amber',
-          label: 'Good start!',
-          message: 'One step is ready. Add the next detail and keep going.',
+          label: 'Photo received. Now pinpoint the location.',
+          message: 'A precise location helps the rescue team reach the animal faster.',
           bar: 'bg-amber-500',
           soft: 'bg-amber-50 dark:bg-amber-950/20',
           border: 'border-amber-200 dark:border-amber-900/50',
-          text: 'text-amber-600 dark:text-amber-400',
+          text: 'text-amber-700 dark:text-amber-400',
           icon: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300',
         }
       : completedSteps === 2
         ? {
-            accent: 'yellow',
-            label: 'Now that’s better! ✨',
-            message: 'Almost there. Add the final detail so we can send the case.',
+            label: 'Looking good! Tell us what you saw.',
+            message: 'A short description gives the rescue team useful context without asking you to diagnose the animal.',
             bar: 'bg-yellow-500',
             soft: 'bg-yellow-50 dark:bg-yellow-950/20',
             border: 'border-yellow-200 dark:border-yellow-900/50',
-            text: 'text-yellow-600 dark:text-yellow-400',
+            text: 'text-yellow-700 dark:text-yellow-400',
             icon: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300',
           }
-        : {
-            accent: 'emerald',
-            label: 'Ready to help! 🐾',
-            message: 'Everything needed is ready. Your rescue report can be transmitted now.',
-            bar: 'bg-emerald-500',
-            soft: 'bg-emerald-50 dark:bg-emerald-950/20',
-            border: 'border-emerald-200 dark:border-emerald-900/50',
-            text: 'text-emerald-600 dark:text-emerald-400',
-            icon: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300',
-          };
+        : completedSteps === 3
+          ? {
+              label: 'Almost there. Landmark is optional.',
+              message: 'Add a nearby landmark if it makes the location easier to find, then you’re ready to send.',
+              bar: 'bg-orange-500',
+              soft: 'bg-orange-50 dark:bg-orange-950/20',
+              border: 'border-orange-200 dark:border-orange-900/50',
+              text: 'text-orange-700 dark:text-orange-400',
+              icon: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300',
+            }
+          : {
+              label: 'All set! Broadcast to the rescue network 🐾',
+              message: 'Your report has the essential details. AI will assess the animal after submission.',
+              bar: 'bg-emerald-600',
+              soft: 'bg-emerald-50 dark:bg-emerald-950/20',
+              border: 'border-emerald-200 dark:border-emerald-900/50',
+              text: 'text-emerald-700 dark:text-emerald-400',
+              icon: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300',
+            };
 
   useEffect(() => {
     if (gpsError) {
@@ -589,7 +600,7 @@ export default function ReportCase() {
                         onChange={(e) =>
                           setManualAddress(e.target.value)
                         }
-                        placeholder="Landmark or nearby place (optional)"
+                        placeholder="Landmark (optional) — e.g. opposite the Axis Bank ATM"
                         className="w-full rounded-xl border border-stone-200 bg-white p-4 text-sm font-medium text-stone-700 outline-none transition-all duration-300 placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/10 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder:text-stone-500 dark:focus:border-emerald-700"
                       />
 
@@ -677,12 +688,12 @@ export default function ReportCase() {
                   onChange={(e) =>
                     setDescription(e.target.value)
                   }
-                  placeholder="Describe the animal's condition, injury, or situation..."
+                  placeholder="Tell us what you noticed — behavior, surroundings, or anything that may help the rescue team..."
                   className="w-full rounded-xl border border-stone-200 bg-white p-4 text-sm font-medium text-stone-700 outline-none transition-all duration-300 placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/10 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder:text-stone-500 dark:focus:border-emerald-700 h-24 resize-none"
                 />
 
                 <p className="text-[11px] text-stone-400 dark:text-stone-500 ml-2">
-                  Example: "Dog has an injured back leg and is unable to walk."
+                  Example: "Dog is staying near the construction gate and seems scared."
                 </p>
               </div>
             </div>
@@ -724,7 +735,7 @@ export default function ReportCase() {
                     {isSubmitting ? 'Transmitting rescue case…' : isOffline ? 'Waiting for connection…' : 'Transmit rescue case'}
                   </button>
                   <p className="text-center text-[10px] leading-4 text-stone-400 dark:text-stone-500">
-                    {reportReady ? 'Photo and location are ready for rescue coordination.' : 'Add the photo and location above to continue.'}
+                    {reportReady ? 'The essential report details are ready for rescue coordination.' : 'Add the missing report details above to continue.'}
                   </p>
                 </div>
               </div>
@@ -773,7 +784,7 @@ export default function ReportCase() {
                     </span>
                   </button>
                   <p className="text-center text-[11px] leading-5 text-stone-400 dark:text-stone-500">
-                    {reportReady ? 'Your photo and location are ready for the rescue workflow.' : 'Add the photo and location before transmitting the case.'}
+                    {reportReady ? 'Your essential report details are ready for the rescue workflow.' : 'Complete the report details before transmitting the case.'}
                   </p>
                 </div>
               </div>
