@@ -71,7 +71,7 @@ export default function Notifications() {
             </div>
             <h1 className="mt-2 text-3xl font-black sm:text-4xl">Notifications</h1>
             <p className="mt-2 max-w-xl text-sm leading-6 text-stone-300">
-              Important rescue assignments, nearby cases, and verification updates in one place.
+              Assignments, nearby rescue opportunities, and case updates — all in one place. 🔔
             </p>
           </div>
           <div className="flex gap-2">
@@ -123,11 +123,12 @@ export default function Notifications() {
           <div className="space-y-3">
             {visible.map((item) => {
               const meta = notificationMeta(item.notification_type);
+              const MetaIcon = meta.Icon || Bell;
               return (
                 <Surface key={item.id} className={`border p-4 sm:p-5 ${item.is_read ? "" : "border-emerald-200 bg-emerald-50/40 dark:border-emerald-900/60 dark:bg-emerald-950/10"}`}>
                   <div className="flex gap-4">
                     <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
-                      <Bell size={18} />
+                      <MetaIcon size={18} />
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -155,7 +156,7 @@ export default function Notifications() {
           </div>
         ) : (
           <Surface className="p-10">
-            <EmptyState icon="🔔" title={filter === "unread" ? "No unread notifications" : "No notifications yet"} message="Rescue updates will appear here when there is something important to act on." />
+            <EmptyState icon="🔔" title={filter === "unread" ? "You’re all caught up 🎉" : "Nothing new yet 🐾"} message="When something needs your attention, we’ll let you know here." />
           </Surface>
         )}
       </section>
