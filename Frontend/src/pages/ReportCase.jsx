@@ -375,20 +375,20 @@ export default function ReportCase() {
           <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-stone-500 dark:text-stone-400">
             Share the photo and location. We’ll take care of the rescue workflow from there.
           </p>
-          <div className="mx-auto mt-6 flex max-w-2xl items-center justify-center gap-3 sm:gap-5">
+          <div className="mx-auto mt-6 grid max-w-2xl grid-cols-3 gap-2 sm:flex sm:items-center sm:justify-center sm:gap-5">
             {reportSteps.map(({ label, done, Icon }, index) => (
-              <div key={label} className="flex min-w-0 flex-1 items-center">
+              <div key={label} className="flex min-w-0 items-center sm:flex-1">
                 <div className={`flex min-w-0 items-center gap-2.5 ${done ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-400 dark:text-stone-500'}`}>
                   <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border transition-all duration-300 ${done ? 'border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40' : 'border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-950'}`}>
                     <Icon size={15} aria-hidden="true" />
                   </span>
                   <div className="min-w-0 text-left">
-                    <p className="truncate text-[11px] font-black uppercase tracking-wider">{label}</p>
-                    <p className="text-[10px] font-semibold text-stone-400 dark:text-stone-500">{done ? 'Complete' : 'Add this'}</p>
+                    <p className="truncate text-[10px] font-black uppercase tracking-wider sm:text-[11px]">{label}</p>
+                    <p className="hidden text-[10px] font-semibold text-stone-400 dark:text-stone-500 sm:block">{done ? 'Complete' : 'Add this'}</p>
                   </div>
                 </div>
                 {index < reportSteps.length - 1 && (
-                  <span className={`mx-2 h-px min-w-3 flex-1 transition-colors ${done ? 'bg-emerald-300 dark:bg-emerald-800' : 'bg-stone-200 dark:bg-stone-800'}`} aria-hidden="true" />
+                  <span className={`mx-1 hidden h-px min-w-3 flex-1 transition-colors sm:mx-2 sm:block ${done ? 'bg-emerald-300 dark:bg-emerald-800' : 'bg-stone-200 dark:bg-stone-800'}`} aria-hidden="true" />
                 )}
               </div>
             ))}
@@ -456,11 +456,11 @@ export default function ReportCase() {
           </div>
         ) : (
           <form
-            className="grid gap-8 lg:grid-cols-[1.1fr_.9fr]"
+            className="grid gap-5 sm:gap-8 lg:grid-cols-[1.1fr_.9fr]"
             onSubmit={handleSubmit}
           >
 
-            <div className="space-y-6">{/* IMAGE */}
+            <div className="space-y-5 sm:space-y-6">{/* IMAGE */}
               <div>
                 <input
                   type="file"
@@ -572,7 +572,7 @@ export default function ReportCase() {
                     <div className="space-y-4">
 
                       {!isOffline ? (
-                        <div className="rounded-2xl overflow-hidden h-48 border border-stone-200 dark:border-stone-800 border border-stone-300/50 dark:border-white/5 relative z-0">
+                        <div className="rounded-2xl overflow-hidden h-56 sm:h-48 border border-stone-200 dark:border-stone-800 border border-stone-300/50 dark:border-white/5 relative z-0">
 
                           <MapContainer
                             center={
@@ -661,9 +661,43 @@ export default function ReportCase() {
               </div>
             </div>
 
-            {/* TRANSMIT RESCUE CASE */}
-            <div className="space-y-6">
-              <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-900">
+            {/* MOBILE TRANSMIT RESCUE CASE */}
+            <div className="lg:hidden">
+              <div className="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm dark:border-emerald-900/50 dark:bg-stone-900">
+                <div className="flex items-center gap-3 border-b border-stone-200 bg-emerald-50/70 px-4 py-3 dark:border-stone-800 dark:bg-emerald-950/20">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
+                    <HandHeart size={18} aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-extrabold text-stone-800 dark:text-stone-100">Ready to send?</h3>
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400">Check your report before transmitting.</p>
+                  </div>
+                </div>
+                <div className="space-y-3 p-4">
+                  <div className="rounded-xl border border-stone-200 bg-stone-50 p-3 dark:border-stone-800 dark:bg-stone-950">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-bold text-stone-500 dark:text-stone-400">Report progress</span>
+                      <span className={`text-[11px] font-black ${reportReady ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-400 dark:text-stone-500'}`}>
+                        {reportSteps.filter((step) => step.done).length}/3 ready
+                      </span>
+                    </div>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-stone-200 dark:bg-stone-800">
+                      <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${(reportSteps.filter((step) => step.done).length / reportSteps.length) * 100}%` }} />
+                    </div>
+                  </div>
+                  <button type="submit" disabled={isSubmitting || isOffline || !reportReady} className="w-full rounded-xl bg-emerald-600 px-4 py-4 text-sm font-extrabold text-white shadow-[0_10px_24px_rgba(16,185,129,0.2)] transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50">
+                    {isSubmitting ? 'Transmitting rescue case…' : isOffline ? 'Waiting for connection…' : 'Transmit rescue case'}
+                  </button>
+                  <p className="text-center text-[10px] leading-4 text-stone-400 dark:text-stone-500">
+                    {reportReady ? 'Photo and location are ready for rescue coordination.' : 'Add the photo and location above to continue.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* DESKTOP TRANSMIT RESCUE CASE */}
+            <div className="hidden space-y-6 lg:block">
+              <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-900 lg:sticky lg:top-24">
                 <div className="border-b border-stone-200 px-5 py-4 dark:border-stone-800">
                   <div className="flex items-start gap-3">
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
