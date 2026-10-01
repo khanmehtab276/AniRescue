@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useToast } from '../contexts/ToastContext.jsx';
+import { unlockNotificationSound, playNotificationSound } from '../services/notificationSound.js';
 import {
   getFirebaseMessaging,
   onMessage,
@@ -20,6 +21,18 @@ export default function PushBridge() {
   const navigate = useNavigate();
 
   const isLoggedIn = Boolean(user?.id);
+
+  // Unlock the app sound after the user's first interaction. Browsers
+  // deliberately block unsolicited audio until the user has interacted.
+  useEffect(() => {
+    const unlock = () => unlockNotificationSound();
+    window.addEventListener('pointerdown', unlock, { once: true, passive: true });
+    window.addEventListener('keydown', unlock, { once: true, passive: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, []);
 
   // Users who already granted permission get their token re-registered
   // on each session, so token rotation and new devices keep working.
@@ -56,10 +69,12 @@ export default function PushBridge() {
           const title = notification.title || data.title || 'AniRescue';
           const body = notification.body || data.body || '';
 
+          playNotificationSound();
+
           showToast(
             [title, body].filter(Boolean).join(' — ') ||
               'You have a new update.',
-            'info',
+            'notification',
           );
 
           window.dispatchEvent(
