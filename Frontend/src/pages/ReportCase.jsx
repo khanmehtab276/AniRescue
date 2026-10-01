@@ -67,6 +67,7 @@ export default function ReportCase() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionResult, setSubmissionResult] = useState(null);
   const [isReadyToTransmit, setIsReadyToTransmit] = useState(false);
+  const [detailsSkipped, setDetailsSkipped] = useState(false);
 
   const [locationMode, setLocationMode] = useState('auto');
   const [manualAddress, setManualAddress] = useState('');
@@ -98,7 +99,7 @@ export default function ReportCase() {
   const reportReady = Boolean(imageFile && ((locationMode === 'auto' && location) || (locationMode === 'custom' && (pinnedLocation || manualAddress.trim()))) && isReadyToTransmit);
   const photoReady = Boolean(imageFile);
   const locationReady = Boolean(locationMode === 'auto' ? location : (pinnedLocation || manualAddress.trim()));
-  const detailsReady = Boolean(description.trim());
+  const detailsReady = Boolean(description.trim()) || detailsSkipped;
   const coreReady = photoReady && locationReady && detailsReady;
   const reportSteps = [
     { label: 'Photo', done: photoReady, Icon: Camera },
@@ -130,7 +131,7 @@ export default function ReportCase() {
       : completedSteps === 2
         ? {
             label: 'Looking good! Tell us what you saw.',
-            message: 'A short description gives the rescue team useful context without asking you to diagnose the animal.',
+            message: 'Tell us what you noticed if you can. It’s optional — AI will handle the animal assessment.'
             bar: 'bg-yellow-500',
             soft: 'bg-yellow-50 dark:bg-yellow-950/20',
             border: 'border-yellow-200 dark:border-yellow-900/50',
@@ -139,8 +140,8 @@ export default function ReportCase() {
           }
         : completedSteps === 3
           ? {
-              label: 'Almost there. Landmark is optional.',
-              message: 'Add a nearby landmark if useful, then review the report once before broadcasting it.',
+              label: 'Report details are ready. One quick review.',
+              message: 'Landmark is optional. Review what you’ve shared once, then broadcast the case.',
               bar: 'bg-orange-500',
               soft: 'bg-orange-50 dark:bg-orange-950/20',
               border: 'border-orange-200 dark:border-orange-900/50',
@@ -413,6 +414,7 @@ export default function ReportCase() {
     setImagePreview(null);
     setImageFile(null);
     setDescription('');
+    setDetailsSkipped(false);
     setManualAddress('');
     setPinnedLocation(null);
     setLocationMode('auto');
@@ -692,9 +694,10 @@ export default function ReportCase() {
 
                 <textarea
                   value={description}
-                  onChange={(e) =>
-                    setDescription(e.target.value)
-                  }
+                  onChange={(e) => {
+                    setDescription(e.target.value);
+                    if (e.target.value.trim()) setDetailsSkipped(false);
+                  }}
                   placeholder="Tell us what you noticed — behavior, surroundings, or anything that may help the rescue team..."
                   className="w-full rounded-xl border border-stone-200 bg-white p-4 text-sm font-medium text-stone-700 outline-none transition-all duration-300 placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/10 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder:text-stone-500 dark:focus:border-emerald-700 h-24 resize-none"
                 />
@@ -702,6 +705,15 @@ export default function ReportCase() {
                 <p className="text-[11px] text-stone-400 dark:text-stone-500 ml-2">
                   Example: "Dog is staying near the construction gate and seems scared."
                 </p>
+                {!detailsReady && photoReady && locationReady && (
+                  <button
+                    type="button"
+                    onClick={() => setDetailsSkipped(true)}
+                    className="ml-2 mt-1 text-[11px] font-bold text-stone-500 underline decoration-stone-300 underline-offset-2 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
+                  >
+                    Skip optional details
+                  </button>
+                )}
               </div>
             </div>
 
