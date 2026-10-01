@@ -22,11 +22,7 @@ const SIZES = {
 };
 
 /**
- * One shared Button used by every role's pages. Indigo is the ONLY
- * brand color for primary actions everywhere — no role-specific hues.
- * Rose ("danger") is reserved for destructive actions and the
- * emergency Report CTA specifically, as a semantic urgency signal,
- * not a role theme.
+ * Shared action button with consistent focus, motion and loading states.
  */
 export default function Button({
   variant = 'primary',
@@ -34,15 +30,20 @@ export default function Button({
   as: Component = 'button',
   className = '',
   disabled = false,
+  loading = false,
   children,
   ...rest
 }) {
   return (
     <Component
-      disabled={disabled}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors duration-150 disabled:opacity-50 disabled:pointer-events-none ${VARIANTS[variant] || VARIANTS.primary} ${SIZES[size] || SIZES.md} ${className}`}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      className={`rescue-focus-ring inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors duration-150 disabled:opacity-50 disabled:pointer-events-none ${VARIANTS[variant] || VARIANTS.primary} ${SIZES[size] || SIZES.md} ${className}`}
       {...rest}
     >
+      {loading && (
+        <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" />
+      )}
       {children}
     </Component>
   );
