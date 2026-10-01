@@ -675,7 +675,7 @@ export default function ReportCase() {
                         onChange={(e) =>
                           setManualAddress(e.target.value)
                         }
-                        placeholder="Landmark or nearby place (optional)"
+                        placeholder="Landmark (optional) — e.g. opposite the Axis Bank ATM"
                         className="w-full rounded-xl border border-stone-200 bg-white p-4 text-sm font-medium text-stone-700 outline-none transition-all duration-300 placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/10 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder:text-stone-500 dark:focus:border-emerald-700"
                       />
 
@@ -719,7 +719,7 @@ export default function ReportCase() {
                     <div className="min-w-0">
                       <div className="flex items-center justify-between gap-3">
                         <h3 className="text-sm font-extrabold text-stone-800 dark:text-stone-100">Transmit rescue case</h3>
-                        <span className={`text-[11px] font-black whitespace-nowrap ${progressState.text}`}>{completedSteps}/3</span>
+                        <span className={`text-[11px] font-black whitespace-nowrap ${progressState.text}`}>{completedSteps}/4</span>
                       </div>
                       <p className={`mt-0.5 text-[11px] font-bold transition-colors duration-500 ${progressState.text}`}>{progressState.label}</p>
                     </div>
@@ -729,7 +729,7 @@ export default function ReportCase() {
                   <div className={`rounded-xl border p-3 transition-all duration-500 ${progressState.border} ${progressState.soft}`}>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[11px] font-bold text-stone-500 dark:text-stone-400">Report progress</span>
-                      <span className={`text-[11px] font-black ${progressState.text}`}>{completedSteps}/3 ready</span>
+                      <span className={`text-[11px] font-black ${progressState.text}`}>{completedSteps}/4 ready</span>
                     </div>
                     <div className="mt-2 flex gap-1.5">
                       {reportSteps.map((step) => (
@@ -771,7 +771,7 @@ export default function ReportCase() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-3">
                         <h3 className="font-extrabold text-stone-800 dark:text-stone-100">Transmit rescue case</h3>
-                        <span className={`text-xs font-black ${progressState.text}`}>{completedSteps}/3</span>
+                        <span className={`text-xs font-black ${progressState.text}`}>{completedSteps}/4</span>
                       </div>
                       <p className={`mt-1 text-xs font-bold ${progressState.text}`}>{progressState.label}</p>
                       <p className="mt-1 text-xs leading-5 text-stone-500 dark:text-stone-400">Send the report for validation and rescue coordination.</p>
