@@ -5,7 +5,7 @@ import {
   useEffect,
 } from 'react';
 import { PawPrint } from 'lucide-react';
-import API from '../utils/api';
+import API, { refreshCsrfToken, setCsrfToken } from '../utils/api';
 
 const AuthContext = createContext();
 
@@ -59,6 +59,7 @@ export function AuthProvider({ children }) {
 
       try {
         const response = await API.get('/auth/me');
+        await refreshCsrfToken();
         const normalizedUser = normalizeUser(
           response.data?.user || response.data,
         );
@@ -120,6 +121,7 @@ export function AuthProvider({ children }) {
       console.warn('Logout request failed:', error?.message || error);
     } finally {
       clearLegacyCredentials();
+      setCsrfToken(null);
       localStorage.removeItem('anirescue_user');
       setUser(null);
     }
@@ -128,6 +130,7 @@ export function AuthProvider({ children }) {
   const refreshUser = async () => {
     try {
       const response = await API.get('/auth/me');
+      await refreshCsrfToken();
       const normalizedUser = normalizeUser(
         response.data?.user || response.data,
       );
