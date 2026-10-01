@@ -40,7 +40,7 @@ export default function Landing() {
           </p>
 
           <h1 className="text-4xl md:text-6xl font-extrabold leading-tight text-stone-900 dark:text-stone-100">
-            Every report can help
+            Every report can help 🐾
             <span className="block text-emerald-700 dark:text-emerald-400">
               save an animal.
             </span>
@@ -59,7 +59,7 @@ export default function Landing() {
               </Button>
             ) : (
               <Button as={Link} to="/login" size="lg" className="w-full">
-                Get Started
+                Get started — let’s help
               </Button>
             )}
           </div>
@@ -88,7 +88,7 @@ export default function Landing() {
             </p>
 
             <h2 className="mt-1 text-2xl font-extrabold text-stone-900 dark:text-stone-100">
-              From Report to Resolution
+              From report to rescue
             </h2>
           </div>
 
@@ -97,25 +97,25 @@ export default function Landing() {
             <Step
               number="01"
               title="Report"
-              description="Anyone can submit an animal's location, description and a photo in under a minute."
+              description="Share a photo, where you saw the animal, and what happened. We’ll guide you from there."
             />
 
             <Step
               number="02"
               title="AI Verification"
-              description="Every image is checked to confirm it shows a genuine rescue-eligible animal before it reaches volunteers."
+              description="A quick AI check helps keep the rescue queue focused on real animal cases."
             />
 
             <Step
               number="03"
               title="Rescue"
-              description="A nearby volunteer claims the case, and submits photo evidence once the rescue is complete."
+              description="A nearby responder can pick up the case and keep the rescue status updated."
             />
 
             <Step
               number="04"
               title="Verified Resolution"
-              description="An admin or partner organization reviews the evidence before the case is marked resolved — no self-certified rescues."
+              description="The completed rescue is reviewed before the case is finally marked resolved. 💚"
             />
 
           </div>
@@ -128,7 +128,7 @@ export default function Landing() {
 
           <div className="mb-5 text-center">
             <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-              Built for everyone in the loop
+              Everyone has a part to play
             </p>
           </div>
 
