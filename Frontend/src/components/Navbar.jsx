@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Activity, Building2, ClipboardCheck, ClipboardList, LayoutDashboard, LogOut, Map as MapIcon, Menu, Moon, PawPrint, Search, Shield, Siren, Sun, User, Users, X } from 'lucide-react';
+import { Activity, Building2, ClipboardCheck, ClipboardList, LayoutDashboard, LogOut, Map as MapIcon, Menu, MessageSquareHeart, Moon, PawPrint, Search, Shield, Siren, Sun, User, Users, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
@@ -11,6 +11,7 @@ const NAV = {
     { label: 'Report Rescue', path: '/report', Icon: Siren, primary: true },
     { label: 'My Cases', path: '/dashboard/cases', Icon: ClipboardList },
     { label: 'Rescue Map', path: '/map', Icon: MapIcon },
+    { label: 'Feedback', path: '/feedback', Icon: MessageSquareHeart },
   ],
   volunteer: [
     { label: 'Rescue Hub', path: '/volunteer', Icon: LayoutDashboard },
@@ -19,6 +20,7 @@ const NAV = {
     { label: 'Active Rescue', path: '/volunteer/active', Icon: Activity },
     { label: 'Rescue History', path: '/volunteer/history', Icon: ClipboardList },
     { label: 'Rescue Map', path: '/map', Icon: MapIcon },
+    { label: 'Feedback', path: '/feedback', Icon: MessageSquareHeart },
   ],
   ngo: [
     { label: 'Operations', path: '/ngo', Icon: LayoutDashboard },
@@ -27,6 +29,7 @@ const NAV = {
     { label: 'Volunteers', path: '/ngo/volunteers', Icon: Users },
     { label: 'Verification', path: '/verification', Icon: ClipboardCheck },
     { label: 'Operations Map', path: '/map', Icon: MapIcon },
+    { label: 'Feedback', path: '/feedback', Icon: MessageSquareHeart },
   ],
   admin: [
     { label: 'Control Center', path: '/admin', Icon: LayoutDashboard },
@@ -35,6 +38,7 @@ const NAV = {
     { label: 'AI Validation', path: '/admin/ai-validation', Icon: Activity },
     { label: 'Verification', path: '/verification', Icon: ClipboardCheck },
     { label: 'Global Map', path: '/map', Icon: MapIcon },
+    { label: 'Feedback', path: '/feedback', Icon: MessageSquareHeart },
   ],
 };
 
