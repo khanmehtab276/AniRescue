@@ -36,7 +36,7 @@ export default function Toast({ message, type = 'info', onClose }) {
   const current = styles[type] || styles.info;
 
   return (
-    <div className="fixed left-1/2 top-4 z-[9999] w-[calc(100%-1rem)] max-w-sm -translate-x-1/2 animate-fade-in sm:left-auto sm:right-5 sm:translate-x-0" role="status" aria-live="polite">
+    <div className={`fixed left-1/2 top-4 z-[9999] w-[calc(100%-1rem)] max-w-sm -translate-x-1/2 animate-fade-in sm:left-auto sm:right-5 sm:translate-x-0 ${type === 'notification' ? 'anirescue-notification-toast' : ''}`} role="status" aria-live="polite">
       <div className={`flex items-start gap-3 rounded-2xl border p-4 shadow-[0_10px_30px_rgba(0,0,0,0.2)] ${type === 'notification' ? 'border-blue-200 bg-blue-50/95 dark:border-blue-900/70 dark:bg-slate-900/95' : 'border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900'}`}>
 
         <div className={`mt-0.5 ${type === 'notification' ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
