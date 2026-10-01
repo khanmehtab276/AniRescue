@@ -9,7 +9,8 @@ import {
   MapContainer,
   TileLayer,
   Marker,
-  useMapEvents
+  useMapEvents,
+  useMap
 } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -26,6 +27,20 @@ L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x,
   shadowUrl: markerShadow
 });
+
+function MapViewportController({ center }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!center) return;
+    map.flyTo(center, Math.max(map.getZoom(), 13), {
+      duration: 0.65,
+      easeLinearity: 0.25,
+    });
+  }, [map, center]);
+
+  return null;
+}
 
 function MapPinDropper({ position, setPosition }) {
   useMapEvents({
@@ -432,7 +447,7 @@ export default function ReportCase() {
                     <img
                       src={imagePreview}
                       alt="Selected rescue animal"
-                      className="w-full h-auto object-contain rounded-xl"
+                      className="w-full h-auto object-contain rounded-xl rescue-image-fade"
                     />
                   ) : (
                     <div className="p-10 flex flex-col items-center justify-center h-56">
@@ -534,7 +549,14 @@ export default function ReportCase() {
                             zoom={13}
                             scrollWheelZoom={true}
                             className="w-full h-full"
+                            scrollWheelZoom
+                            maxBounds={[[-85.05112878, -180], [85.05112878, 180]]}
+                            maxBoundsViscosity={1}
+                            worldCopyJump={false}
                           >
+                            <MapViewportController
+                              center={location ? [location.lat, location.lng] : null}
+                            />
                             <TileLayer
                               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                             />
