@@ -9,30 +9,47 @@ const API = axios.create({
   },
 });
 
-function getCookie(name) {
-  if (typeof document === 'undefined') return null;
+const CSRF_STORAGE_KEY = 'anirescue_csrf';
 
-  const prefix = `${name}=`;
-  const entry = document.cookie
-    .split('; ')
-    .find((value) => value.startsWith(prefix));
+export function setCsrfToken(token) {
+  if (typeof sessionStorage === 'undefined') return;
 
-  return entry ? decodeURIComponent(entry.slice(prefix.length)) : null;
+  if (token) {
+    sessionStorage.setItem(CSRF_STORAGE_KEY, token);
+  } else {
+    sessionStorage.removeItem(CSRF_STORAGE_KEY);
+  }
+}
+
+export function getCsrfToken() {
+  if (typeof sessionStorage === 'undefined') return null;
+  return sessionStorage.getItem(CSRF_STORAGE_KEY);
+}
+
+export async function refreshCsrfToken() {
+  const response = await API.get('/auth/csrf');
+  const token = response.data?.csrfToken;
+
+  if (!token) {
+    throw new Error('Backend did not return a CSRF token.');
+  }
+
+  setCsrfToken(token);
+  return token;
 }
 
 API.interceptors.request.use(
   (config) => {
-    const csrfToken = getCookie('anirescue_csrf');
+    const method = String(config.method || 'get').toLowerCase();
 
-    if (
-      csrfToken &&
-      !['get', 'head', 'options'].includes(
-        String(config.method || 'get').toLowerCase(),
-      )
-    ) {
-      config.headers['X-CSRF-Token'] = csrfToken;
+    if (!['get', 'head', 'options'].includes(method)) {
+      const csrfToken = getCsrfToken();
+
+      if (csrfToken) {
+        config.headers = config.headers || {};
+        config.headers['X-CSRF-Token'] = csrfToken;
+      }
     }
-
 
     return config;
   },
