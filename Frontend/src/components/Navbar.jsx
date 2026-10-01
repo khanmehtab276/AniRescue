@@ -43,10 +43,10 @@ const NAV = {
 };
 
 const ROLE_META = {
-  user: { label: 'Reporter', Icon: PawPrint },
-  volunteer: { label: 'Rescue Volunteer', Icon: Siren },
-  ngo: { label: 'NGO Operations', Icon: Building2 },
-  admin: { label: 'Administrator', Icon: Shield },
+  user: { label: 'Reporter', Icon: PawPrint, accent: 'emerald' },
+  volunteer: { label: 'Rescue Volunteer', Icon: Siren, accent: 'amber' },
+  ngo: { label: 'NGO Operations', Icon: Building2, accent: 'blue' },
+  admin: { label: 'Administrator', Icon: Shield, accent: 'violet' },
 };
 
 function isActivePath(pathname, path) {
@@ -57,7 +57,7 @@ function isActivePath(pathname, path) {
 function Brand() {
   return (
     <Link to="/" className="flex items-center gap-3 min-w-0">
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-600 text-white shadow-sm"><PawPrint size={21} strokeWidth={2.4} /></span>
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-sm"><PawPrint size={21} strokeWidth={2.4} /></span>
       <span className="min-w-0">
         <span className="block text-[15px] font-black tracking-tight text-stone-900 dark:text-stone-50">AniRescue</span>
         <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-400">Rescue coordination</span>
@@ -103,7 +103,7 @@ export default function Navbar() {
         <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-8">
             <Brand />
-            {user && meta && <div className="hidden items-center gap-2 border-l border-stone-200 pl-6 dark:border-stone-800 md:flex"><meta.Icon size={15} className="text-emerald-600 dark:text-emerald-400" /><span className="text-sm font-bold text-stone-600 dark:text-stone-300">{meta.label}</span></div>}
+            {user && meta && <div className="hidden items-center gap-2 border-l border-stone-200 pl-6 dark:border-stone-800 md:flex"><meta.Icon size={15} className={`text-${meta.accent}-600 dark:text-${meta.accent}-400`} /><span className="text-sm font-bold text-stone-600 dark:text-stone-300">{meta.label}</span></div>}
           </div>
           <div className="flex items-center gap-2">{user && <NotificationBell />}
             {user && <button type="button" onClick={() => setMenuOpen((value) => !value)} className="inline-flex h-10 items-center gap-2 rounded-xl border border-stone-300 bg-white px-3 text-stone-800 shadow-[0_4px_14px_rgba(28,25,23,0.10)] transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:text-emerald-700 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:shadow-[0_4px_16px_rgba(0,0,0,0.30)] dark:hover:border-emerald-700 dark:hover:text-emerald-400" aria-expanded={menuOpen} aria-controls="rescue-navigation" aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}>{menuOpen ? <X size={18} /> : <Menu size={18} />}<span className="hidden text-xs font-extrabold sm:inline">Menu</span></button>}
