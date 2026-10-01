@@ -11,6 +11,10 @@ const VARIANTS = {
     'bg-transparent border border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800/50',
   danger:
     'bg-rose-600 text-white shadow-sm hover:bg-rose-700 active:bg-rose-800',
+  info:
+    'bg-blue-600 text-white shadow-sm hover:bg-blue-700 active:bg-blue-800',
+  ai:
+    'bg-violet-600 text-white shadow-sm hover:bg-violet-700 active:bg-violet-800',
   ghost:
     'bg-transparent text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-800/50',
 };
@@ -38,7 +42,7 @@ export default function Button({
     <Component
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={`rescue-focus-ring inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors duration-150 disabled:opacity-50 disabled:pointer-events-none ${VARIANTS[variant] || VARIANTS.primary} ${SIZES[size] || SIZES.md} ${className}`}
+      className={`rescue-focus-ring inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:pointer-events-none ${VARIANTS[variant] || VARIANTS.primary} ${SIZES[size] || SIZES.md} ${className}`}
       {...rest}
     >
       {loading && (
