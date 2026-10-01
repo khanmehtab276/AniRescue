@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Bell, BellRing, CheckCheck, ChevronRight, CircleCheck, HeartHandshake, Inbox, MapPin, Search, UserCheck } from "lucide-react";
+import { AlertTriangle, Bell, BellRing, CheckCheck, ChevronRight, CircleCheck, HeartHandshake, Inbox, MapPin, MessageSquareHeart, Search, UserCheck } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../utils/api";
 import { useAuth } from "../contexts/AuthContext.jsx";
@@ -17,6 +17,7 @@ const TYPE_META = {
   CASE_RESOLVED: { label: "Case resolved", tone: "emerald", Icon: CircleCheck },
   CASE_RELEASED: { label: "Case released", tone: "amber", Icon: UserCheck },
   CASE_CANCELLED: { label: "Case cancelled", tone: "rose", Icon: AlertTriangle },
+  FEEDBACK_RECEIVED: { label: "New feedback", tone: "sky", Icon: MessageSquareHeart },
 };
 
 function relativeTime(value) {
