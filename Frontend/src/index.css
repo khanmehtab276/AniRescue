@@ -318,3 +318,48 @@ h1, h2, h3 {
   font-family: 'Manrope', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
   letter-spacing: -0.02em;
 }
+
+
+/* Installed-PWA notification surfaces use a bottom-sheet layout on compact
+   screens so they behave like app UI rather than a desktop dropdown. */
+@media (display-mode: standalone) and (max-width: 640px) {
+  .anirescue-notification-backdrop {
+    background: rgb(15 23 42 / 0.24);
+  }
+
+  .anirescue-notification-panel {
+    top: auto !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: min(78vh, 620px);
+    border-radius: 1.75rem 1.75rem 0 0 !important;
+    padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 0 -18px 45px rgb(15 23 42 / 0.18);
+    animation-name: rescue-pwa-notification-in;
+    animation-duration: 280ms;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    transform-origin: bottom center;
+  }
+
+  .dark .anirescue-notification-panel {
+    box-shadow: 0 -20px 55px rgb(0 0 0 / 0.42);
+  }
+
+  .anirescue-notification-toast {
+    top: max(0.75rem, env(safe-area-inset-top)) !important;
+    left: 0.75rem !important;
+    right: 0.75rem !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes rescue-pwa-notification-in {
+    from { opacity: 0; transform: translateY(22px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+}
