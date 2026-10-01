@@ -424,8 +424,8 @@ export default function ReportCase() {
                 <label
                   htmlFor="cameraInput"
                   className={`block overflow-hidden transition-all duration-300 cursor-pointer rounded-2xl bg-white dark:bg-stone-900 ${imagePreview
-                      ? 'border border-stone-200 dark:border-stone-800 shadow-sm border-2 border-emerald-500/50'
-                      : 'border border-stone-200 dark:border-stone-800'
+                    ? 'border border-stone-200 dark:border-stone-800 shadow-sm border-2 border-emerald-500/50'
+                    : 'border border-stone-200 dark:border-stone-800'
                     }`}
                 >
                   {imagePreview ? (
@@ -466,8 +466,8 @@ export default function ReportCase() {
                       }
                     }}
                     className={`flex-1 py-2.5 rounded-lg text-xs uppercase tracking-wide font-bold transition-all duration-300 ${locationMode === 'auto'
-                        ? 'bg-[#1a1f2e] dark:bg-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.3)]'
-                        : 'text-stone-500 hover:bg-black/5 dark:hover:bg-white/5'
+                      ? 'bg-[#1a1f2e] dark:bg-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.3)]'
+                      : 'text-stone-500 hover:bg-black/5 dark:hover:bg-white/5'
                       }`}
                   >
                     Auto GPS
@@ -479,8 +479,8 @@ export default function ReportCase() {
                       setLocationMode('custom')
                     }
                     className={`flex-1 py-2.5 rounded-lg text-xs uppercase tracking-wide font-bold transition-all duration-300 ${locationMode === 'custom'
-                        ? 'bg-[#1a1f2e] dark:bg-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.3)]'
-                        : 'text-stone-500 hover:bg-black/5 dark:hover:bg-white/5'
+                      ? 'bg-[#1a1f2e] dark:bg-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.3)]'
+                      : 'text-stone-500 hover:bg-black/5 dark:hover:bg-white/5'
                       }`}
                   >
                     Pin & Describe
@@ -503,8 +503,8 @@ export default function ReportCase() {
                               : 'Location unavailable'
                         }
                         className={`w-full p-4 rounded-xl text-sm font-bold outline-none border-none transition-all duration-300 bg-white dark:bg-stone-900 ${location
-                            ? 'text-emerald-600 dark:text-emerald-400'
-                            : 'text-stone-400'
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-stone-400'
                           } border border-stone-200 dark:border-stone-800`}
                       />
 
@@ -604,161 +604,41 @@ export default function ReportCase() {
                   Example: "Dog has an injured back leg and is unable to walk."
                 </p>
               </div>
-
-              <div className="animate-fade-in">
-
-                {locationMode === 'auto' ? (
-                  <div className="space-y-3">
-
-                    <input
-                      type="text"
-                      readOnly
-                      value={
-                        isLoading
-                          ? 'Getting your location...'
-                          : location
-                            ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`
-                            : 'Location unavailable'
-                      }
-                      className={`w-full p-4 rounded-xl text-sm font-bold outline-none border-none transition-all duration-300 bg-white dark:bg-stone-900 ${
-                        location
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : 'text-stone-400'
-                      } border border-stone-200 dark:border-stone-800`}
-                    />
-
-                    <input
-                      type="text"
-                      value={manualAddress}
-                      onChange={(e) =>
-                        setManualAddress(e.target.value)
-                      }
-                      placeholder="Add a Landmark (optional)"
-                      className="w-full p-4 rounded-xl text-sm font-medium text-stone-700 dark:text-stone-200 outline-none border-none transition-all duration-300 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800"
-                    />
-
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-
-                    {!isOffline ? (
-                      <div className="rounded-2xl overflow-hidden h-48 border border-stone-200 dark:border-stone-800 border border-stone-300/50 dark:border-white/5 relative z-0">
-
-                        <MapContainer
-                          center={
-                            location
-                              ? [location.lat, location.lng]
-                              : defaultMapCenter
-                          }
-                          zoom={13}
-                          scrollWheelZoom={true}
-                          worldCopyJump={false}
-                          maxBounds={[
-                            [-85.05112878, -180],
-                            [85.05112878, 180]
-                          ]}
-                          maxBoundsViscosity={1}
-                          className="w-full h-full"
-                        >
-                          <TileLayer
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                          />
-
-                          <MapPinDropper
-                            position={pinnedLocation}
-                            setPosition={setPinnedLocation}
-                          />
-                        </MapContainer>
-
-                        {!pinnedLocation && (
-                          <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-3 py-1.5 rounded-full z-[400] backdrop-blur-sm pointer-events-none">
-                            Tap map to drop pin
-                          </div>
-                        )}
-
-                      </div>
-                    ) : (
-                      <div className="rounded-2xl h-32 flex flex-col items-center justify-center text-center p-4 border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900">
-
-                        <span className="text-3xl mb-2 grayscale opacity-50">
-                          🗺️
-                        </span>
-
-                        <p className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wide">
-                          Map offline
-                        </p>
-
-                        <p className="text-[10px] text-stone-400 dark:text-stone-500 mt-1 font-medium">
-                          Please provide a descriptive landmark below.
-                        </p>
-
-                      </div>
-                    )}
-
-                    <input
-                      type="text"
-                      value={manualAddress}
-                      onChange={(e) =>
-                        setManualAddress(e.target.value)
-                      }
-                      placeholder="Add a Landmark (optional)"
-                      className="w-full p-4 rounded-xl text-sm font-medium text-stone-700 dark:text-stone-200 outline-none border-none transition-all duration-300 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800"
-                    />
-
-                  </div>
-                )}
-              </div>
             </div>
 
-            {/* DESCRIPTION */}
-            <div className="space-y-2">
-              <label className="block text-xs uppercase tracking-wider font-bold text-stone-500 dark:text-stone-400 ml-2">
-                Description (optional)
-              </label>
+            {/* SECOND COLUMN - Submit button only */}
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-stone-200 bg-stone-50 p-5 dark:border-stone-800 dark:bg-stone-950">
+                {/* SUBMIT */}
+                <button
+                  type="submit"
+                  disabled={
+                    isSubmitting ||
+                    isOffline ||
+                    !imageFile ||
+                    (locationMode === 'auto' && !location) ||
+                    (
+                      locationMode === 'custom' &&
+                      !pinnedLocation &&
+                      !manualAddress.trim()
+                    )
+                  }
+                  className="w-full relative group mt-6 disabled:opacity-50"
+                >
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3/4 h-5 bg-rose-500 blur-lg rounded-full transition-all duration-300 group-hover:bg-rose-400"></div>
 
-              <textarea
-                value={description}
-                onChange={(e) =>
-                  setDescription(e.target.value)
-                }
-                placeholder="Describe the animal's condition, injury, or situation..."
-                className="w-full p-4 rounded-xl text-sm font-medium text-stone-700 dark:text-stone-200 outline-none border-none transition-all duration-300 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 h-24 resize-none"
-              />
+                  <div className="relative z-10 w-full bg-[#1a1f2e] dark:bg-black text-white p-4 rounded-xl font-bold text-lg transition-all border-t border-white/20 shadow-[0_8px_20px_rgba(0,0,0,0.4)] flex justify-center items-center gap-2">
+                    {isSubmitting
+                      ? 'Processing...'
+                      : isOffline
+                        ? 'Waiting for Internet'
+                        : 'Transmit Rescue Alert'}
+                  </div>
+                </button>
 
-              <p className="text-[11px] text-stone-400 dark:text-stone-500 ml-2">
-                Example: "Dog has an injured back leg and is unable to walk."
-              </p>
-            </div>
-            </div><div className="space-y-6"><div className="rounded-2xl border border-stone-200 bg-stone-50 p-5 dark:border-stone-800 dark:bg-stone-950">{/* SUBMIT */}
-              <button
-                type="submit"
-                disabled={
-                  isSubmitting ||
-                  isOffline ||
-                  !imageFile ||
-                  (locationMode === 'auto' && !location) ||
-                  (
-                    locationMode === 'custom' &&
-                    !pinnedLocation &&
-                    !manualAddress.trim()
-                  )
-                }
-                className="w-full relative group mt-6 disabled:opacity-50"
-              >
-                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3/4 h-5 bg-rose-500 blur-lg rounded-full transition-all duration-300 group-hover:bg-rose-400"></div>
-
-                <div className="relative z-10 w-full bg-[#1a1f2e] dark:bg-black text-white p-4 rounded-xl font-bold text-lg transition-all border-t border-white/20 shadow-[0_8px_20px_rgba(0,0,0,0.4)] flex justify-center items-center gap-2">
-                  {isSubmitting
-                    ? 'Processing...'
-                    : isOffline
-                      ? 'Waiting for Internet'
-                      : 'Transmit Rescue Alert'}
-                </div>
-              </button>
-
-            </div></div></form>
+              </div></div></form>
         )}
       </div>
-    </div>
+    </div >
   );
 }
