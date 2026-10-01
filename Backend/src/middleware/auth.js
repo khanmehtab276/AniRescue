@@ -65,6 +65,25 @@ function clearAuthCookies(res) {
   ]);
 }
 
+function getCsrfToken(req) {
+  const cookies = parseCookies(req.headers.cookie);
+  return cookies[CSRF_COOKIE] || null;
+}
+
+function ensureCsrfToken(req, res) {
+  const existingToken = getCsrfToken(req);
+  if (existingToken) return existingToken;
+
+  const csrfToken = crypto.randomBytes(32).toString("hex");
+  res.append(
+    "Set-Cookie",
+    CSRF_COOKIE + "=" + csrfToken + "; " + cookieOptions({
+      maxAge: SESSION_MAX_AGE_SECONDS,
+    }),
+  );
+  return csrfToken;
+}
+
 function getSessionToken(req) {
   const cookies = parseCookies(req.headers.cookie);
   return cookies[SESSION_COOKIE] || null;
@@ -106,8 +125,7 @@ function requireCsrf(req, res, next) {
     return next();
   }
 
-  const cookies = parseCookies(req.headers.cookie);
-  const csrfCookie = cookies[CSRF_COOKIE];
+  const csrfCookie = getCsrfToken(req);
   const csrfHeader = req.get("X-CSRF-Token");
 
   if (
@@ -218,6 +236,8 @@ module.exports = {
   requireCsrf,
   setAuthCookies,
   clearAuthCookies,
+  getCsrfToken,
+  ensureCsrfToken,
   SESSION_COOKIE,
   CSRF_COOKIE,
 };
