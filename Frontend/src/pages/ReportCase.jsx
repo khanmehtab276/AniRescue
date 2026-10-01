@@ -131,7 +131,7 @@ export default function ReportCase() {
       : completedSteps === 2
         ? {
             label: 'Looking good! Tell us what you saw.',
-            message: 'Tell us what you noticed if you can. It’s optional — AI will handle the animal assessment.'
+            message: 'Tell us what you noticed if you can. It’s optional — AI will handle the animal assessment.',
             bar: 'bg-yellow-500',
             soft: 'bg-yellow-50 dark:bg-yellow-950/20',
             border: 'border-yellow-200 dark:border-yellow-900/50',
