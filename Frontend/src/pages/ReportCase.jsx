@@ -392,7 +392,7 @@ export default function ReportCase() {
                 )}
               </div>
             ))}
-          </div>v>
+          </div>
         </div>
 
         {submissionResult ? (
