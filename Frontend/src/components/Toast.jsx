@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { AlertTriangle, CheckCircle2, Info, XCircle, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, XCircle } from 'lucide-react';
 
 export default function Toast({ message, type = 'info', onClose }) {
   useEffect(() => {
