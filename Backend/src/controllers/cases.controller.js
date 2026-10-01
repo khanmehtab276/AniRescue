@@ -6,6 +6,7 @@ const { normalizeEnum } = require("../utils/helpers");
 const { logCaseHistory } = require("../utils/caseHistory");
 const { haversineKm } = require("../utils/geo");
 const { createNotification } = require("../utils/notifications");
+const { notifyCaseRecipients } = require("../utils/caseNotificationRecipients");
 const { sendPushNotification } = require("../utils/pushNotifications");
 const {
   canCancel,
@@ -203,6 +204,14 @@ const reportCase = async (req, res) => {
       `📬 Case #${savedCase.id} committed and queued in the AI processing outbox.`,
     );
 
+    await notifyCaseRecipients({
+      caseId: savedCase.id,
+      notificationType: "CASE_REPORTED",
+      title: "Rescue report received 🐾",
+      message: `Your rescue report #${savedCase.id} is safely received. We’ll keep you updated as it moves through rescue.`,
+      includeReporter: true,
+    });
+
     res.status(201).json({
       success: true,
       case: savedCase,
@@ -392,6 +401,19 @@ const verifyJunkCase = async (req, res) => {
       action: "JUNK_REVIEW_OVERRIDE",
       fromStatus: "REJECTED_JUNK",
       toStatus: newStatus,
+    });
+
+    await notifyCaseRecipients({
+      caseId: id,
+      notificationType: approved ? "VALIDATION_PASSED" : "VALIDATION_REJECTED",
+      title: approved ? "Rescue report approved 🐾" : "Rescue report still needs review",
+      message: approved
+        ? `Rescue report #${id} has been approved and is now available for rescue.`
+        : `Rescue report #${id} remains under review by the rescue team.`,
+      includeReporter: true,
+      includeNearbyVolunteers: approved,
+      includeNearbyNgos: true,
+      includeAdmins: true,
     });
 
     res.json({
@@ -696,6 +718,15 @@ const claimCase = async (req, res) => {
       toStatus: "IN_PROGRESS",
     });
 
+    await notifyCaseRecipients({
+      caseId,
+      notificationType: "CASE_CLAIMED",
+      title: "Rescue help is on the way 🐾",
+      message: `Rescue Case #${caseId} has been claimed and is now in progress.`,
+      includeReporter: true,
+      includeAdmins: true,
+    });
+
     res.json({ success: true, case: result.rows[0] });
   } catch (err) {
     console.error("Claim case error:", err);
@@ -767,6 +798,16 @@ const cancelCase = async (req, res) => {
       fromStatus: currentCase.status,
       toStatus: "CANCELLED",
       notes: reason || null,
+    });
+
+    await notifyCaseRecipients({
+      caseId: id,
+      notificationType: "CASE_CANCELLED",
+      title: "Rescue case cancelled",
+      message: `Rescue Case #${id} was cancelled.${reason ? ` Reason: ${reason}` : ""}`,
+      includeReporter: true,
+      includeAssignedVolunteer: true,
+      includeAdmins: true,
     });
 
     res.json({ success: true, case: result.rows[0] });
@@ -852,6 +893,16 @@ const submitRescueEvidence = async (req, res) => {
       fromStatus: "IN_PROGRESS",
       toStatus: "RESCUE_COMPLETED",
       notes: notes || null,
+    });
+
+    await notifyCaseRecipients({
+      caseId: id,
+      notificationType: "EVIDENCE_SUBMITTED",
+      title: "Rescue completed 🐾",
+      message: `Rescue Case #${id} has been marked rescued and is waiting for verification.`,
+      includeReporter: true,
+      includeNearbyNgos: true,
+      includeAdmins: true,
     });
 
     res.json({ success: true, case: result.rows[0] });
@@ -1181,6 +1232,17 @@ const releaseCase = async (req, res) => {
       notes: "Case released by assigned volunteer.",
     });
 
+    await notifyCaseRecipients({
+      caseId: id,
+      notificationType: "CASE_RELEASED",
+      title: "Rescue case is available again",
+      message: `Rescue Case #${id} is available again for a rescue volunteer.`,
+      includeReporter: true,
+      includeNearbyVolunteers: true,
+      includeNearbyNgos: true,
+      includeAdmins: true,
+    });
+
     return res.json({
       success: true,
       case: result.rows[0],
@@ -1365,6 +1427,16 @@ const verifyCompletion = async (req, res) => {
         }
       }
     }
+
+    await notifyCaseRecipients({
+      caseId: id,
+      notificationType: approved ? "COMPLETION_VERIFIED" : "COMPLETION_REJECTED",
+      title: approved ? "Rescue verified 🎉" : "Rescue needs another look",
+      message: approved
+        ? `Rescue Case #${id} has been verified successfully.`
+        : `Rescue Case #${id} needs another rescue check. Reason: ${reason}`,
+      includeReporter: true,
+    });
 
     apiCache.flushAll();
 
