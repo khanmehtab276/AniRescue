@@ -1,25 +1,21 @@
 -- =====================================================================
 -- Migration 001: AniRescue original database baseline
 -- =====================================================================
--- This migration captures the schema that existed in Neon BEFORE the
--- numbered application migrations were introduced.
+-- This migration captures the application schema that existed before
+-- the numbered feature migrations were introduced.
 --
--- IMPORTANT:
---   - This is the true starting point for a fresh database.
---   - Later feature migrations must add their own objects here only if
---     those objects existed before migration tracking began.
---   - Do not add objects from migrations 002+ to this file.
+-- The original Neon database was created manually. This file therefore
+-- includes every manual-only object that is not introduced by migrations
+-- 002-010, including all four PostgreSQL enums and the volunteer location/
+-- availability fields.
 --
--- Reconstructed from the current Neon schema plus the original migration
--- history. In particular, the original database used PostgreSQL enums
--- for role/account/case/volunteer availability and already had the
--- rescue-case indexes defined below.
+-- Later feature migrations must remain responsible for their own changes.
 -- =====================================================================
 
 BEGIN;
 
 -- ---------------------------------------------------------------------
--- Original enum types
+-- Original PostgreSQL enum types
 -- ---------------------------------------------------------------------
 
 CREATE TYPE user_role AS ENUM (
@@ -56,8 +52,8 @@ CREATE TYPE case_status AS ENUM (
 -- ---------------------------------------------------------------------
 -- Original users table
 --
--- jurisdiction_* were introduced by migration 002 and are therefore
--- intentionally NOT part of this baseline.
+-- jurisdiction_* is added by migration 002 and is intentionally not
+-- duplicated here.
 -- ---------------------------------------------------------------------
 
 CREATE TABLE users (
@@ -78,10 +74,10 @@ CREATE TABLE users (
 -- Original rescue_cases table
 --
 -- Evidence/verification fields, AI audit fields and client_request_id
--- are intentionally added by later migrations.
+-- are added by later migrations.
 --
--- priority originally existed without the later STANDARD default;
--- migration 002 establishes that default and backfills existing NULLs.
+-- priority originally had no default. Migration 002 intentionally
+-- establishes STANDARD and backfills existing NULL values.
 -- ---------------------------------------------------------------------
 
 CREATE TABLE rescue_cases (
@@ -95,10 +91,8 @@ CREATE TABLE rescue_cases (
   manual_address TEXT,
   is_custom_location BOOLEAN DEFAULT FALSE,
   image_payload TEXT NOT NULL,
-  reporter_id INTEGER
-    REFERENCES users(id) ON DELETE SET NULL,
-  assigned_volunteer_id INTEGER
-    REFERENCES users(id) ON DELETE SET NULL,
+  reporter_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  assigned_volunteer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   resolution_image_payload TEXT,
   resolution_notes TEXT,
@@ -106,7 +100,7 @@ CREATE TABLE rescue_cases (
 );
 
 -- ---------------------------------------------------------------------
--- Original indexes from the manually-created Neon schema
+-- Original rescue-case indexes
 -- ---------------------------------------------------------------------
 
 CREATE INDEX idx_cases_reporter
@@ -124,10 +118,6 @@ CREATE UNIQUE INDEX idx_one_active_rescue_per_volunteer
 
 -- ---------------------------------------------------------------------
 -- Migration metadata
---
--- The migration runner also bootstraps this table before migration 001
--- so that it can safely record migration 001 on an empty database.
--- IF NOT EXISTS keeps this migration compatible with that runner.
 -- ---------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS schema_migrations (
