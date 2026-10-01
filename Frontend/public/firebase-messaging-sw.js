@@ -27,13 +27,24 @@ self.addEventListener('push', (event) => {
   const title = notification.title || data.title || 'AniRescue';
   const body = notification.body || data.body || '';
 
+  const tag = data.notificationId
+    ? `notification-${data.notificationId}`
+    : data.caseId
+      ? `case-${data.caseId}`
+      : `anirescue-${Date.now()}`;
+
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
       data,
       icon: '/pwa-192x192.png',
       badge: '/pwa-192x192.png',
-      tag: data.caseId ? `case-${data.caseId}` : undefined,
+      image: data.imageUrl || undefined,
+      tag,
+      renotify: true,
+      silent: false,
+      vibrate: [60, 80, 60],
+      timestamp: Date.now(),
     }),
   );
 });
