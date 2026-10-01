@@ -5,6 +5,7 @@ import API from "../utils/api";
 import { useAuth } from "../contexts/AuthContext.jsx";
 
 const TYPE_META = {
+  CASE_REPORTED: { label: "Report received", tone: "emerald", Icon: Inbox },
   CASE_AVAILABLE: { label: "Nearby rescue", tone: "amber", Icon: MapPin },
   CASE_CLAIMED: { label: "Case claimed", tone: "emerald", Icon: UserCheck },
   CASE_ASSIGNED: { label: "Case assigned", tone: "sky", Icon: HeartHandshake },
