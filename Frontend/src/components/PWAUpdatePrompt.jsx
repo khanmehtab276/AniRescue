@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { registerSW } from 'virtual:pwa-register';
 
 export default function PWAUpdatePrompt() {
@@ -26,7 +27,7 @@ export default function PWAUpdatePrompt() {
     <div className="fixed bottom-5 left-1/2 z-[9999] w-[calc(100%-2rem)] max-w-md -translate-x-1/2">
       <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.2)] dark:border-stone-700 dark:bg-stone-900">
         <div className="flex items-start gap-3">
-          <div className="text-xl">🔄</div>
+          <div className="mt-0.5 text-emerald-600 dark:text-emerald-400"><RefreshCw size={19} aria-hidden="true" /></div>
 
           <div className="flex-1">
             <p className="font-bold text-sm text-stone-800 dark:text-stone-100">
