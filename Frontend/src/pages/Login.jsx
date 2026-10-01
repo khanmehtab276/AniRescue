@@ -117,12 +117,10 @@ export default function Login() {
       }
 
       /*
-       * Volunteer and NGO accounts are created as PENDING. The backend
-       * still returns a token, but every protected route rejects it
-       * until the account is activated — so signing them in would drop
-       * them onto a dashboard where every request fails with no
-       * explanation. Don't store the session; tell them what's
-       * actually happening instead.
+       * Volunteer and NGO accounts are created as PENDING. They do not
+       * receive an authenticated session until an administrator activates
+       * the account, so keep them on the registration screen with a clear
+       * status message instead of entering a protected dashboard.
        */
       if (
         isRegistering &&
