@@ -1,18 +1,11 @@
 -- =====================================================================
 -- Migration 002: Phase 2 — RBAC correctness, evidence/verification flow,
--- NGO jurisdiction, case history/audit trail, priority honesty fix.
---
--- This is the FIRST migration file in the repo. No prior schema was
--- version-controlled, so this only ADDS columns/tables — nothing here
--- drops or renames existing data. Safe to run against the existing
--- Neon database. Run manually via psql or your preferred migration
--- runner; the backend does not auto-apply this on boot.
+-- NGO jurisdiction, volunteer availability, case history/audit trail,
+-- and priority default/backfill.
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
-
--- ---------------------------------------------------------------------
--- 2. Rescue evidence + verification fields on rescue_cases
+-- 1. Rescue evidence + verification fields
 -- ---------------------------------------------------------------------
 ALTER TABLE rescue_cases
   ADD COLUMN IF NOT EXISTS evidence_image_payload TEXT,
@@ -23,11 +16,7 @@ ALTER TABLE rescue_cases
   ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
 
 -- ---------------------------------------------------------------------
--- 3. Priority honesty fix
---    Nothing in the backend or AI worker has ever written to this
---    column — every "HIGH priority" badge in the UI has been rendering
---    off a NULL value. Give it a real, explicit default so it stops
---    silently lying, and backfill existing rows.
+-- 2. Priority honesty fix
 -- ---------------------------------------------------------------------
 ALTER TABLE rescue_cases
   ALTER COLUMN priority SET DEFAULT 'STANDARD';
@@ -37,9 +26,7 @@ UPDATE rescue_cases
  WHERE priority IS NULL;
 
 -- ---------------------------------------------------------------------
--- 4. NGO operating jurisdiction
---    Used to filter the NGO dashboard feed by service radius instead
---    of returning the master case list to every NGO account.
+-- 3. NGO operating jurisdiction
 -- ---------------------------------------------------------------------
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS jurisdiction_lat DOUBLE PRECISION,
@@ -47,9 +34,19 @@ ALTER TABLE users
   ADD COLUMN IF NOT EXISTS jurisdiction_radius_km DOUBLE PRECISION DEFAULT 15;
 
 -- ---------------------------------------------------------------------
--- 5. Case status/action history — minimal audit trail
---    Every mutating case action (claim, status change, evidence
---    submission, verification, priority change) inserts one row here.
+-- 4. Volunteer availability/location tracking
+--
+-- These fields existed in the manually-created Neon schema but were
+-- missing from the original migration history. They are represented
+-- here so a fresh database reproduces the current schema exactly.
+-- ---------------------------------------------------------------------
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS availability_status volunteer_availability
+    NOT NULL DEFAULT 'OFFLINE',
+  ADD COLUMN IF NOT EXISTS location_updated_at TIMESTAMPTZ;
+
+-- ---------------------------------------------------------------------
+-- 5. Case status/action history
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS case_status_history (
   id            SERIAL PRIMARY KEY,
