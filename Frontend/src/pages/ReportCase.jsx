@@ -100,6 +100,50 @@ export default function ReportCase() {
     { label: 'Location', done: Boolean(locationMode === 'auto' ? location : (pinnedLocation || manualAddress.trim())), Icon: Map },
     { label: 'Details', done: Boolean(description.trim()), Icon: Search },
   ];
+  const completedSteps = reportSteps.filter((step) => step.done).length;
+  const progressState = completedSteps === 0
+    ? {
+        accent: 'red',
+        label: 'Let’s get started',
+        message: 'Add a photo and location so we can begin the rescue workflow.',
+        bar: 'bg-red-500',
+        soft: 'bg-red-50 dark:bg-red-950/20',
+        border: 'border-red-200 dark:border-red-900/50',
+        text: 'text-red-600 dark:text-red-400',
+        icon: 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-300',
+      }
+    : completedSteps === 1
+      ? {
+          accent: 'amber',
+          label: 'Good start!',
+          message: 'One step is ready. Add the next detail and keep going.',
+          bar: 'bg-amber-500',
+          soft: 'bg-amber-50 dark:bg-amber-950/20',
+          border: 'border-amber-200 dark:border-amber-900/50',
+          text: 'text-amber-600 dark:text-amber-400',
+          icon: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300',
+        }
+      : completedSteps === 2
+        ? {
+            accent: 'yellow',
+            label: 'Now that’s better! ✨',
+            message: 'Almost there. Add the final detail so we can send the case.',
+            bar: 'bg-yellow-500',
+            soft: 'bg-yellow-50 dark:bg-yellow-950/20',
+            border: 'border-yellow-200 dark:border-yellow-900/50',
+            text: 'text-yellow-600 dark:text-yellow-400',
+            icon: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300',
+          }
+        : {
+            accent: 'emerald',
+            label: 'Ready to help! 🐾',
+            message: 'Everything needed is ready. Your rescue report can be transmitted now.',
+            bar: 'bg-emerald-500',
+            soft: 'bg-emerald-50 dark:bg-emerald-950/20',
+            border: 'border-emerald-200 dark:border-emerald-900/50',
+            text: 'text-emerald-600 dark:text-emerald-400',
+            icon: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300',
+          };
 
   useEffect(() => {
     if (gpsError) {
@@ -645,29 +689,38 @@ export default function ReportCase() {
 
             {/* MOBILE TRANSMIT RESCUE CASE */}
             <div className="lg:hidden">
-              <div className="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm dark:border-emerald-900/50 dark:bg-stone-900">
-                <div className="flex items-center gap-3 border-b border-stone-200 bg-emerald-50/70 px-4 py-3 dark:border-stone-800 dark:bg-emerald-950/20">
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
-                    <HandHeart size={18} aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-extrabold text-stone-800 dark:text-stone-100">Ready to send?</h3>
-                    <p className="text-[11px] text-stone-500 dark:text-stone-400">Check your report before transmitting.</p>
+              <div className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-500 dark:bg-stone-900 ${progressState.border}`}>
+                <div className={`relative overflow-hidden border-b px-4 py-3 transition-colors duration-500 ${progressState.soft} ${progressState.border}`}>
+                  <div className="absolute inset-x-0 bottom-0 h-1 bg-stone-200/70 dark:bg-stone-800/70">
+                    <div className={`h-full rounded-full transition-all duration-700 ease-out ${progressState.bar}`} style={{ width: `${(completedSteps / reportSteps.length) * 100}%` }} />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-colors duration-500 ${progressState.icon}`}>
+                      <HandHeart size={18} aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 className="text-sm font-extrabold text-stone-800 dark:text-stone-100">Transmit rescue case</h3>
+                        <span className={`text-[11px] font-black whitespace-nowrap ${progressState.text}`}>{completedSteps}/3</span>
+                      </div>
+                      <p className={`mt-0.5 text-[11px] font-bold transition-colors duration-500 ${progressState.text}`}>{progressState.label}</p>
+                    </div>
                   </div>
                 </div>
                 <div className="space-y-3 p-4">
-                  <div className="rounded-xl border border-stone-200 bg-stone-50 p-3 dark:border-stone-800 dark:bg-stone-950">
+                  <div className={`rounded-xl border p-3 transition-all duration-500 ${progressState.border} ${progressState.soft}`}>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[11px] font-bold text-stone-500 dark:text-stone-400">Report progress</span>
-                      <span className={`text-[11px] font-black ${reportReady ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-400 dark:text-stone-500'}`}>
-                        {reportSteps.filter((step) => step.done).length}/3 ready
-                      </span>
+                      <span className={`text-[11px] font-black ${progressState.text}`}>{completedSteps}/3 ready</span>
                     </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-stone-200 dark:bg-stone-800">
-                      <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${(reportSteps.filter((step) => step.done).length / reportSteps.length) * 100}%` }} />
+                    <div className="mt-2 flex gap-1.5">
+                      {reportSteps.map((step) => (
+                        <div key={step.label} className={`h-2 flex-1 overflow-hidden rounded-full transition-all duration-500 ${step.done ? progressState.bar : 'bg-stone-200 dark:bg-stone-800'}`} />
+                      ))}
                     </div>
+                    <p className={`mt-2 text-[11px] leading-4 font-medium ${progressState.text}`}>{progressState.message}</p>
                   </div>
-                  <button type="submit" disabled={isSubmitting || isOffline || !reportReady} className="w-full rounded-xl bg-emerald-600 px-4 py-4 text-sm font-extrabold text-white shadow-[0_10px_24px_rgba(16,185,129,0.2)] transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50">
+                  <button type="submit" disabled={isSubmitting || isOffline || !reportReady} className={`w-full rounded-xl px-4 py-4 text-sm font-extrabold text-white shadow-lg transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${progressState.bar}`}>
                     {isSubmitting ? 'Transmitting rescue case…' : isOffline ? 'Waiting for connection…' : 'Transmit rescue case'}
                   </button>
                   <p className="text-center text-[10px] leading-4 text-stone-400 dark:text-stone-500">
@@ -679,33 +732,43 @@ export default function ReportCase() {
 
             {/* DESKTOP TRANSMIT RESCUE CASE */}
             <div className="hidden space-y-6 lg:block">
-              <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-900 lg:sticky lg:top-24">
-                <div className="border-b border-stone-200 px-5 py-4 dark:border-stone-800">
+              <div className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-500 dark:bg-stone-900 lg:sticky lg:top-24 ${progressState.border}`}>
+                <div className={`relative overflow-hidden border-b px-5 py-4 transition-colors duration-500 ${progressState.soft} ${progressState.border}`}>
+                  <div className="absolute inset-x-0 bottom-0 h-1 bg-stone-200/70 dark:bg-stone-800/70">
+                    <div className={`h-full rounded-full transition-all duration-700 ease-out ${progressState.bar}`} style={{ width: `${(completedSteps / reportSteps.length) * 100}%` }} />
+                  </div>
                   <div className="flex items-start gap-3">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
+                    <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl transition-colors duration-500 ${progressState.icon}`}>
                       <HandHeart size={19} aria-hidden="true" />
                     </span>
-                    <div>
-                      <h3 className="font-extrabold text-stone-800 dark:text-stone-100">Transmit rescue case</h3>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 className="font-extrabold text-stone-800 dark:text-stone-100">Transmit rescue case</h3>
+                        <span className={`text-xs font-black ${progressState.text}`}>{completedSteps}/3</span>
+                      </div>
+                      <p className={`mt-1 text-xs font-bold ${progressState.text}`}>{progressState.label}</p>
                       <p className="mt-1 text-xs leading-5 text-stone-500 dark:text-stone-400">Send the report for validation and rescue coordination.</p>
                     </div>
                   </div>
                 </div>
-                <div className="space-y-3 p-5">
-                  <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 dark:border-stone-800 dark:bg-stone-950">
+                <div className="space-y-4 p-5">
+                  <div className={`rounded-xl border px-4 py-3 transition-all duration-500 ${progressState.border} ${progressState.soft}`}>
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-xs font-bold text-stone-500 dark:text-stone-400">Report readiness</span>
-                      <span className={`text-xs font-black ${reportReady ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-400 dark:text-stone-500'}`}>
+                      <span className={`text-xs font-black ${progressState.text}`}>
                         {reportReady ? 'Ready to transmit' : 'More information needed'}
                       </span>
                     </div>
-                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-stone-200 dark:bg-stone-800">
-                      <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${(reportSteps.filter((step) => step.done).length / reportSteps.length) * 100}%` }} />
+                    <div className="mt-3 flex gap-1.5">
+                      {reportSteps.map((step) => (
+                        <div key={step.label} className={`h-2 flex-1 overflow-hidden rounded-full transition-all duration-500 ${step.done ? progressState.bar : 'bg-stone-200 dark:bg-stone-800'}`} />
+                      ))}
                     </div>
+                    <p className={`mt-2 text-[11px] leading-4 font-medium ${progressState.text}`}>{progressState.message}</p>
                   </div>
-                  <button type="submit" disabled={isSubmitting || isOffline || !reportReady} className="group relative w-full overflow-hidden rounded-xl disabled:cursor-not-allowed disabled:opacity-50">
-                    <span className="absolute inset-0 bg-emerald-600 transition-transform duration-300 group-hover:scale-[1.02]" />
-                    <span className="relative flex min-h-14 items-center justify-center gap-2 rounded-xl border border-emerald-500 px-4 py-3 text-base font-extrabold text-white shadow-[0_10px_24px_rgba(16,185,129,0.22)] transition-all duration-300 group-hover:bg-emerald-700">
+                  <button type="submit" disabled={isSubmitting || isOffline || !reportReady} className={`group relative w-full overflow-hidden rounded-xl disabled:cursor-not-allowed disabled:opacity-50 ${progressState.bar}`}>
+                    <span className="absolute inset-0 bg-black/10 transition-opacity duration-300 group-hover:opacity-0" />
+                    <span className="relative flex min-h-14 items-center justify-center gap-2 rounded-xl border border-white/20 px-4 py-3 text-base font-extrabold text-white shadow-[0_12px_28px_rgba(0,0,0,0.14)] transition-all duration-300 group-hover:-translate-y-0.5">
                       {isSubmitting ? 'Transmitting rescue case…' : isOffline ? 'Waiting for connection…' : 'Transmit rescue case'}
                     </span>
                   </button>
