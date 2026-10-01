@@ -5,18 +5,12 @@
 -- the numbered feature migrations were introduced.
 --
 -- The original Neon database was created manually. This file therefore
--- includes every manual-only object that is not introduced by migrations
--- 002-010, including all four PostgreSQL enums and the volunteer location/
--- availability fields.
+-- includes the manual core objects and all four PostgreSQL enums.
 --
--- Later feature migrations must remain responsible for their own changes.
+-- Later feature migrations remain responsible for their own additions.
 -- =====================================================================
 
 BEGIN;
-
--- ---------------------------------------------------------------------
--- Original PostgreSQL enum types
--- ---------------------------------------------------------------------
 
 CREATE TYPE user_role AS ENUM (
   'USER',
@@ -49,13 +43,6 @@ CREATE TYPE case_status AS ENUM (
   'RESCUE_COMPLETED'
 );
 
--- ---------------------------------------------------------------------
--- Original users table
---
--- jurisdiction_* is added by migration 002 and is intentionally not
--- duplicated here.
--- ---------------------------------------------------------------------
-
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   full_name VARCHAR(255) NOT NULL,
@@ -65,20 +52,8 @@ CREATE TABLE users (
   latitude NUMERIC(10,8),
   longitude NUMERIC(11,8),
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-  account_status account_status NOT NULL DEFAULT 'ACTIVE',
-  availability_status volunteer_availability NOT NULL DEFAULT 'OFFLINE',
-  location_updated_at TIMESTAMPTZ
+  account_status account_status NOT NULL DEFAULT 'ACTIVE'
 );
-
--- ---------------------------------------------------------------------
--- Original rescue_cases table
---
--- Evidence/verification fields, AI audit fields and client_request_id
--- are added by later migrations.
---
--- priority originally had no default. Migration 002 intentionally
--- establishes STANDARD and backfills existing NULL values.
--- ---------------------------------------------------------------------
 
 CREATE TABLE rescue_cases (
   id SERIAL PRIMARY KEY,
@@ -99,10 +74,6 @@ CREATE TABLE rescue_cases (
   verification_status VARCHAR(50) DEFAULT 'Unverified'
 );
 
--- ---------------------------------------------------------------------
--- Original rescue-case indexes
--- ---------------------------------------------------------------------
-
 CREATE INDEX idx_cases_reporter
   ON rescue_cases (reporter_id);
 
@@ -115,10 +86,6 @@ CREATE INDEX idx_cases_status
 CREATE UNIQUE INDEX idx_one_active_rescue_per_volunteer
   ON rescue_cases (assigned_volunteer_id)
   WHERE status = 'IN_PROGRESS' AND assigned_volunteer_id IS NOT NULL;
-
--- ---------------------------------------------------------------------
--- Migration metadata
--- ---------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS schema_migrations (
   version INTEGER PRIMARY KEY,
