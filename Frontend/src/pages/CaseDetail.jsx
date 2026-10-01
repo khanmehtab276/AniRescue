@@ -273,8 +273,8 @@ export default function CaseDetail() {
         {caseItem.image_payload && (
           <img
             src={caseItem.image_payload}
-            alt="Reported animal"
-            className="w-full h-auto object-contain rounded-xl mb-4"
+            alt="Reported animal" onError={(event) => { event.currentTarget.hidden = true; }}
+            className="w-full max-h-[70vh] h-auto object-contain rounded-xl mb-4 rescue-image-fade bg-stone-100 dark:bg-stone-950"
           />
         )}
 
@@ -297,8 +297,8 @@ export default function CaseDetail() {
             </p>
             <img
               src={caseItem.evidence_image_payload}
-              alt="Rescue evidence"
-              className="w-full h-auto object-contain rounded-xl"
+              alt="Rescue evidence" onError={(event) => { event.currentTarget.hidden = true; }}
+              className="w-full max-h-[60vh] h-auto object-contain rounded-xl rescue-image-fade bg-stone-100 dark:bg-stone-950"
             />
             {caseItem.evidence_notes && (
               <p className="text-sm text-stone-600 dark:text-stone-300 mt-2">
