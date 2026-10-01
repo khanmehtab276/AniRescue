@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import Surface from './Surface.jsx';
 import { StatusBadge, PriorityBadge } from './Badge.jsx';
+import { MapPin } from 'lucide-react';
 
 /**
  * One case card design used on every dashboard. Only the trailing
@@ -41,8 +42,9 @@ export default function CaseCard({ caseItem, action, distanceKm, meta, friendly 
         <img
           src={caseItem.image_payload}
           alt={`Photo submitted with the report for ${caseItem.species || 'this animal'}`}
-          className="w-full h-auto object-contain rounded-xl mb-3"
+          className="w-full h-auto max-h-[28rem] object-contain rounded-xl mb-3 rescue-image-fade bg-stone-100 dark:bg-stone-950"
           loading="lazy"
+          onError={(event) => { event.currentTarget.hidden = true; }}
         />
       )}
 
@@ -54,7 +56,7 @@ export default function CaseCard({ caseItem, action, distanceKm, meta, friendly 
 
       {caseItem.manual_address && (
         <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
-          📍 {caseItem.manual_address}
+          <MapPin size={13} className="inline-block mr-1 align-[-2px]" aria-hidden="true" />{caseItem.manual_address}
         </p>
       )}
 
