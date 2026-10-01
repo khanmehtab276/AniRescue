@@ -146,30 +146,39 @@ const notifyCaseRecipients = async ({
   includeNearbyNgos = false,
   includeAdmins = false,
 }) => {
-  const userIds = await getCaseRecipients({
-    caseId,
-    includeReporter,
-    includeAssignedVolunteer,
-    includeNearbyVolunteers,
-    includeNearbyNgos,
-    includeAdmins,
-  });
-
-  let notified = 0;
-
-  for (const userId of userIds) {
-    const notification = await notifyUser({
-      userId,
+  try {
+    const userIds = await getCaseRecipients({
       caseId,
-      notificationType,
-      title,
-      message,
+      includeReporter,
+      includeAssignedVolunteer,
+      includeNearbyVolunteers,
+      includeNearbyNgos,
+      includeAdmins,
     });
 
-    if (notification) notified += 1;
-  }
+    let notified = 0;
 
-  return { notified, recipients: userIds.length };
+    for (const userId of userIds) {
+      const notification = await notifyUser({
+        userId,
+        caseId,
+        notificationType,
+        title,
+        message,
+      });
+
+      if (notification) notified += 1;
+    }
+
+    return { notified, recipients: userIds.length };
+  } catch (error) {
+    console.error(
+      "Case stakeholder notification failed (non-fatal):",
+      error?.message || error,
+    );
+
+    return { notified: 0, recipients: 0 };
+  }
 };
 
 module.exports = {
