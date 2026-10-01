@@ -20,6 +20,7 @@ const Profile = lazy(() => import("./pages/Profile.jsx"));
 const CaseDetail = lazy(() => import("./pages/CaseDetail.jsx"));
 const VerificationQueue = lazy(() => import("./pages/VerificationQueue.jsx"));
 const Notifications = lazy(() => import("./pages/Notifications.jsx"));
+const Feedback = lazy(() => import("./pages/Feedback.jsx"));
 
 function RouteTransition({ children }) {
   const location = useLocation();
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="/report" element={<ReportCase/>}/>
           <Route path="/profile" element={<Profile/>}/>
           <Route path="/notifications" element={<Notifications/>}/>
+          <Route path="/feedback" element={<Feedback/>}/>
           <Route path="/my-reports" element={<UserCases/>}/>
           <Route path="/map" element={<MapView/>}/>
           <Route path="/cases/:id" element={<CaseDetail/>}/>
