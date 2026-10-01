@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Camera, CheckCircle2, HandHeart, Map, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -30,24 +30,27 @@ L.Icon.Default.mergeOptions({
 
 function MapViewportController({ center }) {
   const map = useMap();
+  const hasCenteredInitialLocation = useRef(false);
 
   useEffect(() => {
-    if (!center) return;
-    map.flyTo(center, Math.max(map.getZoom(), 13), {
-      duration: 0.65,
-      easeLinearity: 0.25,
-    });
+    if (!center || hasCenteredInitialLocation.current) return;
+    hasCenteredInitialLocation.current = true;
+    map.setView(center, map.getZoom(), { animate: true });
   }, [map, center]);
 
   return null;
 }
 
 function MapPinDropper({ position, setPosition }) {
+  const map = useMap();
+
   useMapEvents({
     click(e) {
-      setPosition({
-        lat: e.latlng.lat,
-        lng: e.latlng.lng
+      const nextPosition = { lat: e.latlng.lat, lng: e.latlng.lng };
+      setPosition(nextPosition);
+      map.panTo([nextPosition.lat, nextPosition.lng], {
+        animate: true,
+        duration: 0.45,
       });
     }
   });
@@ -372,17 +375,24 @@ export default function ReportCase() {
           <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-stone-500 dark:text-stone-400">
             Share the photo and location. We’ll take care of the rescue workflow from there.
           </p>
-          <div className="mx-auto mt-5 grid max-w-lg grid-cols-3 gap-2">
-            {reportSteps.map(({ label, done, Icon }) => (
-              <div key={label} className={`rounded-xl border px-2 py-2.5 text-left transition-colors ${done ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-900/60 dark:bg-emerald-950/20' : 'border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-950'}`}>
-                <div className="flex items-center gap-2">
-                  <Icon size={14} className={done ? 'text-emerald-600' : 'text-stone-400'} aria-hidden="true" />
-                  <span className="text-[10px] font-black uppercase tracking-wider text-stone-500 dark:text-stone-400">{label}</span>
+          <div className="mx-auto mt-6 flex max-w-2xl items-center justify-center gap-3 sm:gap-5">
+            {reportSteps.map(({ label, done, Icon }, index) => (
+              <div key={label} className="flex min-w-0 flex-1 items-center">
+                <div className={`flex min-w-0 items-center gap-2.5 ${done ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-400 dark:text-stone-500'}`}>
+                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border transition-all duration-300 ${done ? 'border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40' : 'border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-950'}`}>
+                    <Icon size={15} aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0 text-left">
+                    <p className="truncate text-[11px] font-black uppercase tracking-wider">{label}</p>
+                    <p className="text-[10px] font-semibold text-stone-400 dark:text-stone-500">{done ? 'Complete' : 'Add this'}</p>
+                  </div>
                 </div>
-                <p className="mt-1 text-[10px] font-bold text-stone-400">{done ? 'Ready ✓' : 'Still needed'}</p>
+                {index < reportSteps.length - 1 && (
+                  <span className={`mx-2 h-px min-w-3 flex-1 transition-colors ${done ? 'bg-emerald-300 dark:bg-emerald-800' : 'bg-stone-200 dark:bg-stone-800'}`} aria-hidden="true" />
+                )}
               </div>
             ))}
-          </div>
+          </div>v>
         </div>
 
         {submissionResult ? (
@@ -553,8 +563,8 @@ export default function ReportCase() {
                         onChange={(e) =>
                           setManualAddress(e.target.value)
                         }
-                        placeholder="Add a Landmark (optional)"
-                        className="w-full p-4 rounded-xl text-sm font-medium text-stone-700 dark:text-stone-200 outline-none border-none transition-all duration-300 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800"
+                        placeholder="Landmark or nearby place (optional)"
+                        className="w-full rounded-xl border border-stone-200 bg-white p-4 text-sm font-medium text-stone-700 outline-none transition-all duration-300 placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/10 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder:text-stone-500 dark:focus:border-emerald-700"
                       />
 
                     </div>
@@ -621,8 +631,8 @@ export default function ReportCase() {
                         onChange={(e) =>
                           setManualAddress(e.target.value)
                         }
-                        placeholder="Add a Landmark (optional)"
-                        className="w-full p-4 rounded-xl text-sm font-medium text-stone-700 dark:text-stone-200 outline-none border-none transition-all duration-300 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800"
+                        placeholder="Landmark or nearby place (optional)"
+                        className="w-full rounded-xl border border-stone-200 bg-white p-4 text-sm font-medium text-stone-700 outline-none transition-all duration-300 placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/10 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder:text-stone-500 dark:focus:border-emerald-700"
                       />
 
                     </div>
@@ -642,7 +652,7 @@ export default function ReportCase() {
                     setDescription(e.target.value)
                   }
                   placeholder="Describe the animal's condition, injury, or situation..."
-                  className="w-full p-4 rounded-xl text-sm font-medium text-stone-700 dark:text-stone-200 outline-none border-none transition-all duration-300 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 h-24 resize-none"
+                  className="w-full rounded-xl border border-stone-200 bg-white p-4 text-sm font-medium text-stone-700 outline-none transition-all duration-300 placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/10 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder:text-stone-500 dark:focus:border-emerald-700 h-24 resize-none"
                 />
 
                 <p className="text-[11px] text-stone-400 dark:text-stone-500 ml-2">
@@ -651,31 +661,45 @@ export default function ReportCase() {
               </div>
             </div>
 
-            {/* SECOND COLUMN - Submit button only */}
+            {/* TRANSMIT RESCUE CASE */}
             <div className="space-y-6">
-              <div className="rounded-2xl border border-stone-200 bg-stone-50 p-5 dark:border-stone-800 dark:bg-stone-950">
-                {/* SUBMIT */}
-                <button
-                  type="submit"
-                  disabled={
-                    isSubmitting ||
-                    isOffline ||
-                    !reportReady
-                  }
-                  className="w-full relative group mt-6 disabled:opacity-50"
-                >
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3/4 h-5 bg-rose-500 blur-lg rounded-full transition-all duration-300 group-hover:bg-rose-400"></div>
-
-                  <div className="relative z-10 w-full bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 p-4 rounded-xl font-bold text-lg transition-all border-t border-white/20 shadow-[0_8px_20px_rgba(0,0,0,0.4)] flex justify-center items-center gap-2">
-                    {isSubmitting
-                      ? 'Sending your report...'
-                      : isOffline
-                        ? 'Waiting for connection…'
-                        : 'Send rescue report 🐾'}
+              <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-900">
+                <div className="border-b border-stone-200 px-5 py-4 dark:border-stone-800">
+                  <div className="flex items-start gap-3">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
+                      <HandHeart size={19} aria-hidden="true" />
+                    </span>
+                    <div>
+                      <h3 className="font-extrabold text-stone-800 dark:text-stone-100">Transmit rescue case</h3>
+                      <p className="mt-1 text-xs leading-5 text-stone-500 dark:text-stone-400">Send the report for validation and rescue coordination.</p>
+                    </div>
                   </div>
-                </button>
-
-              </div></div></form>
+                </div>
+                <div className="space-y-3 p-5">
+                  <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 dark:border-stone-800 dark:bg-stone-950">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-xs font-bold text-stone-500 dark:text-stone-400">Report readiness</span>
+                      <span className={`text-xs font-black ${reportReady ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-400 dark:text-stone-500'}`}>
+                        {reportReady ? 'Ready to transmit' : 'More information needed'}
+                      </span>
+                    </div>
+                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-stone-200 dark:bg-stone-800">
+                      <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${(reportSteps.filter((step) => step.done).length / reportSteps.length) * 100}%` }} />
+                    </div>
+                  </div>
+                  <button type="submit" disabled={isSubmitting || isOffline || !reportReady} className="group relative w-full overflow-hidden rounded-xl disabled:cursor-not-allowed disabled:opacity-50">
+                    <span className="absolute inset-0 bg-emerald-600 transition-transform duration-300 group-hover:scale-[1.02]" />
+                    <span className="relative flex min-h-14 items-center justify-center gap-2 rounded-xl border border-emerald-500 px-4 py-3 text-base font-extrabold text-white shadow-[0_10px_24px_rgba(16,185,129,0.22)] transition-all duration-300 group-hover:bg-emerald-700">
+                      {isSubmitting ? 'Transmitting rescue case…' : isOffline ? 'Waiting for connection…' : 'Transmit rescue case'}
+                    </span>
+                  </button>
+                  <p className="text-center text-[11px] leading-5 text-stone-400 dark:text-stone-500">
+                    {reportReady ? 'Your photo and location are ready for the rescue workflow.' : 'Add the photo and location before transmitting the case.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </form>
         )}
       </div>
     </div >
