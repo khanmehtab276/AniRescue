@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Camera, CheckCircle2, HandHeart, Map, Search } from 'lucide-react';
+import { Camera, CheckCircle2, HandHeart, Map, MapPin, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import useLocation from '../hooks/useLocation';
 import useOfflineSync from '../hooks/useOfflineSync';
@@ -66,7 +66,6 @@ export default function ReportCase() {
   const [imagePreview, setImagePreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionResult, setSubmissionResult] = useState(null);
-  const [isReadyToTransmit, setIsReadyToTransmit] = useState(false);
   const [detailsSkipped, setDetailsSkipped] = useState(false);
 
   const [locationMode, setLocationMode] = useState('auto');
@@ -96,73 +95,70 @@ export default function ReportCase() {
   // Neutral world view center as fallback when user location is unavailable
   const defaultMapCenter = [0, 0];
 
-  const reportReady = Boolean(imageFile && ((locationMode === 'auto' && location) || (locationMode === 'custom' && (pinnedLocation || manualAddress.trim()))) && isReadyToTransmit);
   const photoReady = Boolean(imageFile);
   const locationReady = Boolean(locationMode === 'auto' ? location : (pinnedLocation || manualAddress.trim()));
   const detailsReady = Boolean(description.trim()) || detailsSkipped;
+  const landmarkReady = Boolean(manualAddress.trim());
   const coreReady = photoReady && locationReady && detailsReady;
+  // Landmark is optional: step 4 shows completion when supplied but never
+  // blocks transmission when it is left blank.
+  const reportReady = Boolean(coreReady);
   const reportSteps = [
     { label: 'Photo', done: photoReady, Icon: Camera },
     { label: 'Location', done: locationReady, Icon: Map },
     { label: 'Details', done: detailsReady, Icon: Search },
-    { label: 'Review', done: isReadyToTransmit, Icon: HandHeart },
+    { label: 'Landmark (optional)', done: landmarkReady, Icon: MapPin },
   ];
   const completedSteps = reportSteps.filter((step) => step.done).length;
   const progressState = completedSteps === 0
     ? {
-        label: 'Awaiting life-saving details...',
-        message: 'Start with a clear photo. We’ll handle the animal assessment with AI.',
-        bar: 'bg-red-600',
-        soft: 'bg-red-50 dark:bg-red-950/20',
-        border: 'border-red-200 dark:border-red-900/50',
-        text: 'text-red-700 dark:text-red-400',
-        icon: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300',
+        label: 'Start with the rescue essentials.',
+        message: 'Add a clear photo first. AI will handle the animal assessment after submission.',
+        bar: 'bg-rose-600',
+        soft: 'bg-rose-50 dark:bg-rose-950/20',
+        border: 'border-rose-200 dark:border-rose-900/50',
+        text: 'text-rose-700 dark:text-rose-400',
+        icon: 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300',
       }
     : completedSteps === 1
       ? {
           label: 'Photo received. Now pinpoint the location.',
           message: 'A precise location helps the rescue team reach the animal faster.',
-          bar: 'bg-amber-500',
-          soft: 'bg-amber-50 dark:bg-amber-950/20',
-          border: 'border-amber-200 dark:border-amber-900/50',
-          text: 'text-amber-700 dark:text-amber-400',
-          icon: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300',
+          bar: 'bg-red-600',
+          soft: 'bg-red-50 dark:bg-red-950/20',
+          border: 'border-red-200 dark:border-red-900/50',
+          text: 'text-red-700 dark:text-red-400',
+          icon: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300',
         }
       : completedSteps === 2
         ? {
-            label: 'Looking good! Tell us what you saw.',
-            message: 'Tell us what you noticed if you can. It’s optional — AI will handle the animal assessment.',
-            bar: 'bg-yellow-500',
-            soft: 'bg-yellow-50 dark:bg-yellow-950/20',
-            border: 'border-yellow-200 dark:border-yellow-900/50',
-            text: 'text-yellow-700 dark:text-yellow-400',
-            icon: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300',
+            label: 'Location received. Tell us what you noticed.',
+            message: 'Description is optional. Share anything useful, or skip it and let AI handle the assessment.',
+            bar: 'bg-amber-500',
+            soft: 'bg-amber-50 dark:bg-amber-950/20',
+            border: 'border-amber-200 dark:border-amber-900/50',
+            text: 'text-amber-700 dark:text-amber-400',
+            icon: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300',
           }
         : completedSteps === 3
           ? {
-              label: 'Report details are ready. One quick review.',
-              message: 'Landmark is optional. Review what you’ve shared once, then broadcast the case.',
-              bar: 'bg-orange-500',
-              soft: 'bg-orange-50 dark:bg-orange-950/20',
-              border: 'border-orange-200 dark:border-orange-900/50',
-              text: 'text-orange-700 dark:text-orange-400',
-              icon: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300',
+              label: 'Report essentials are ready.',
+              message: 'Landmark is optional. You can transmit the rescue case now or add a landmark for the rescue team.',
+              bar: 'bg-yellow-500',
+              soft: 'bg-yellow-50 dark:bg-yellow-950/20',
+              border: 'border-yellow-200 dark:border-yellow-900/50',
+              text: 'text-yellow-700 dark:text-yellow-400',
+              icon: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300',
             }
           : {
               label: 'All set! Broadcast to the rescue network 🐾',
-              message: 'Your report has the essential details. AI will assess the animal after submission.',
+              message: 'Photo, location, details and landmark are ready. AI will assess the animal after submission.',
               bar: 'bg-emerald-600',
               soft: 'bg-emerald-50 dark:bg-emerald-950/20',
               border: 'border-emerald-200 dark:border-emerald-900/50',
               text: 'text-emerald-700 dark:text-emerald-400',
               icon: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300',
             };
-
-  useEffect(() => {
-    if (!coreReady) {
-      setIsReadyToTransmit(false);
-    }
-  }, [coreReady, imageFile, location, pinnedLocation, manualAddress, description]);
 
   useEffect(() => {
     if (gpsError) {
@@ -750,20 +746,11 @@ export default function ReportCase() {
                     </div>
                     <p className={`mt-2 text-[11px] leading-4 font-medium ${progressState.text}`}>{progressState.message}</p>
                   </div>
-                  {coreReady && !isReadyToTransmit && (
-                    <button
-                      type="button"
-                      onClick={() => setIsReadyToTransmit(true)}
-                      className="w-full rounded-xl border border-stone-300 bg-stone-900 px-4 py-3 text-sm font-extrabold text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-stone-800 dark:border-stone-700 dark:bg-white dark:text-stone-900 dark:hover:bg-stone-100"
-                    >
-                      Review report & prepare to send
-                    </button>
-                  )}
                   <button type="submit" disabled={isSubmitting || isOffline || !reportReady} className={`w-full rounded-xl px-4 py-4 text-sm font-extrabold text-white shadow-lg transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${progressState.bar}`}>
                     {isSubmitting ? 'Transmitting rescue case…' : isOffline ? 'Waiting for connection…' : 'Transmit rescue case'}
                   </button>
                   <p className="text-center text-[10px] leading-4 text-stone-400 dark:text-stone-500">
-                    {reportReady ? 'The essential report details are ready for rescue coordination.' : 'Add the missing report details above to continue.'}
+                    {reportReady ? (landmarkReady ? 'Everything is ready for rescue coordination.' : 'Ready to transmit. The landmark is optional.') : 'Add the missing report details above to continue.'}
                   </p>
                 </div>
               </div>
@@ -805,15 +792,6 @@ export default function ReportCase() {
                     </div>
                     <p className={`mt-2 text-[11px] leading-4 font-medium ${progressState.text}`}>{progressState.message}</p>
                   </div>
-                  {coreReady && !isReadyToTransmit && (
-                    <button
-                      type="button"
-                      onClick={() => setIsReadyToTransmit(true)}
-                      className="w-full rounded-xl border border-stone-300 bg-stone-900 px-4 py-3 text-sm font-extrabold text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-stone-800 dark:border-stone-700 dark:bg-white dark:text-stone-900 dark:hover:bg-stone-100"
-                    >
-                      Review report & prepare to send
-                    </button>
-                  )}
                   <button type="submit" disabled={isSubmitting || isOffline || !reportReady} className={`group relative w-full overflow-hidden rounded-xl disabled:cursor-not-allowed disabled:opacity-50 ${progressState.bar}`}>
                     <span className="absolute inset-0 bg-black/10 transition-opacity duration-300 group-hover:opacity-0" />
                     <span className="relative flex min-h-14 items-center justify-center gap-2 rounded-xl border border-white/20 px-4 py-3 text-base font-extrabold text-white shadow-[0_12px_28px_rgba(0,0,0,0.14)] transition-all duration-300 group-hover:-translate-y-0.5">
@@ -821,7 +799,7 @@ export default function ReportCase() {
                     </span>
                   </button>
                   <p className="text-center text-[11px] leading-5 text-stone-400 dark:text-stone-500">
-                    {reportReady ? 'Your essential report details are ready for the rescue workflow.' : 'Complete the report details before transmitting the case.'}
+                    {reportReady ? (landmarkReady ? 'Your report is ready for the rescue workflow.' : 'Your report is ready. Adding a landmark is optional.') : 'Complete the required report details before transmitting the case.'}
                   </p>
                 </div>
               </div>
