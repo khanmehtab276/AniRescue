@@ -20,13 +20,13 @@ export default function Surface({
   children,
   ...rest
 }) {
-  const base = 'rounded-2xl transition-colors duration-200';
+  const base = 'rounded-2xl transition-all duration-300 will-change-transform';
 
   const flat =
     'bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800';
 
   const elevated =
-    'bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm shadow-stone-200/60 dark:shadow-black/20';
+    'bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm shadow-stone-200/60 hover:-translate-y-0.5 hover:shadow-md dark:shadow-black/20 dark:hover:shadow-black/30';
 
   const subtle =
     'bg-stone-100/70 dark:bg-stone-800/40 border border-stone-200/60 dark:border-stone-800/60';
