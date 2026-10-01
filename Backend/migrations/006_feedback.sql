@@ -7,8 +7,8 @@
 -- =====================================================================
 
 CREATE TABLE IF NOT EXISTS feedback (
-  id BIGSERIAL PRIMARY KEY,
-  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   category VARCHAR(40) NOT NULL DEFAULT 'PLATFORM',
   rating SMALLINT NOT NULL,
   message TEXT NOT NULL,
