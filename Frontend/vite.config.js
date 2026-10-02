@@ -26,7 +26,7 @@ export default defineConfig({
             // NetworkFirst makes a normal refresh use the newest deployed
             // app shell whenever the network is available, while retaining
             // the cached shell as an offline fallback.
-            urlPattern: /^https:\/\/anirescue-a5fd7\.web\.app\/.*$/i,
+            urlPattern: /^https:\/\/anirescue-a5fd7\.web\.app(?:\/[^.?#]*)?(?:[?#].*)?$/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'anirescue-document-cache',
