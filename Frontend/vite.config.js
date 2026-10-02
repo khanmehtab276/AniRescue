@@ -6,17 +6,37 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // Keep the installed PWA on the newest deployed frontend instead of
-      // waiting for a manual "Update" action.
+      // Update the installed PWA automatically when a new frontend is deployed.
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       workbox: {
         // Remove caches created by older PWA builds after the new worker
         // becomes active.
         cleanupOutdatedCaches: true,
-        // Let the new worker take control immediately after installation.
+        // Take control immediately so the current build is used without
+        // waiting for every old tab to close.
         skipWaiting: true,
         clientsClaim: true,
+        // index.html is the app shell and must not be pinned in the
+        // precache. It is fetched through NetworkFirst below instead.
+        globIgnores: ['index.html'],
+        runtimeCaching: [
+          {
+            // Firebase Hosting serves every SPA route from index.html.
+            // NetworkFirst makes a normal refresh use the newest deployed
+            // app shell whenever the network is available, while retaining
+            // the cached shell as an offline fallback.
+            urlPattern: /^https:\/\/anirescue-a5fd7\.web\.app\/.*$/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'anirescue-document-cache',
+              networkTimeoutSeconds: 5,
+              cacheableResponse: {
+                statuses: [200],
+              },
+            },
+          },
+        ],
       },
       manifest: {
         name: 'AniRescue Emergency Platform',
