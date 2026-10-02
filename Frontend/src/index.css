@@ -320,6 +320,18 @@ h1, h2, h3 {
 }
 
 
+/* Toast positioning: keep transient feedback clear of mobile/PWA safe areas. */
+.anirescue-toast {
+  top: max(1rem, calc(env(safe-area-inset-top, 0px) + 0.75rem));
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 2rem);
+}
+
+@media (max-width: 640px) {
+  .anirescue-toast {
+    width: min(calc(100% - 1rem), 28rem);
+  }
+}
+
 /* Installed-PWA notification surfaces use a bottom-sheet layout on compact
    screens so they behave like app UI rather than a desktop dropdown. */
 @media (display-mode: standalone) and (max-width: 640px) {
