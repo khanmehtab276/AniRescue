@@ -73,22 +73,40 @@ def get_db_connection(existing_conn):
     """
     Reuse an existing PostgreSQL connection if it is healthy.
     Otherwise create a new connection.
+
+    Neon connections can become stale while the worker remains alive
+    (for example after a long idle period or a network interruption).
+    Use bounded connection/query timeouts and TCP keepalives so the worker
+    never hangs indefinitely while checking or using a stale connection.
     """
 
     if existing_conn is not None and not existing_conn.closed:
         try:
             with existing_conn.cursor() as cur:
+                cur.execute("SET statement_timeout = 10000")
                 cur.execute("SELECT 1")
 
             return existing_conn
 
-        except Exception:
+        except Exception as err:
+            print(
+                f"⚠️ Existing PostgreSQL connection is stale/unusable: {err}"
+            )
+
             try:
                 existing_conn.close()
             except Exception:
                 pass
 
-    return psycopg2.connect(DATABASE_URL)
+    return psycopg2.connect(
+        DATABASE_URL,
+        connect_timeout=10,
+        keepalives=1,
+        keepalives_idle=30,
+        keepalives_interval=10,
+        keepalives_count=3,
+        options="-c statement_timeout=30000",
+    )
 
 
 # --------------------------------------------------
