@@ -114,11 +114,11 @@ export default function ReportCase() {
     ? {
         label: 'Start with the rescue essentials.',
         message: 'Add a clear photo first. AI will handle the animal assessment after submission.',
-        bar: 'bg-rose-600',
-        soft: 'bg-rose-50 dark:bg-rose-950/20',
-        border: 'border-rose-200 dark:border-rose-900/50',
-        text: 'text-rose-700 dark:text-rose-400',
-        icon: 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300',
+        bar: 'bg-[#DC143C]',
+        soft: 'bg-[#DC143C]/5 dark:bg-[#DC143C]/10',
+        border: 'border-[#DC143C]/20 dark:border-[#DC143C]/40',
+        text: 'text-[#DC143C] dark:text-[#FF4D6D]',
+        icon: 'bg-[#DC143C]/10 text-[#DC143C] dark:bg-[#DC143C]/20 dark:text-[#FF6B81]',
       }
     : completedSteps === 1
       ? {
