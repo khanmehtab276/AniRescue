@@ -734,11 +734,6 @@ export default function ReportCase() {
                   </div>
                 </div>
                 <div className="space-y-3 p-4">
-                  <div className="flex gap-1.5" aria-label="Report progress">
-                    {reportSteps.map((step) => (
-                      <div key={step.label} className={`h-2 flex-1 overflow-hidden rounded-full transition-all duration-500 ${step.done ? progressState.bar : 'bg-stone-200 dark:bg-stone-800'}`} />
-                    ))}
-                  </div>
                   <p className={`text-[11px] leading-4 font-medium ${progressState.text}`}>{progressState.message}</p>
                   <button type="submit" disabled={isSubmitting || isOffline || !reportReady} className={`w-full rounded-xl px-4 py-4 text-sm font-extrabold text-white shadow-lg transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${progressState.bar}`}>
                     {isSubmitting ? 'Transmitting rescue case…' : isOffline ? 'Waiting for connection…' : 'Transmit rescue case'}
@@ -771,11 +766,6 @@ export default function ReportCase() {
                   </div>
                 </div>
                 <div className="space-y-4 p-5">
-                  <div className="flex gap-1.5" aria-label="Report progress">
-                    {reportSteps.map((step) => (
-                      <div key={step.label} className={`h-2 flex-1 overflow-hidden rounded-full transition-all duration-500 ${step.done ? progressState.bar : 'bg-stone-200 dark:bg-stone-800'}`} />
-                    ))}
-                  </div>
                   <p className={`text-[11px] leading-4 font-medium ${progressState.text}`}>{progressState.message}</p>
                   <button type="submit" disabled={isSubmitting || isOffline || !reportReady} className={`group relative w-full overflow-hidden rounded-xl disabled:cursor-not-allowed disabled:opacity-50 ${progressState.bar}`}>
                     <span className="absolute inset-0 bg-black/10 transition-opacity duration-300 group-hover:opacity-0" />
