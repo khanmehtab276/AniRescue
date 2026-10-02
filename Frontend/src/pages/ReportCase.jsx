@@ -124,11 +124,11 @@ export default function ReportCase() {
       ? {
           label: 'Photo received. Now pinpoint the location.',
           message: 'A precise location helps the rescue team reach the animal faster.',
-          bar: 'bg-red-600',
-          soft: 'bg-red-50 dark:bg-red-950/20',
-          border: 'border-red-200 dark:border-red-900/50',
-          text: 'text-red-700 dark:text-red-400',
-          icon: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300',
+          bar: 'bg-red-500',
+          soft: 'bg-red-50/80 dark:bg-red-900/15',
+          border: 'border-red-300 dark:border-red-800/40',
+          text: 'text-red-600 dark:text-red-300',
+          icon: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300',
         }
       : completedSteps === 2
         ? {
@@ -715,7 +715,7 @@ export default function ReportCase() {
 
             {/* TRANSMIT RESCUE CASE — single responsive progress/action container */}
             <div className="lg:hidden">
-              <div className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-500 dark:bg-stone-900 ${progressState.border}`}>
+              <div className={`overflow-hidden rounded-2xl border shadow-sm transition-all duration-500 ${progressState.soft} ${progressState.border}`}>
                 <div className={`relative overflow-hidden border-b px-4 py-3 transition-colors duration-500 ${progressState.soft} ${progressState.border}`}>
                   <div className="absolute inset-x-0 bottom-0 h-1 bg-stone-200/70 dark:bg-stone-800/70">
                     <div className={`h-full rounded-full transition-all duration-700 ease-out ${progressState.bar}`} style={{ width: `${(completedSteps / reportSteps.length) * 100}%` }} />
@@ -746,7 +746,7 @@ export default function ReportCase() {
             </div>
 
             <div className="hidden lg:block">
-              <div className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-500 dark:bg-stone-900 lg:sticky lg:top-24 ${progressState.border}`}>
+              <div className={`overflow-hidden rounded-2xl border shadow-sm transition-all duration-500 lg:sticky lg:top-24 ${progressState.soft} ${progressState.border}`}>
                 <div className={`relative overflow-hidden border-b px-5 py-4 transition-colors duration-500 ${progressState.soft} ${progressState.border}`}>
                   <div className="absolute inset-x-0 bottom-0 h-1 bg-stone-200/70 dark:bg-stone-800/70">
                     <div className={`h-full rounded-full transition-all duration-700 ease-out ${progressState.bar}`} style={{ width: `${(completedSteps / reportSteps.length) * 100}%` }} />
