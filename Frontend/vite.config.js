@@ -6,8 +6,18 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt',
+      // Keep the installed PWA on the newest deployed frontend instead of
+      // waiting for a manual "Update" action.
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      workbox: {
+        // Remove caches created by older PWA builds after the new worker
+        // becomes active.
+        cleanupOutdatedCaches: true,
+        // Let the new worker take control immediately after installation.
+        skipWaiting: true,
+        clientsClaim: true,
+      },
       manifest: {
         name: 'AniRescue Emergency Platform',
         short_name: 'AniRescue',
