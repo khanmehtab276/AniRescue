@@ -25,9 +25,10 @@ RUN pip install --index-url https://pypi.org/simple \
     typing-extensions
 
 # Install CPU-only PyTorch wheels without resolving their dependencies
-# through the PyTorch index. The longer pip timeout is intentional because
-# the CPU wheel is large and may download slowly.
+# through the PyTorch index. Keep pip's progress bar enabled so the Docker
+# build shows the download percentage, transferred size, speed, and ETA.
 RUN pip install --no-deps \
+    --progress-bar on \
     --timeout 600 \
     --index-url https://download.pytorch.org/whl/cpu \
     torch torchvision
