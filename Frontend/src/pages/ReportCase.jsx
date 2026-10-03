@@ -167,6 +167,7 @@ export default function ReportCase() {
   const [locationMode, setLocationMode] = useState('auto');
   const [manualAddress, setManualAddress] = useState('');
   const [pinnedLocation, setPinnedLocation] = useState(null);
+  const draftHydratedRef = useRef(false);
 
   const { showToast } = useToast();
 
@@ -261,6 +262,58 @@ export default function ReportCase() {
       setLocationMode('custom');
     }
   }, [gpsError]);
+
+  // Restore an unfinished report when the user returns to the Rescue page.
+  useEffect(() => {
+    let cancelled = false;
+
+    const restoreDraft = async () => {
+      const fields = loadReportDraftFields();
+
+      if (fields) {
+        setDescription(fields.description || '');
+        setDetailsSkipped(Boolean(fields.detailsSkipped));
+        setLocationMode(fields.locationMode || 'auto');
+        setManualAddress(fields.manualAddress || '');
+        setPinnedLocation(fields.pinnedLocation || null);
+      }
+
+      try {
+        const savedImage = await loadReportDraftImage();
+        if (!cancelled && savedImage) {
+          setImageFile(savedImage);
+          setImagePreview(URL.createObjectURL(savedImage));
+        }
+      } catch (error) {
+        console.warn('Could not restore the saved rescue photo:', error);
+      } finally {
+        if (!cancelled) {
+          draftHydratedRef.current = true;
+        }
+      }
+    };
+
+    restoreDraft();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Keep the unfinished report available across navigation, refreshes and
+  // PWA page recreation. The actual image is stored in IndexedDB because a
+  // File object should not be placed in localStorage.
+  useEffect(() => {
+    if (!draftHydratedRef.current) return;
+
+    saveReportDraftFields({
+      description,
+      detailsSkipped,
+      locationMode,
+      manualAddress,
+      pinnedLocation,
+    });
+  }, [description, detailsSkipped, locationMode, manualAddress, pinnedLocation]);
 
   useEffect(() => {
     getLocation();
