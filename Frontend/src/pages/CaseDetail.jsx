@@ -590,7 +590,15 @@ export default function CaseDetail() {
         {/* NGO/ADMIN: priority */}
         {(role === 'NGO' || role === 'ADMIN') && (
           <div>
-            <p className="text-xs text-stone-500 dark:text-stone-400 mb-1.5">Priority</p>
+            <div className="flex items-center justify-between gap-3 mb-1.5">
+              <p className="text-xs text-stone-500 dark:text-stone-400">Rescue Priority</p>
+              {caseItem.gemini_status === 'COMPLETED' && (
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-300">AI-derived initially</span>
+              )}
+            </div>
+            <p className="mb-2 text-[11px] leading-4 text-stone-400 dark:text-stone-500">
+              Initially derived from AI severity/urgency; NGO or Admin can adjust it for the operational rescue queue.
+            </p>
             <div className="flex gap-1.5">
               {PRIORITY_OPTIONS.map((p) => (
                 <button
