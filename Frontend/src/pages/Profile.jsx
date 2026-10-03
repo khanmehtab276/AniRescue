@@ -129,8 +129,8 @@ function VolunteerProfile({ user, cases }) {
     <>
       <Section eyebrow="Volunteer status" title="Field readiness">
         <InfoRow label="Availability" value={availability} />
-        <InfoRow label="Current base" value={user.location_updated_at ? 'Current location active' : 'Location not updated'} />
-        <InfoRow label="Service radius" value="Managed by rescue dispatch" />
+        <InfoRow label="Current location" value={user.location_updated_at ? 'Live field location available' : 'Location not updated'} />
+        <InfoRow label="Dispatch scope" value="Nearby validated rescue cases" />
         <InfoRow label="Transport" value="Not configured" />
       </Section>
       <Section eyebrow="Capabilities" title="Volunteer profile">
