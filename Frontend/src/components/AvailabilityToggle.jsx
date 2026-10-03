@@ -26,7 +26,7 @@ export default function AvailabilityToggle({
 
   return (
     <Surface className="p-4 mb-6">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-wide text-stone-400 dark:text-stone-500">
             Your availability
@@ -44,14 +44,14 @@ export default function AvailabilityToggle({
           <div
             role="group"
             aria-label="Availability"
-            className="flex shrink-0 gap-1 p-1 rounded-xl bg-stone-100 dark:bg-stone-800"
+            className="grid w-full grid-cols-2 gap-1 p-1 rounded-xl bg-stone-100 dark:bg-stone-800 sm:flex sm:w-auto"
           >
             <button
               type="button"
               onClick={() => onChange('AVAILABLE')}
               disabled={isUpdating || isAvailable}
               aria-pressed={isAvailable}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors disabled:cursor-default ${
+              className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors disabled:cursor-default ${
                 isAvailable
                   ? 'bg-emerald-600 text-white'
                   : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-100'
