@@ -306,13 +306,24 @@ export default function ReportCase() {
   useEffect(() => {
     if (!draftHydratedRef.current) return;
 
-    saveReportDraftFields({
-      description,
-      detailsSkipped,
-      locationMode,
-      manualAddress,
-      pinnedLocation,
-    });
+    const hasDraftFields = Boolean(
+      description.trim() ||
+      detailsSkipped ||
+      manualAddress.trim() ||
+      pinnedLocation
+    );
+
+    if (hasDraftFields) {
+      saveReportDraftFields({
+        description,
+        detailsSkipped,
+        locationMode,
+        manualAddress,
+        pinnedLocation,
+      });
+    } else {
+      clearReportDraftFields();
+    }
   }, [description, detailsSkipped, locationMode, manualAddress, pinnedLocation]);
 
   useEffect(() => {
