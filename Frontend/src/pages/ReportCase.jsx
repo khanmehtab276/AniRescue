@@ -827,7 +827,7 @@ export default function ReportCase() {
                         onChange={(e) =>
                           setManualAddress(e.target.value)
                         }
-                        placeholder="Landmark (optional) — e.g. near Axis Bank ATM"
+                        placeholder="Landmark (optional)"
                         className="w-full rounded-xl border border-stone-200 bg-white p-4 text-sm font-medium text-stone-700 outline-none transition-all duration-300 placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/10 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder:text-stone-500 dark:focus:border-emerald-700"
                       />
 
@@ -895,7 +895,7 @@ export default function ReportCase() {
                         onChange={(e) =>
                           setManualAddress(e.target.value)
                         }
-                        placeholder="Landmark (optional) — e.g. near Axis Bank ATM"
+                        placeholder="Landmark (optional)"
                         className="w-full rounded-xl border border-stone-200 bg-white p-4 text-sm font-medium text-stone-700 outline-none transition-all duration-300 placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/10 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder:text-stone-500 dark:focus:border-emerald-700"
                       />
 
