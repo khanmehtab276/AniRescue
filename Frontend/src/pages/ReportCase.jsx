@@ -327,8 +327,11 @@ export default function ReportCase() {
     };
   }, [imagePreview]);
 
-  const handleImageChange = (e) => {
+  const handleImageChange = async (e) => {
     const file = e.target.files?.[0];
+
+    // Allow the same photo to be selected again after replacing it.
+    e.target.value = '';
 
     if (!file) {
       return;
@@ -352,6 +355,13 @@ export default function ReportCase() {
 
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
+
+    try {
+      await saveReportDraftImage(file);
+    } catch (error) {
+      console.warn('Could not persist the rescue photo draft:', error);
+      showToast('Photo selected, but it could not be saved for later.', 'warning');
+    }
 
     if (!location && locationMode === 'auto') {
       getLocation();
@@ -563,6 +573,9 @@ export default function ReportCase() {
     setManualAddress('');
     setPinnedLocation(null);
     setLocationMode('auto');
+
+    clearReportDraftFields();
+    clearReportDraftImage();
 
     getLocation();
   };
