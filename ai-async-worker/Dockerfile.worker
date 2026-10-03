@@ -12,10 +12,23 @@ ENV PATH="/opt/venv/bin:$PATH" \
 # into the small runtime image.
 RUN python -m venv /opt/venv
 
-# Install CPU-only PyTorch first. This prevents pip from selecting a
-# CUDA-enabled build for this CPU-only worker.
-RUN pip install torch torchvision \
-    --index-url https://download.pytorch.org/whl/cpu
+# Install PyTorch's runtime dependencies from normal PyPI.
+# The PyTorch index has inconsistent package metadata for some dependencies,
+# so it must not be used as the dependency resolver's primary index.
+RUN pip install --index-url https://pypi.org/simple \
+    filelock \
+    fsspec \
+    jinja2 \
+    networkx \
+    sympy \
+    typing-extensions
+
+# Install CPU-only PyTorch wheels without resolving their dependencies
+# through the PyTorch index. This keeps the worker CPU-only and avoids the
+# broken dependency metadata seen on the PyTorch package index.
+RUN pip install --no-deps \
+    --index-url https://download.pytorch.org/whl/cpu \
+    torch torchvision
 
 # Install the pinned Ultralytics package without letting it replace the
 # CPU-only PyTorch stack.
@@ -24,7 +37,7 @@ RUN pip install --no-deps ultralytics==8.4.90
 # Install the remaining application + Ultralytics runtime dependencies.
 COPY requirements.txt ./requirements.txt
 RUN grep -v '^ultralytics==' requirements.txt > /tmp/requirements-runtime.txt \
-    && pip install -r /tmp/requirements-runtime.txt \
+    && pip install --index-url https://pypi.org/simple -r /tmp/requirements-runtime.txt \
     && rm -f /tmp/requirements-runtime.txt
 
 # --- Stage 2: Minimal production runtime ---
