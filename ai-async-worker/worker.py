@@ -55,6 +55,39 @@ CASE_NOTIFICATION_QUEUE = "case_notification_queue"
 
 MAX_RETRIES = 3
 
+# AI assessment -> initial operational rescue priority.
+# The highest signal from severity/urgency is used so an urgent/critical
+# case is not accidentally placed in a low-priority rescue queue.
+def derive_initial_priority(gemini_analysis):
+    if not isinstance(gemini_analysis, dict):
+        return "STANDARD"
+
+    severity_priority = {
+        "LOW": 0,
+        "MODERATE": 1,
+        "HIGH": 2,
+        "CRITICAL": 3,
+        "UNKNOWN": 1,
+    }
+    urgency_priority = {
+        "ROUTINE": 0,
+        "SOON": 1,
+        "URGENT": 2,
+        "EMERGENCY": 3,
+        "UNKNOWN": 1,
+    }
+    priority_names = ["LOW", "STANDARD", "HIGH", "CRITICAL"]
+
+    severity_score = severity_priority.get(
+        str(gemini_analysis.get("severity", "UNKNOWN")).upper(), 1
+    )
+    urgency_score = urgency_priority.get(
+        str(gemini_analysis.get("urgency", "UNKNOWN")).upper(), 1
+    )
+
+    return priority_names[max(severity_score, urgency_score)]
+
+
 IMAGE_DOWNLOAD_TIMEOUT = 15
 
 CLOUDINARY_DELIVERY_HOST = "res.cloudinary.com"
@@ -658,7 +691,13 @@ def main():
                         gemini_status = gemini_result["status"]
                         gemini_analysis = gemini_result["analysis"]
 
+                        initial_priority = derive_initial_priority(gemini_analysis)
+
                         if gemini_status == "COMPLETED":
+                            print(
+                                f"🎯 Initial rescue priority derived from AI: "
+                                f"{initial_priority}"
+                            )
                             print(
                                 f"🧠 Gemini assessment completed for "
                                 f"Case {report_id}: "
@@ -677,6 +716,7 @@ def main():
                             SET
                                 status = 'VALIDATION_PASSED',
                                 species = %s,
+                                priority = %s,
                                 ai_confidence = %s,
                                 ai_validated_at = CURRENT_TIMESTAMP,
                                 gemini_status = %s,
@@ -692,6 +732,7 @@ def main():
                             """,
                             (
                                 species,
+                                initial_priority,
                                 confidence,
                                 gemini_status,
                                 json.dumps(gemini_analysis)
