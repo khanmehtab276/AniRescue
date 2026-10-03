@@ -4,6 +4,9 @@ import {
   Activity,
   Building2,
   CheckCircle2,
+  Crosshair,
+  Save,
+  MapPinned,
   ClipboardList,
   ShieldCheck,
   Siren,
@@ -157,22 +160,230 @@ function VolunteerProfile({ user, cases }) {
 }
 
 function NGOProfile({ user, cases }) {
+  const { refreshUser } = useAuth();
   const active = cases.filter((c) => !['RESOLVED', 'REJECTED_JUNK', 'CANCELLED'].includes(c.status)).length;
   const volunteers = new Set(cases.filter((c) => c.assigned_volunteer_id).map((c) => c.assigned_volunteer_id)).size;
-  const configured = user.jurisdiction_lat !== null && user.jurisdiction_lat !== undefined;
+  const configured =
+    user.jurisdiction_lat !== null &&
+    user.jurisdiction_lat !== undefined &&
+    user.jurisdiction_lng !== null &&
+    user.jurisdiction_lng !== undefined;
+
+  const maximumRadius = Number(user.maximum_coverage_radius_km);
+  const [latitude, setLatitude] = useState(configured ? String(user.jurisdiction_lat) : '');
+  const [longitude, setLongitude] = useState(configured ? String(user.jurisdiction_lng) : '');
+  const [radius, setRadius] = useState(
+    configured ? String(user.jurisdiction_radius_km) : String(Number.isFinite(maximumRadius) ? Math.min(15, maximumRadius) : 15),
+  );
+  const [saving, setSaving] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [message, setMessage] = useState('');
+  const [saveError, setSaveError] = useState('');
+
+  useEffect(() => {
+    setLatitude(configured ? String(user.jurisdiction_lat) : '');
+    setLongitude(configured ? String(user.jurisdiction_lng) : '');
+    setRadius(
+      configured
+        ? String(user.jurisdiction_radius_km)
+        : String(Number.isFinite(maximumRadius) ? Math.min(15, maximumRadius) : 15),
+    );
+  }, [
+    configured,
+    user.jurisdiction_lat,
+    user.jurisdiction_lng,
+    user.jurisdiction_radius_km,
+    maximumRadius,
+  ]);
+
+  const useCurrentLocation = () => {
+    setMessage('');
+    setSaveError('');
+
+    if (!navigator.geolocation) {
+      setSaveError('Your browser does not provide location access. Enter the coordinates manually.');
+      return;
+    }
+
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLatitude(position.coords.latitude.toFixed(6));
+        setLongitude(position.coords.longitude.toFixed(6));
+        setLocating(false);
+        setMessage('Current device location loaded. Save the jurisdiction to apply it.');
+      },
+      (error) => {
+        setLocating(false);
+        setSaveError(
+          error.code === error.PERMISSION_DENIED
+            ? 'Location permission was denied. You can enter latitude and longitude manually.'
+            : 'Unable to get your current location. Please try again or enter coordinates manually.',
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+    );
+  };
+
+  const saveJurisdiction = async (event) => {
+    event.preventDefault();
+    setMessage('');
+    setSaveError('');
+
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    const radiusKm = Number(radius);
+
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+      setSaveError('Latitude must be between -90 and 90.');
+      return;
+    }
+
+    if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
+      setSaveError('Longitude must be between -180 and 180.');
+      return;
+    }
+
+    if (!Number.isFinite(radiusKm) || radiusKm <= 0) {
+      setSaveError('Operating radius must be greater than 0 km.');
+      return;
+    }
+
+    if (Number.isFinite(maximumRadius) && radiusKm > maximumRadius) {
+      setSaveError(`Operating radius cannot exceed your registered maximum of ${maximumRadius} km.`);
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const { data } = await API.put('/auth/jurisdiction', {
+        lat,
+        lng,
+        radiusKm,
+      });
+
+      await refreshUser();
+      setLatitude(String(data.user.jurisdiction_lat));
+      setLongitude(String(data.user.jurisdiction_lng));
+      setRadius(String(data.user.jurisdiction_radius_km));
+      setMessage('NGO operating jurisdiction updated successfully.');
+    } catch (error) {
+      console.error('NGO jurisdiction update failed:', error);
+      setSaveError(error.response?.data?.error || 'Unable to update the operating jurisdiction.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <>
       <Section eyebrow="Organization info" title="Operating details">
         <InfoRow label="Operating base" value={user.organization_address} />
         <InfoRow label="Service radius" value={configured ? `${user.jurisdiction_radius_km} km` : 'Not configured'} />
+        <InfoRow
+          label="Maximum coverage"
+          value={Number.isFinite(maximumRadius) ? `${maximumRadius} km` : 'Not available'}
+        />
         <InfoRow label="Account status" value={(user.account_status || 'PENDING').toUpperCase()} />
       </Section>
+
+      <Section eyebrow="NGO jurisdiction" title="Operating area">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20">
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/80 text-emerald-700 shadow-sm dark:bg-stone-900/70 dark:text-emerald-300">
+              <MapPinned size={19} />
+            </span>
+            <div>
+              <p className="text-sm font-black text-stone-900 dark:text-white">Choose your rescue coverage</p>
+              <p className="mt-1 text-xs leading-5 text-stone-600 dark:text-stone-300">
+                This center and radius control which rescue cases your NGO can access. It is separate from your device's current map location.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={saveJurisdiction} className="mt-4 space-y-3">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className="block">
+                <span className="mb-1.5 block text-[11px] font-black uppercase tracking-wider text-stone-500 dark:text-stone-400">Latitude</span>
+                <input
+                  type="number"
+                  min="-90"
+                  max="90"
+                  step="any"
+                  value={latitude}
+                  onChange={(event) => setLatitude(event.target.value)}
+                  placeholder="e.g. 19.076"
+                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm font-semibold text-stone-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                  required
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-[11px] font-black uppercase tracking-wider text-stone-500 dark:text-stone-400">Longitude</span>
+                <input
+                  type="number"
+                  min="-180"
+                  max="180"
+                  step="any"
+                  value={longitude}
+                  onChange={(event) => setLongitude(event.target.value)}
+                  placeholder="e.g. 72.8777"
+                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm font-semibold text-stone-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                  required
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-[11px] font-black uppercase tracking-wider text-stone-500 dark:text-stone-400">Radius (km)</span>
+                <input
+                  type="number"
+                  min="0.1"
+                  max={Number.isFinite(maximumRadius) ? maximumRadius : undefined}
+                  step="0.1"
+                  value={radius}
+                  onChange={(event) => setRadius(event.target.value)}
+                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm font-semibold text-stone-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                  required
+                />
+                {Number.isFinite(maximumRadius) && (
+                  <span className="mt-1 block text-[10px] font-semibold text-stone-400">Maximum: {maximumRadius} km</span>
+                )}
+              </label>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={useCurrentLocation}
+                disabled={locating}
+                className="inline-flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-xs font-black text-stone-700 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:text-emerald-700 disabled:cursor-wait disabled:opacity-60 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:border-emerald-800 dark:hover:text-emerald-300"
+              >
+                <Crosshair size={15} className={locating ? 'animate-spin' : ''} />
+                {locating ? 'Detecting location...' : 'Use my current location'}
+              </button>
+
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-60"
+              >
+                <Save size={15} />
+                {saving ? 'Saving...' : 'Save jurisdiction'}
+              </button>
+            </div>
+
+            {message && <p className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{message}</p>}
+            {saveError && <p className="text-xs font-bold text-rose-600 dark:text-rose-300">{saveError}</p>}
+          </form>
+        </div>
+      </Section>
+
       <Section eyebrow="Organization" title="Contact information">
         <InfoRow label="Organization" value={user.organization_name} />
         <InfoRow label="Contact person" value={user.contact_person} />
         <InfoRow label="Phone" value={user.organization_phone} />
       </Section>
+
       <Section eyebrow="Operations" title="Rescue network">
         <div className="grid gap-3 sm:grid-cols-2">
           <ActivityRow icon={Siren} label="Active cases" value={active} tone="rose" />
@@ -187,7 +398,6 @@ function NGOProfile({ user, cases }) {
     </>
   );
 }
-
 function AdminProfile({ user, cases }) {
   const active = cases.filter((c) => !['RESOLVED', 'REJECTED_JUNK', 'CANCELLED'].includes(c.status)).length;
   const verification = cases.filter((c) => c.status === 'RESCUE_COMPLETED').length;
