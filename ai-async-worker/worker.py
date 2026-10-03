@@ -854,22 +854,49 @@ def main():
                             "x-retry-count"
                         ] = retry_count + 1
 
-                        ch.basic_publish(
-                            exchange="",
-                            routing_key=QUEUE_NAME,
-                            body=body,
-                            properties=pika.BasicProperties(
-                                delivery_mode=2,
-                                headers=new_headers
+                        try:
+                            published = ch.basic_publish(
+                                exchange="",
+                                routing_key=QUEUE_NAME,
+                                body=body,
+                                properties=pika.BasicProperties(
+                                    delivery_mode=2,
+                                    headers=new_headers
+                                )
                             )
-                        )
 
-                        print(
-                            f"🔄 Retrying Case "
-                            f"{report_id} "
-                            f"({retry_count + 1}/"
-                            f"{MAX_RETRIES})"
-                        )
+                            if published is False:
+                                raise RuntimeError(
+                                    "RabbitMQ did not confirm retry publication."
+                                )
+
+                            print(
+                                f"🔄 Retrying Case "
+                                f"{report_id} "
+                                f"({retry_count + 1}/"
+                                f"{MAX_RETRIES})"
+                            )
+
+                            # The replacement message is safely published,
+                            # so the failed original can now be acknowledged.
+                            ch.basic_ack(
+                                delivery_tag=
+                                method.delivery_tag
+                            )
+
+                        except Exception as retry_err:
+                            print(
+                                f"⚠️ Retry publication failed for Case "
+                                f"{report_id}: {retry_err}"
+                            )
+
+                            # Do not lose the original message if RabbitMQ
+                            # could not accept the replacement. RabbitMQ will
+                            # redeliver it after the consumer recovers.
+                            ch.basic_nack(
+                                delivery_tag=method.delivery_tag,
+                                requeue=True
+                            )
 
                     else:
 
@@ -878,14 +905,12 @@ def main():
                             f"exceeded maximum retries."
                         )
 
-                    # ------------------------------------------
-                    # ACK ORIGINAL MESSAGE
-                    # ------------------------------------------
-
-                    ch.basic_ack(
-                        delivery_tag=
-                        method.delivery_tag
-                    )
+                        # The bounded retry limit has been reached. Ack the
+                        # failed message so it does not loop forever.
+                        ch.basic_ack(
+                            delivery_tag=
+                            method.delivery_tag
+                        )
 
                 finally:
 
