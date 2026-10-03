@@ -75,10 +75,10 @@ def get_db_connection(existing_conn):
     Reuse an existing PostgreSQL connection if it is healthy.
     Otherwise create a new connection.
 
-    Neon connections can become stale while the worker remains alive
-    (for example after a long idle period or a network interruption).
-    Use bounded connection/query timeouts and TCP keepalives so the worker
-    never hangs indefinitely while checking or using a stale connection.
+    Neon pooled connections reject PostgreSQL startup parameters such
+    as statement_timeout. Keep the connection-level timeout settings
+    in psycopg2, then apply statement_timeout after the connection is
+    established with SET.
     """
 
     if existing_conn is not None and not existing_conn.closed:
@@ -99,15 +99,166 @@ def get_db_connection(existing_conn):
             except Exception:
                 pass
 
-    return psycopg2.connect(
+    connection = psycopg2.connect(
         DATABASE_URL,
         connect_timeout=10,
         keepalives=1,
         keepalives_idle=30,
         keepalives_interval=10,
         keepalives_count=3,
-        options="-c statement_timeout=30000",
     )
+
+    with connection.cursor() as cur:
+        cur.execute("SET statement_timeout = 30000")
+
+    return connection
+
+
+# --------------------------------------------------
+# CASE NOTIFICATION
+# --------------------------------------------------
+
+
+def publish_case_notification(
+    channel,
+    report_id,
+    is_valid,
+    species=None
+):
+    payload = {
+        "reportId": report_id,
+        "validationPassed": is_valid,
+        "species": species,
+    }
+
+    channel.queue_declare(
+        queue=CASE_NOTIFICATION_QUEUE,
+        durable=True,
+    )
+
+    channel.basic_publish(
+        exchange="",
+        routing_key=CASE_NOTIFICATION_QUEUE,
+        body=json.dumps(payload).encode(),
+        properties=pika.BasicProperties(
+            delivery_mode=2,
+            content_type="application/json",
+        ),
+        mandatory=True,
+    )
+
+    print(
+        f"📢 Case {report_id} notification event published: "
+        f"{'PASSED' if is_valid else 'REJECTED'}"
+    )
+
+# --------------------------------------------------
+# IMAGE DOWNLOAD
+# --------------------------------------------------
+
+
+def resolve_image_input(image_source):
+    """
+    Download a Cloudinary image URL and save it
+    temporarily for YOLO processing.
+
+    Only HTTP/HTTPS URLs are supported.
+    """
+
+    if not image_source:
+        raise ValueError(
+            "Image source is missing."
+        )
+
+    if not isinstance(image_source, str):
+        raise ValueError(
+            "Image source must be a string URL."
+        )
+
+    try:
+        parsed_url = urlparse(image_source)
+    except ValueError:
+        raise ValueError(
+            "Invalid image URL."
+        )
+
+    if parsed_url.scheme != "https":
+        raise ValueError(
+            "Only HTTPS Cloudinary image URLs are supported."
+        )
+
+    if parsed_url.hostname != CLOUDINARY_DELIVERY_HOST:
+        raise ValueError(
+            "Image URL must use the approved Cloudinary delivery host."
+        )
+
+    expected_prefix = f"/{CLOUDINARY_CLOUD_NAME}/"
+    if not parsed_url.path.startswith(expected_prefix):
+        raise ValueError(
+            "Image URL does not belong to the approved Cloudinary cloud."
+        )
+
+    if parsed_url.username or parsed_url.password:
+        raise ValueError(
+            "Image URL credentials are not allowed."
+        )
+
+    temp_path = None
+
+    try:
+        headers = {
+            "User-Agent": "AniRescueWorker/1.0"
+        }
+
+        response = requests.get(
+            image_source,
+            headers=headers,
+            timeout=IMAGE_DOWNLOAD_TIMEOUT,
+            allow_redirects=False,
+        )
+
+        response.raise_for_status()
+
+        content_length = response.headers.get("Content-Length")
+        if content_length and int(content_length) > MAX_IMAGE_BYTES:
+            raise ValueError("Downloaded image exceeds the 10 MB processing limit.")
+
+        if len(response.content) > MAX_IMAGE_BYTES:
+            raise ValueError("Downloaded image exceeds the 10 MB processing limit.")
+
+        # Convert downloaded image to RGB JPEG.
+        # This also normalizes formats such as PNG/WebP.
+        img = Image.open(
+            io.BytesIO(response.content)
+        ).convert("RGB")
+
+        temp_file = tempfile.NamedTemporaryFile(
+            suffix=".jpg",
+            delete=False
+        )
+
+        temp_path = temp_file.name
+        temp_file.close()
+
+        img.save(
+            temp_path,
+            format="JPEG"
+        )
+
+        return temp_path
+
+    except Exception as err:
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
+
+        print(
+            f"⚠️ Image processing/download failed: {err}"
+        )
+
+        raise
 
 
 # --------------------------------------------------
