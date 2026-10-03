@@ -14,7 +14,7 @@ import useLocation from '../hooks/useLocation';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import { getStatusConfig, TONE_CLASSES } from '../utils/statusConfig.js';
 
-const CENTER = [19.076, 72.8777];
+const INITIAL_CENTER = [20, 0];
 
 const ROLE_CONFIG = {
   user: {
@@ -156,6 +156,16 @@ export default function MapView() {
 
   useEffect(() => { loadMap(); }, [role]);
 
+  // The map is location-aware, but it must not assume the user is in India.
+  // Ask the browser for the device's current location and recenter when it arrives.
+  useEffect(() => {
+    getLocation();
+  }, []);
+
+  useEffect(() => {
+    if (currentLocation) setRecenterRequest((value) => value + 1);
+  }, [currentLocation]);
+
   const visibleCases = useMemo(() => mapCases.filter((item) => matches(item, filter)), [mapCases, filter]);
   const urgent = mapCases.filter((item) => item.priority === 'CRITICAL' || item.priority === 'HIGH').length;
   const available = mapCases.filter((item) => item.status === 'VALIDATION_PASSED' && !item.assigned_volunteer_id).length;
@@ -217,7 +227,7 @@ export default function MapView() {
           )}
 
           {!loading && !error && (
-            <MapContainer center={CENTER} zoom={12} minZoom={2} maxBounds={[[-85, -180], [85, 180]]} maxBoundsViscosity={1} className="h-full w-full">
+            <MapContainer center={currentLocation ? [currentLocation.lat, currentLocation.lng] : INITIAL_CENTER} zoom={currentLocation ? 12 : 2} minZoom={2} maxBounds={[[-85, -180], [85, 180]]} maxBoundsViscosity={1} className="h-full w-full">
               <MapViewportController
                 center={currentLocation ? [currentLocation.lat, currentLocation.lng] : null}
                 request={recenterRequest}
@@ -252,7 +262,7 @@ export default function MapView() {
 
           {!loading && !error && (
             <div className="absolute right-3 top-3 z-[500] flex flex-col gap-2">
-              <button type="button" onClick={() => { if (!currentLocation) getLocation(); setRecenterRequest((value) => value + 1); }} disabled={locating} className="rescue-focus-ring grid h-11 w-11 place-items-center rounded-xl border border-stone-200 bg-white/95 text-stone-600 shadow-lg backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:text-emerald-700 disabled:opacity-60 dark:border-stone-800 dark:bg-stone-900/95 dark:text-stone-300 dark:hover:text-emerald-300" aria-label="Center map on my location" title="My location">
+              <button type="button" onClick={() => { if (!currentLocation) getLocation(); else setRecenterRequest((value) => value + 1); }} disabled={locating} className="rescue-focus-ring grid h-11 w-11 place-items-center rounded-xl border border-stone-200 bg-white/95 text-stone-600 shadow-lg backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:text-emerald-700 disabled:opacity-60 dark:border-stone-800 dark:bg-stone-900/95 dark:text-stone-300 dark:hover:text-emerald-300" aria-label="Center map on my location" title="My location">
                 <Crosshair size={18} className={locating ? "animate-spin" : ""} />
               </button>
             </div>
