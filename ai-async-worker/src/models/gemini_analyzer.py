@@ -158,6 +158,11 @@ YOLO has already detected an animal:
 Reporter description:
 {issue_description or "No description provided."}
 
+Workflow context:
+This case has already been reported through AniRescue. The rescue team will
+review, assign, and handle the case. Do not instruct the reporter to contact
+another rescue organization.
+
 Analyze the supplied rescue image visually.
 
 Your task is NOT to diagnose a disease or injury. Only describe visible signs
@@ -171,8 +176,17 @@ Important safety rules:
   other condition that cannot be established from the image.
 - If the image is unclear, say so and use UNKNOWN severity/urgency when needed.
 - Keep first-aid steps simple and low-risk.
-- Emphasize contacting a trained rescuer/veterinarian for serious or uncertain
-  situations.
+- Emphasize that the rescue workflow is already active: the report has been
+  submitted to AniRescue and will be handled by the rescue team.
+- Do NOT tell the reporter to contact an animal rescue organization or submit
+  another report, because the current report is already inside the rescue
+  workflow.
+- For recommended_action, describe what the AniRescue rescue team should
+  prioritize next. Examples include prioritizing rescue assessment, arranging
+  veterinary evaluation, safely transporting the animal, or monitoring until
+  handover. Keep the wording operational and concise.
+- If the case is serious or uncertain, recommend prompt assessment by a trained
+  rescuer or veterinarian as part of the existing rescue workflow.
 - Severity is a visual triage estimate, not a medical diagnosis.
 - Return ONLY the requested JSON structure.
 """
