@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Camera, CheckCircle2, HandHeart, Map, MapPin, Search } from 'lucide-react';
+import { Camera, CheckCircle2, HandHeart, ImagePlus, Map, MapPin, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import useLocation from '../hooks/useLocation';
 import useOfflineSync from '../hooks/useOfflineSync';
