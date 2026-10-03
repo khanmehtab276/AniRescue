@@ -1,3 +1,4 @@
+const { getMessaging } = require("firebase-admin/messaging");
 const { getFirebaseAdmin } = require("../config/firebase");
 
 const sendPushNotification = async ({
@@ -35,7 +36,7 @@ const sendPushNotification = async ({
     },
   };
 
-  return admin.messaging().send(message);
+  return getMessaging().send(message);
 };
 
 module.exports = {
