@@ -821,15 +821,20 @@ export default function ReportCase() {
                           } border border-stone-200 dark:border-stone-800`}
                       />
 
-                      <input
-                        type="text"
-                        value={manualAddress}
-                        onChange={(e) =>
-                          setManualAddress(e.target.value)
-                        }
-                        placeholder="Landmark (optional)"
-                        className="w-full rounded-xl border border-stone-200 bg-white p-4 text-sm font-medium text-stone-700 outline-none transition-all duration-300 placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/10 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder:text-stone-500 dark:focus:border-emerald-700"
-                      />
+                      <div className="space-y-2">
+                        <label className="block text-xs uppercase tracking-wider font-bold text-stone-500 dark:text-stone-400 ml-2">
+                          Landmark (optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={manualAddress}
+                          onChange={(e) =>
+                            setManualAddress(e.target.value)
+                          }
+                          placeholder="e.g. near Axis Bank ATM"
+                          className="w-full rounded-xl border border-stone-200 bg-white p-4 text-sm font-medium text-stone-700 outline-none transition-all duration-300 placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/10 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder:text-stone-500 dark:focus:border-emerald-700"
+                        />
+                      </div>
 
                     </div>
                   ) : (
@@ -889,15 +894,20 @@ export default function ReportCase() {
                         </div>
                       )}
 
-                      <input
-                        type="text"
-                        value={manualAddress}
-                        onChange={(e) =>
-                          setManualAddress(e.target.value)
-                        }
-                        placeholder="Landmark (optional)"
-                        className="w-full rounded-xl border border-stone-200 bg-white p-4 text-sm font-medium text-stone-700 outline-none transition-all duration-300 placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/10 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder:text-stone-500 dark:focus:border-emerald-700"
-                      />
+                      <div className="space-y-2">
+                        <label className="block text-xs uppercase tracking-wider font-bold text-stone-500 dark:text-stone-400 ml-2">
+                          Landmark (optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={manualAddress}
+                          onChange={(e) =>
+                            setManualAddress(e.target.value)
+                          }
+                          placeholder="e.g. near Axis Bank ATM"
+                          className="w-full rounded-xl border border-stone-200 bg-white p-4 text-sm font-medium text-stone-700 outline-none transition-all duration-300 placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/10 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder:text-stone-500 dark:focus:border-emerald-700"
+                        />
+                      </div>
 
                     </div>
                   )}
