@@ -1,7 +1,5 @@
 import json
 import os
-import re
-
 from google import genai
 from google.genai import types
 
@@ -9,6 +7,7 @@ from google.genai import types
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 GEMINI_THINKING_LEVEL = os.getenv("GEMINI_THINKING_LEVEL", "low").lower()
+GEMINI_TIMEOUT_MS = int(os.getenv("GEMINI_TIMEOUT_MS", "120000"))
 
 ALLOWED_THINKING_LEVELS = {"low", "medium", "high"}
 
@@ -78,7 +77,10 @@ def _get_client():
         return None
 
     if _client is None:
-        _client = genai.Client(api_key=GEMINI_API_KEY)
+        _client = genai.Client(
+            api_key=GEMINI_API_KEY,
+            http_options=types.HttpOptions(timeout=GEMINI_TIMEOUT_MS),
+        )
 
     return _client
 
