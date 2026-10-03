@@ -6,6 +6,7 @@ WORKDIR /build
 ENV PATH="/opt/venv/bin:$PATH" \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
+    PIP_DEFAULT_TIMEOUT=600 \
     PYTHONDONTWRITEBYTECODE=1
 
 # Keep the Python environment isolated so only the final venv is copied
@@ -24,9 +25,10 @@ RUN pip install --index-url https://pypi.org/simple \
     typing-extensions
 
 # Install CPU-only PyTorch wheels without resolving their dependencies
-# through the PyTorch index. This keeps the worker CPU-only and avoids the
-# broken dependency metadata seen on the PyTorch package index.
+# through the PyTorch index. The longer pip timeout is intentional because
+# the CPU wheel is large and may download slowly.
 RUN pip install --no-deps \
+    --timeout 600 \
     --index-url https://download.pytorch.org/whl/cpu \
     torch torchvision
 
