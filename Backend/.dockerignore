@@ -6,7 +6,13 @@ __pycache__
 *.pyo
 *.pyd
 .env
+.env.*
 .dockerignore
 Dockerfile*
 docker-compose*.yml
-README.md   
+README.md
+*.md
+test
+tests
+coverage
+npm-debug.log*
