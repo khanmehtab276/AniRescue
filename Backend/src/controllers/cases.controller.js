@@ -21,6 +21,8 @@ const CASE_FIELDS = `
   latitude, longitude, is_custom_location, image_payload,
   evidence_image_payload, evidence_notes, rejection_reason,
   reporter_id, assigned_volunteer_id, verified_by,
+  ai_confidence, ai_validated_at,
+  gemini_status, gemini_analysis, gemini_analyzed_at,
   created_at, completed_at, resolved_at
 `;
 
