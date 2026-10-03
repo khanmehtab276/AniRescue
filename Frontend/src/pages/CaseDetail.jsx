@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, X, Brain, ShieldAlert, Stethoscope, ListChecks } from 'lucide-react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useToast } from '../contexts/ToastContext.jsx';
@@ -351,6 +351,80 @@ export default function CaseDetail() {
           </div>
         )}
       </Surface>
+
+      {/* AI PRELIMINARY ASSESSMENT */}
+      {caseItem.gemini_status === 'COMPLETED' && caseItem.gemini_analysis && (
+        <Surface className="mb-6 overflow-hidden p-5 sm:p-6">
+          <div className="flex items-start gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300">
+              <Brain size={21} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-300">AI Preliminary Assessment</p>
+              <p className="mt-1 text-xs leading-5 text-stone-500 dark:text-stone-400">
+                Visual triage guidance only — not a medical diagnosis.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-2xl bg-stone-100/80 p-3 dark:bg-stone-800/70">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500">Severity</p>
+              <p className="mt-1 text-sm font-black text-stone-800 dark:text-stone-100">{caseItem.gemini_analysis.severity || 'UNKNOWN'}</p>
+            </div>
+            <div className="rounded-2xl bg-stone-100/80 p-3 dark:bg-stone-800/70">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500">Urgency</p>
+              <p className="mt-1 text-sm font-black text-stone-800 dark:text-stone-100">{caseItem.gemini_analysis.urgency || 'UNKNOWN'}</p>
+            </div>
+            <div className="rounded-2xl bg-stone-100/80 p-3 dark:bg-stone-800/70 col-span-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500">Condition</p>
+              <p className="mt-1 text-sm font-semibold leading-5 text-stone-700 dark:text-stone-200">{caseItem.gemini_analysis.condition_summary || 'No visual condition summary available.'}</p>
+            </div>
+          </div>
+
+          {Array.isArray(caseItem.gemini_analysis.visible_signs) && caseItem.gemini_analysis.visible_signs.length > 0 && (
+            <div className="mt-4 rounded-2xl border border-stone-200/70 p-4 dark:border-stone-700/60">
+              <div className="flex items-center gap-2 text-sm font-black text-stone-800 dark:text-stone-100">
+                <ShieldAlert size={17} /> Visible signs
+              </div>
+              <ul className="mt-2 space-y-1.5 text-sm text-stone-600 dark:text-stone-300">
+                {caseItem.gemini_analysis.visible_signs.map((sign, index) => <li key={index}>• {sign}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {Array.isArray(caseItem.gemini_analysis.first_aid) && caseItem.gemini_analysis.first_aid.length > 0 && (
+            <div className="mt-4 rounded-2xl border border-stone-200/70 p-4 dark:border-stone-700/60">
+              <div className="flex items-center gap-2 text-sm font-black text-stone-800 dark:text-stone-100">
+                <Stethoscope size={17} /> Immediate care guidance
+              </div>
+              <ul className="mt-2 space-y-1.5 text-sm text-stone-600 dark:text-stone-300">
+                {caseItem.gemini_analysis.first_aid.map((item, index) => <li key={index}>• {item}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {role !== 'USER' && caseItem.gemini_analysis.recommended_action && (
+            <div className="mt-4 rounded-2xl bg-emerald-50 p-4 dark:bg-emerald-950/30">
+              <div className="flex items-center gap-2 text-sm font-black text-emerald-700 dark:text-emerald-300">
+                <ListChecks size={17} /> Rescue team next step
+              </div>
+              <p className="mt-2 text-sm leading-6 text-stone-700 dark:text-stone-200">
+                {caseItem.gemini_analysis.recommended_action}
+              </p>
+            </div>
+          )}
+
+          {role === 'USER' && isReporterMe && (
+            <div className="mt-4 rounded-2xl bg-emerald-50 p-4 dark:bg-emerald-950/30">
+              <p className="text-sm font-black text-emerald-700 dark:text-emerald-300">Your report is already in the rescue workflow.</p>
+              <p className="mt-1 text-sm leading-6 text-stone-600 dark:text-stone-300">
+                The AniRescue rescue team will review the case, coordinate the rescue, and arrange further care when needed. You do not need to contact another rescue organization for this report.
+              </p>
+            </div>
+          )}
+        </Surface>
+      )}
 
       {/* ROLE-SPECIFIC ACTIONS */}
       <Surface className="mb-6 p-5 sm:p-6 space-y-3">
