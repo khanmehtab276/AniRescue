@@ -25,6 +25,7 @@ if str(WORKER_DIR) not in sys.path:
     sys.path.insert(0, str(WORKER_DIR))
 
 from src.models.yolo_engine import YoloGatekeeper
+from src.models.gemini_analyzer import analyze_image_with_gemini
 
 
 # --------------------------------------------------
@@ -426,7 +427,7 @@ def main():
 
                     cursor.execute(
                         """
-                        SELECT status, ai_validated_at
+                        SELECT status, ai_validated_at, issue_description
                         FROM rescue_cases
                         WHERE id = %s
                         """,
@@ -489,6 +490,37 @@ def main():
 
                     if is_valid:
 
+                        # Gemini is deliberately optional. YOLO remains the
+                        # gatekeeper, so a Gemini quota/API failure never
+                        # rejects a valid rescue report.
+                        print(
+                            f"🧠 Running Gemini preliminary assessment for "
+                            f"Case {report_id}..."
+                        )
+
+                        gemini_result = analyze_image_with_gemini(
+                            image_path=image_input,
+                            yolo_species=species,
+                            yolo_confidence=confidence,
+                            issue_description=case_row[2],
+                        )
+
+                        gemini_status = gemini_result["status"]
+                        gemini_analysis = gemini_result["analysis"]
+
+                        if gemini_status == "COMPLETED":
+                            print(
+                                f"🧠 Gemini assessment completed for "
+                                f"Case {report_id}: "
+                                f"severity={gemini_analysis.get('severity')}, "
+                                f"urgency={gemini_analysis.get('urgency')}"
+                            )
+                        else:
+                            print(
+                                f"ℹ️ Gemini assessment unavailable for "
+                                f"Case {report_id}: {gemini_status}"
+                            )
+
                         cursor.execute(
                             """
                             UPDATE rescue_cases
@@ -496,13 +528,26 @@ def main():
                                 status = 'VALIDATION_PASSED',
                                 species = %s,
                                 ai_confidence = %s,
-                                ai_validated_at = CURRENT_TIMESTAMP
+                                ai_validated_at = CURRENT_TIMESTAMP,
+                                gemini_status = %s,
+                                gemini_analysis = %s::jsonb,
+                                gemini_analyzed_at =
+                                    CASE
+                                        WHEN %s = 'COMPLETED'
+                                        THEN CURRENT_TIMESTAMP
+                                        ELSE NULL
+                                    END
                             WHERE id = %s
                               AND ai_validated_at IS NULL
                             """,
                             (
                                 species,
                                 confidence,
+                                gemini_status,
+                                json.dumps(gemini_analysis)
+                                if gemini_analysis is not None
+                                else None,
+                                gemini_status,
                                 report_id
                             )
                         )
@@ -529,7 +574,8 @@ def main():
                             SET
                                 status = 'REJECTED_JUNK',
                                 ai_confidence = %s,
-                                ai_validated_at = CURRENT_TIMESTAMP
+                                ai_validated_at = CURRENT_TIMESTAMP,
+                                gemini_status = 'NOT_APPLICABLE'
                             WHERE id = %s
                               AND ai_validated_at IS NULL
                             """,
