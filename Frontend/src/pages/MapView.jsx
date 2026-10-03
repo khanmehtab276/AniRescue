@@ -174,6 +174,20 @@ export default function MapView() {
     && Number.isFinite(Number(user?.jurisdiction_lng))
     && Number.isFinite(Number(user?.jurisdiction_radius_km))
     && Number(user.jurisdiction_radius_km) > 0;
+  const viewLabel = role === 'admin'
+    ? 'Global'
+    : role === 'ngo'
+      ? (ngoJurisdiction ? `${user.jurisdiction_radius_km} km` : 'Not set')
+      : role === 'volunteer'
+        ? 'Dispatch'
+        : 'My location';
+  const viewDescription = role === 'admin'
+    ? 'All active rescue cases'
+    : role === 'ngo'
+      ? (ngoJurisdiction ? 'Within your NGO operating area' : 'Configure your NGO area')
+      : role === 'volunteer'
+        ? 'Device location + rescue dispatch'
+        : 'Device location + your reports';
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-24 pt-5 md:px-8 md:pb-8 md:pt-8">
@@ -197,11 +211,11 @@ export default function MapView() {
         <Stat icon={<MapPin size={16} />} label="Mapped" value={mapCases.length} />
         <Stat icon={<Siren size={16} />} label={role === 'user' ? 'My reports' : 'Available'} value={role === 'user' ? mapCases.length : available} />
         <Stat icon={<AlertTriangle size={16} />} label="Priority" value={urgent} />
-        <Stat icon={<Users size={16} />} label="View" value={role === 'admin' ? 'Global' : role === 'ngo' ? (ngoJurisdiction ? `${user.jurisdiction_radius_km} km` : 'Not set') : 'Role'} />
+        <Stat icon={<Users size={16} />} label="View" value={viewLabel} />
       </section>
 
       <div className="mb-4 flex gap-2 overflow-x-auto pb-1 rescue-stagger">
-        <div className="flex h-9 shrink-0 items-center gap-2 rounded-xl bg-emerald-50 px-3 text-xs font-bold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"><Filter size={14} /> View</div>
+        <div className="flex h-9 shrink-0 items-center gap-2 rounded-xl bg-emerald-50 px-3 text-xs font-bold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"><Filter size={14} /> View · {viewDescription}</div>
         {config.filters.map(([value, label]) => (
           <button key={value} onClick={() => setFilter(value)} className={`shrink-0 rounded-xl px-4 py-2 text-xs font-bold transition-all duration-200 active:scale-95 ${filter === value ? 'bg-emerald-700 text-white shadow-md shadow-emerald-700/20' : 'border border-stone-200 bg-white text-stone-600 hover:-translate-y-0.5 hover:border-emerald-200 hover:text-emerald-700 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300 dark:hover:border-emerald-700 dark:hover:text-emerald-300'}`}>
             {label}
