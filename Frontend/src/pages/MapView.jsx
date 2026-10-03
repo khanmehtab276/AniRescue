@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import {
   AlertTriangle, Crosshair, Filter, HeartHandshake, MapPin, PawPrint,
   RefreshCw, Shield, Siren, Users,
@@ -169,6 +169,11 @@ export default function MapView() {
   const visibleCases = useMemo(() => mapCases.filter((item) => matches(item, filter)), [mapCases, filter]);
   const urgent = mapCases.filter((item) => item.priority === 'CRITICAL' || item.priority === 'HIGH').length;
   const available = mapCases.filter((item) => item.status === 'VALIDATION_PASSED' && !item.assigned_volunteer_id).length;
+  const ngoJurisdiction = role === 'ngo'
+    && Number.isFinite(Number(user?.jurisdiction_lat))
+    && Number.isFinite(Number(user?.jurisdiction_lng))
+    && Number.isFinite(Number(user?.jurisdiction_radius_km))
+    && Number(user.jurisdiction_radius_km) > 0;
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-24 pt-5 md:px-8 md:pb-8 md:pt-8">
@@ -192,7 +197,7 @@ export default function MapView() {
         <Stat icon={<MapPin size={16} />} label="Mapped" value={mapCases.length} />
         <Stat icon={<Siren size={16} />} label={role === 'user' ? 'My reports' : 'Available'} value={role === 'user' ? mapCases.length : available} />
         <Stat icon={<AlertTriangle size={16} />} label="Priority" value={urgent} />
-        <Stat icon={<Users size={16} />} label="View" value={role === 'admin' ? 'Global' : 'Role'} />
+        <Stat icon={<Users size={16} />} label="View" value={role === 'admin' ? 'Global' : role === 'ngo' ? (ngoJurisdiction ? `${user.jurisdiction_radius_km} km` : 'Not set') : 'Role'} />
       </section>
 
       <div className="mb-4 flex gap-2 overflow-x-auto pb-1 rescue-stagger">
@@ -233,6 +238,39 @@ export default function MapView() {
                 request={recenterRequest}
               />
               <TileLayer attribution={tileAttribution} url={tileUrl} />
+              {ngoJurisdiction && (
+                <>
+                  <Circle
+                    center={[Number(user.jurisdiction_lat), Number(user.jurisdiction_lng)]}
+                    radius={Number(user.jurisdiction_radius_km) * 1000}
+                    pathOptions={{
+                      color: isDark ? '#34d399' : '#059669',
+                      fillColor: isDark ? '#10b981' : '#34d399',
+                      fillOpacity: isDark ? 0.10 : 0.12,
+                      weight: 2,
+                    }}
+                  />
+                  <Marker
+                    position={[Number(user.jurisdiction_lat), Number(user.jurisdiction_lng)]}
+                    icon={L.divIcon({
+                      className: 'anirescue-map-marker',
+                      html: '<div class="anirescue-marker-core" style="--marker-color:#059669"><span></span></div>',
+                      iconSize: [34, 34],
+                      iconAnchor: [17, 17],
+                    })}
+                  >
+                    <Popup>
+                      <div className="p-1">
+                        <p className="text-[10px] font-black uppercase tracking-wider text-emerald-600">NGO jurisdiction</p>
+                        <p className="mt-1 text-sm font-black text-stone-800">Operating area</p>
+                        <p className="mt-1 text-xs text-stone-500">
+                          {user.jurisdiction_radius_km} km radius
+                        </p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                </>
+              )}
               {visibleCases.map((item) => (
                 <Marker
                   key={item.id}
@@ -304,7 +342,9 @@ export default function MapView() {
 
       <div className="mt-4 flex items-start gap-2 rounded-2xl bg-emerald-50 px-4 py-3 text-xs leading-5 text-emerald-900 ring-1 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-200 dark:ring-emerald-900">
         <Crosshair size={15} className="mt-0.5 shrink-0 text-emerald-700" />
-        <p>{config.note}</p>
+        <p>{role === 'ngo' && !ngoJurisdiction
+          ? 'Set your NGO operating center and radius from Profile before relying on the jurisdiction map.'
+          : config.note}</p>
       </div>
 
       {!loading && !error && mapCases.length === 0 && (
