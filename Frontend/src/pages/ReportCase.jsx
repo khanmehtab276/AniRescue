@@ -670,35 +670,78 @@ export default function ReportCase() {
                   type="file"
                   id="cameraInput"
                   accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
+                <input
+                  type="file"
+                  id="photoLibraryInput"
+                  accept="image/*"
                   className="hidden"
                   onChange={handleImageChange}
                 />
 
-                <label
-                  htmlFor="cameraInput"
-                  className={`block overflow-hidden transition-all duration-300 cursor-pointer rounded-2xl bg-white dark:bg-stone-900 ${imagePreview
-                    ? 'border border-stone-200 dark:border-stone-800 shadow-sm border-2 border-emerald-500/50'
-                    : 'border border-stone-200 dark:border-stone-800'
-                    }`}
-                >
+                <div className={`overflow-hidden rounded-2xl bg-white dark:bg-stone-900 border transition-all duration-300 ${imagePreview
+                  ? 'border-2 border-emerald-500/50 shadow-sm'
+                  : 'border-stone-200 dark:border-stone-800'
+                  }`}>
                   {imagePreview ? (
-                    <img
-                      src={imagePreview}
-                      alt="Selected rescue animal"
-                      className="w-full h-auto object-contain rounded-xl rescue-image-fade"
-                    />
-                  ) : (
-                    <div className="p-10 flex flex-col items-center justify-center h-56">
-                      <div className="w-16 h-16 rounded-full flex items-center justify-center text-3xl mb-4 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm">
-                        <Camera size={28} strokeWidth={2} aria-hidden="true" />
+                    <div>
+                      <img
+                        src={imagePreview}
+                        alt="Selected rescue animal"
+                        className="w-full h-auto max-h-[28rem] object-contain rescue-image-fade"
+                      />
+                      <div className="grid grid-cols-2 gap-2 border-t border-stone-200 p-3 dark:border-stone-800">
+                        <label
+                          htmlFor="cameraInput"
+                          className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-3 text-xs font-extrabold text-white transition-all duration-300 hover:bg-emerald-700 active:scale-[0.98]"
+                        >
+                          <Camera size={17} aria-hidden="true" />
+                          Retake photo
+                        </label>
+                        <label
+                          htmlFor="photoLibraryInput"
+                          className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-xs font-extrabold text-stone-700 transition-all duration-300 hover:bg-stone-100 active:scale-[0.98] dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:hover:bg-stone-700"
+                        >
+                          <ImagePlus size={17} aria-hidden="true" />
+                          Choose photo
+                        </label>
                       </div>
-
-                      <p className="text-sm text-stone-500 font-bold">
-                        Tap to take or select a photo
-                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-6 sm:p-8">
+                      <div className="mb-5 text-center">
+                        <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-emerald-50 text-emerald-600 shadow-sm dark:bg-emerald-950/40 dark:text-emerald-300">
+                          <Camera size={30} strokeWidth={2} aria-hidden="true" />
+                        </div>
+                        <p className="mt-3 text-sm font-extrabold text-stone-700 dark:text-stone-200">
+                          Add a photo of the animal
+                        </p>
+                        <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">
+                          Take a new photo with your camera or choose one already on your phone.
+                        </p>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label
+                          htmlFor="cameraInput"
+                          className="flex min-h-14 cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-extrabold text-white shadow-lg transition-all duration-300 hover:bg-emerald-700 active:scale-[0.98]"
+                        >
+                          <Camera size={19} aria-hidden="true" />
+                          Take photo
+                        </label>
+                        <label
+                          htmlFor="photoLibraryInput"
+                          className="flex min-h-14 cursor-pointer items-center justify-center gap-2 rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm font-extrabold text-stone-700 transition-all duration-300 hover:bg-stone-100 active:scale-[0.98] dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:hover:bg-stone-700"
+                        >
+                          <ImagePlus size={19} aria-hidden="true" />
+                          Photos / Files
+                        </label>
+                      </div>
                     </div>
                   )}
-                </label>
+                </div>
               </div>
 
               {/* LOCATION */}
