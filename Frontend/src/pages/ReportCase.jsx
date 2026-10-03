@@ -28,6 +28,102 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow
 });
 
+
+const REPORT_DRAFT_KEY = 'anirescue_report_draft_v1';
+const REPORT_DRAFT_DB = 'anirescue_report_drafts';
+const REPORT_DRAFT_STORE = 'images';
+const REPORT_DRAFT_IMAGE_KEY = 'current';
+
+function openReportDraftDb() {
+  return new Promise((resolve, reject) => {
+    if (!('indexedDB' in window)) {
+      reject(new Error('IndexedDB is not available.'));
+      return;
+    }
+
+    const request = indexedDB.open(REPORT_DRAFT_DB, 1);
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(REPORT_DRAFT_STORE)) {
+        db.createObjectStore(REPORT_DRAFT_STORE);
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('Could not open draft storage.'));
+  });
+}
+
+async function saveReportDraftImage(file) {
+  const db = await openReportDraftDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(REPORT_DRAFT_STORE, 'readwrite');
+    transaction.objectStore(REPORT_DRAFT_STORE).put(file, REPORT_DRAFT_IMAGE_KEY);
+    transaction.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    transaction.onerror = () => {
+      db.close();
+      reject(transaction.error || new Error('Could not save the draft image.'));
+    };
+  });
+}
+
+async function loadReportDraftImage() {
+  const db = await openReportDraftDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(REPORT_DRAFT_STORE, 'readonly');
+    const request = transaction.objectStore(REPORT_DRAFT_STORE).get(REPORT_DRAFT_IMAGE_KEY);
+    request.onsuccess = () => {
+      db.close();
+      resolve(request.result || null);
+    };
+    request.onerror = () => {
+      db.close();
+      reject(request.error || new Error('Could not load the draft image.'));
+    };
+  });
+}
+
+async function clearReportDraftImage() {
+  try {
+    const db = await openReportDraftDb();
+    await new Promise((resolve, reject) => {
+      const transaction = db.transaction(REPORT_DRAFT_STORE, 'readwrite');
+      transaction.objectStore(REPORT_DRAFT_STORE).delete(REPORT_DRAFT_IMAGE_KEY);
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+    });
+    db.close();
+  } catch (error) {
+    console.warn('Could not clear the saved draft image:', error);
+  }
+}
+
+function saveReportDraftFields(fields) {
+  try {
+    localStorage.setItem(REPORT_DRAFT_KEY, JSON.stringify(fields));
+  } catch (error) {
+    console.warn('Could not save the rescue report draft:', error);
+  }
+}
+
+function loadReportDraftFields() {
+  try {
+    const stored = localStorage.getItem(REPORT_DRAFT_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch (error) {
+    console.warn('Could not load the rescue report draft:', error);
+    return null;
+  }
+}
+
+function clearReportDraftFields() {
+  localStorage.removeItem(REPORT_DRAFT_KEY);
+}
+
 function MapViewportController({ center }) {
   const map = useMap();
   const hasCenteredInitialLocation = useRef(false);
