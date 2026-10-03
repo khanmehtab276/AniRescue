@@ -193,10 +193,16 @@ export default function ReportCase() {
   const defaultMapCenter = [0, 0];
 
   const photoReady = Boolean(imageFile);
-  const locationReady = Boolean(locationMode === 'auto' ? location : (pinnedLocation || manualAddress.trim()));
+  // A landmark can help the rescue team find the animal, but it is not the
+  // same completion item as an actual GPS/map location. Keep these signals
+  // separate so one landmark cannot count as two progress steps.
+  const locationReady = Boolean(
+    locationMode === 'auto' ? location : pinnedLocation
+  );
   const detailsReady = Boolean(description.trim()) || detailsSkipped;
   const landmarkReady = Boolean(manualAddress.trim());
-  const coreReady = photoReady && locationReady && detailsReady;
+  const locationOrLandmarkReady = locationReady || landmarkReady;
+  const coreReady = photoReady && locationOrLandmarkReady && detailsReady;
   // Landmark is optional: step 4 shows completion when supplied but never
   // blocks transmission when it is left blank.
   const reportReady = Boolean(coreReady);
@@ -229,7 +235,7 @@ export default function ReportCase() {
         }
       : completedSteps === 2
         ? {
-            label: 'Location received. Tell us what you noticed.',
+            label: 'Location details received. Tell us what you noticed.',
             message: 'Description is optional. Share anything useful, or skip it and let AI handle the assessment.',
             bar: 'bg-amber-500',
             soft: 'bg-amber-50 dark:bg-amber-950/20',
