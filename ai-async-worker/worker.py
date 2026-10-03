@@ -76,9 +76,8 @@ def get_db_connection(existing_conn):
     Otherwise create a new connection.
 
     Neon pooled connections reject PostgreSQL startup parameters such
-    as statement_timeout. Keep the connection-level timeout settings
-    in psycopg2, then apply statement_timeout after the connection is
-    established with SET.
+    as statement_timeout. Keep connection-level timeouts in psycopg2,
+    then apply statement_timeout after the connection is established.
     """
 
     if existing_conn is not None and not existing_conn.closed:
