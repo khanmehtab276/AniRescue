@@ -28,7 +28,7 @@ export default function NGODashboard() {
 
   const [radiusKm, setRadiusKm] = useState(15);
   const [isSavingJurisdiction, setIsSavingJurisdiction] = useState(false);
-  const { location: detectedLocation, getLocation, isLoading: isLocating } = useLocation();
+  const { location: detectedLocation, getLocation, stopLocationDetection, isLoading: isLocating } = useLocation();
 
   const hasJurisdiction =
     user?.jurisdiction_lat !== null && user?.jurisdiction_lat !== undefined;
@@ -82,6 +82,11 @@ export default function NGODashboard() {
     fetchJunkQueue();
     fetchVerificationCount();
   }, [fetchCases, fetchJunkQueue, fetchVerificationCount]);
+
+  const handleStopLocationDetection = () => {
+    stopLocationDetection();
+    showToast('Location detection stopped.', 'info');
+  };
 
   const handleSaveJurisdiction = async () => {
     if (!detectedLocation) {
@@ -213,9 +218,15 @@ export default function NGODashboard() {
             />
           </div>
 
-          <Button onClick={handleSaveJurisdiction} disabled={isSavingJurisdiction || isLocating} className="w-full">
-            {isLocating ? 'Detecting location...' : detectedLocation ? 'Save Operating Area (uses current location)' : 'Detect My Location'}
-          </Button>
+          {isLocating ? (
+            <Button onClick={handleStopLocationDetection} variant="secondary" className="w-full">
+              Stop Detecting Location
+            </Button>
+          ) : (
+            <Button onClick={handleSaveJurisdiction} disabled={isSavingJurisdiction} className="w-full">
+              {detectedLocation ? 'Save Operating Area (uses current location)' : 'Detect My Location'}
+            </Button>
+          )}
         </Surface>
       )}
 
