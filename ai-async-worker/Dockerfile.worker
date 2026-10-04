@@ -37,11 +37,21 @@ RUN pip install --no-deps \
 # CPU-only PyTorch stack.
 RUN pip install --no-deps ultralytics==8.4.90
 
+# CLIP is used only during the image build to bake the fixed AniRescue
+# vocabulary into YOLO-World. It is not needed for runtime inference.
+RUN pip install --no-deps git+https://github.com/ultralytics/CLIP.git \\
+    && pip install --index-url https://pypi.org/simple ftfy regex tqdm
+
 # Install the remaining application + Ultralytics runtime dependencies.
 COPY requirements.txt ./requirements.txt
 RUN grep -v '^ultralytics==' requirements.txt > /tmp/requirements-runtime.txt \
     && pip install --index-url https://pypi.org/simple -r /tmp/requirements-runtime.txt \
     && rm -f /tmp/requirements-runtime.txt
+
+# Build the fixed-vocabulary OpenVINO model once at image-build time.
+# This keeps CLIP/text-prompt setup out of the production startup path.
+COPY build_yolo_world_model.py ./build_yolo_world_model.py
+RUN YOLO_WORLD_IMGSZ=512 python build_yolo_world_model.py
 
 # --- Stage 2: Minimal production runtime ---
 FROM python:3.10-slim AS runtime
@@ -68,6 +78,9 @@ RUN apt-get update \
 
 # Copy only the prepared Python environment from the builder.
 COPY --from=builder /opt/venv /opt/venv
+
+# Copy the prebuilt OpenVINO model into the runtime image.
+COPY --from=builder /opt/yolo-world /opt/yolo-world
 
 # Create the non-root runtime user before copying application files.
 RUN addgroup --system --gid 65532 appgroup \
