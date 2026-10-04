@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle, X, Brain, ShieldAlert, Stethoscope, ListChecks } from 'lucide-react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -262,9 +263,9 @@ export default function CaseDetail() {
 
   return (
     <>
-      {confirmAction && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-stone-950/60 p-4 backdrop-blur-sm sm:p-6" role="presentation" onMouseDown={() => setConfirmAction(null)}>
-          <div className="w-full max-w-md animate-rescue-pop rounded-3xl border border-stone-200 bg-white p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)] dark:border-stone-700 dark:bg-stone-900 dark:shadow-[0_24px_80px_rgba(0,0,0,0.7)]" role="dialog" aria-modal="true" aria-labelledby="confirm-action-title" onMouseDown={(event) => event.stopPropagation()}>
+      {confirmAction && createPortal(
+        <div className="fixed inset-0 z-[2147483647] flex min-h-screen items-center justify-center bg-stone-950/65 p-4 backdrop-blur-sm sm:p-6" role="presentation" onMouseDown={() => setConfirmAction(null)}>
+          <div className="w-full max-w-md animate-rescue-pop rounded-3xl border border-stone-200 bg-white p-5 shadow-[0_24px_80px_rgba(0,0,0,0.45)] dark:border-stone-700 dark:bg-stone-900 dark:shadow-[0_24px_80px_rgba(0,0,0,0.8)]" role="dialog" aria-modal="true" aria-labelledby="confirm-action-title" onMouseDown={(event) => event.stopPropagation()}>
             <div className="flex items-start gap-3">
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300"><AlertTriangle size={20} /></span>
               <div className="min-w-0">
@@ -279,7 +280,7 @@ export default function CaseDetail() {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     <div className="mx-auto max-w-7xl px-4 py-6 pb-24 sm:px-6 lg:px-8 lg:py-10 lg:pb-10">
 
       <button
