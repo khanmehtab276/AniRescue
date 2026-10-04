@@ -46,8 +46,6 @@ services:
       - LOCATION_FRESHNESS_MINUTES=${LOCATION_FRESHNESS_MINUTES}
       - NOTIFICATION_RADIUS_KM=${NOTIFICATION_RADIUS_KM}
       - CORS_ORIGIN=${CORS_ORIGIN}
-    # Run every migration that is missing from schema_migrations, then start the API.
-    # Already-applied migrations are safely skipped by Backend/scripts/migrate.js.
     command: ["sh", "-c", "npm run db:migrate && npm start"]
     depends_on:
       rabbitmq:
@@ -81,7 +79,7 @@ services:
       - OMP_NUM_THREADS=1
       - MKL_NUM_THREADS=1
       - OPENBLAS_NUM_THREADS=1
-      - YOLO_WORLD_OPENVINO_MODEL=/opt/yolo-world/openvino
+      - YOLO_WORLD_OPENVINO_MODEL=/opt/yolo-world/yolov8s-worldv2_openvino_model
       - YOLO_WORLD_IMGSZ=512
       - YOLO_WORLD_CONF=0.20
       - YOLO_WORLD_MAX_DET=1
