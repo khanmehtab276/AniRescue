@@ -29,7 +29,6 @@ class YoloGatekeeper:
 
     IMAGE_SIZE = int(os.getenv("YOLO_WORLD_IMGSZ", "512"))
     MAX_DETECTIONS = int(os.getenv("YOLO_WORLD_MAX_DET", "1"))
-    CPU_THREADS = int(os.getenv("YOLO_WORLD_OPENVINO_THREADS", "1"))
 
     def __init__(self, confidence_threshold=0.20):
         self.confidence_threshold = float(
@@ -43,21 +42,15 @@ class YoloGatekeeper:
 
         print(f"Loading YOLO-World OpenVINO model from: {self.MODEL_PATH}")
 
+        # Ultralytics handles OpenVINO model loading, compilation, device
+        # selection, and inference configuration internally. Do not call
+        # compile_model() on self.model.model: for exported OpenVINO models
+        # that attribute is not an OpenVINO Core instance.
         self.model = YOLO(
             str(self.MODEL_PATH),
             task="detect",
             verbose=False,
         )
-
-        # Keep CPU inference bounded on the small worker instance.
-        if self.CPU_THREADS > 0:
-            self.model.model.ov_compiled_model = self.model.model.compile_model(
-                self.model.model.ov_model,
-                config={
-                    "PERFORMANCE_HINT": "LATENCY",
-                    "INFERENCE_NUM_THREADS": self.CPU_THREADS,
-                },
-            )
 
         self.class_names = {
             index: name
@@ -70,7 +63,6 @@ class YoloGatekeeper:
             f"imgsz={self.IMAGE_SIZE}",
             f"conf={self.confidence_threshold}",
             f"max_det={self.MAX_DETECTIONS}",
-            f"threads={self.CPU_THREADS}",
         )
 
     def validate_image(self, image_path):
