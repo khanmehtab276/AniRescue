@@ -11,6 +11,7 @@ import {
   Shield,
   Map as MapIcon,
   Loader2,
+  RotateCcw,
 } from 'lucide-react';
 import API from '../utils/api';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -152,6 +153,25 @@ export default function AdminDashboard() {
       setError(
         err.response?.data?.error ||
         'Unable to verify this case.'
+      );
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleRetryAI = async (caseId) => {
+    setProcessingId(caseId);
+    setError('');
+
+    try {
+      await API.put(`/cases/${caseId}/retry-ai`);
+      await loadDashboard();
+    } catch (err) {
+      console.error('AI retry error:', err);
+
+      setError(
+        err.response?.data?.error ||
+        'Unable to retry AI validation for this case.'
       );
     } finally {
       setProcessingId(null);
@@ -458,6 +478,9 @@ export default function AdminDashboard() {
                         onReleaseCase={() =>
                           handleVerifyJunk(item.id, true)
                         }
+                        onRetryAI={() =>
+                          handleRetryAI(item.id)
+                        }
                       />
                     ))}
                   </div>
@@ -680,7 +703,8 @@ function JunkReviewCard({
   caseData,
   processingId,
   onConfirmJunk,
-  onReleaseCase
+  onReleaseCase,
+  onRetryAI
 }) {
   const {
     id,
@@ -760,7 +784,7 @@ function JunkReviewCard({
 
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mt-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
 
         <button
           disabled={isProcessing}
@@ -780,6 +804,21 @@ function JunkReviewCard({
           {isProcessing
             ? 'Processing...'
             : 'Release Case'}
+        </button>
+
+        <button
+          disabled={isProcessing}
+          onClick={onRetryAI}
+          className="rounded-xl px-3 py-3 text-sm font-bold bg-blue-600 text-white disabled:opacity-50 transition-all"
+        >
+          {isProcessing ? (
+            'Processing...'
+          ) : (
+            <span className="inline-flex items-center justify-center gap-2">
+              <RotateCcw size={16} strokeWidth={2.5} />
+              Retry AI
+            </span>
+          )}
         </button>
 
       </div>
