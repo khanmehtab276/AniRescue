@@ -358,7 +358,7 @@ const retryRejectedCase = async (req, res) => {
          ai_confidence = NULL,
          ai_validated_at = NULL,
          rejection_reason = NULL,
-         gemini_status = NULL,
+         gemini_status = 'NOT_RUN',
          gemini_analysis = NULL,
          gemini_analyzed_at = NULL
        WHERE id = $1
