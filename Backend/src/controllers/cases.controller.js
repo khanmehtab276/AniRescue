@@ -315,7 +315,133 @@ const getJunkQueue = async (req, res) => {
   }
 };
 
-// 3. ADMIN/NGO JUNK REVIEW OVERRIDE
+// 3. ADMIN AI RETRY FOR REJECTED CASES
+const retryRejectedCase = async (req, res) => {
+  const { id } = req.params;
+  const adminId = req.user.id;
+
+  let client;
+
+  try {
+    client = await pool.connect();
+    await client.query("BEGIN");
+
+    const caseResult = await client.query(
+      `SELECT id, status, image_payload
+       FROM rescue_cases
+       WHERE id = $1
+       FOR UPDATE`,
+      [id],
+    );
+
+    if (caseResult.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({
+        error: "Case not found.",
+      });
+    }
+
+    const currentCase = caseResult.rows[0];
+
+    if (currentCase.status !== "REJECTED_JUNK") {
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        error: `Case cannot be retried because its current status is ${currentCase.status}.`,
+      });
+    }
+
+    const resetResult = await client.query(
+      `UPDATE rescue_cases
+       SET
+         status = 'PENDING_VALIDATION',
+         species = NULL,
+         ai_confidence = NULL,
+         ai_validated_at = NULL,
+         rejection_reason = NULL,
+         gemini_status = NULL,
+         gemini_analysis = NULL,
+         gemini_analyzed_at = NULL
+       WHERE id = $1
+         AND status = 'REJECTED_JUNK'
+       RETURNING id, status, species, ai_confidence, ai_validated_at`,
+      [id],
+    );
+
+    if (resetResult.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        error: "Case could not be moved back into AI validation.",
+      });
+    }
+
+    // Re-open the existing durable AI outbox job so the normal dispatcher
+    // publishes it to yolo_processing_queue. If an older case has no job,
+    // create one from the original Cloudinary image URL.
+    const jobResult = await client.query(
+      `UPDATE case_processing_jobs
+       SET
+         published_at = NULL,
+         locked_at = NULL,
+         attempts = 0,
+         last_error = NULL,
+         image_url = $2
+       WHERE case_id = $1
+       RETURNING id`,
+      [id, currentCase.image_payload],
+    );
+
+    if (jobResult.rows.length === 0) {
+      await client.query(
+        `INSERT INTO case_processing_jobs
+           (case_id, image_url)
+         VALUES ($1, $2)`,
+        [id, currentCase.image_payload],
+      );
+    }
+
+    await client.query("COMMIT");
+
+    apiCache.flushAll();
+
+    await logCaseHistory({
+      caseId: id,
+      actorId: adminId,
+      actorRole: req.user.role,
+      action: "AI_VALIDATION_RETRY_REQUESTED",
+      fromStatus: "REJECTED_JUNK",
+      toStatus: "PENDING_VALIDATION",
+    });
+
+    await notifyCaseRecipients({
+      caseId: id,
+      notificationType: "CASE_REPORTED",
+      title: "AI validation restarted",
+      message: `Rescue report #${id} has been sent for AI re-validation by an administrator.`,
+      includeReporter: true,
+      includeAdmins: true,
+    });
+
+    return res.json({
+      success: true,
+      case: resetResult.rows[0],
+      message: "Case has been queued for AI re-validation.",
+    });
+  } catch (err) {
+    try {
+      await client?.query("ROLLBACK");
+    } catch {}
+
+    console.error("AI retry request error:", err);
+
+    return res.status(500).json({
+      error: "Failed to retry AI validation for this case.",
+    });
+  } finally {
+    client?.release();
+  }
+};
+
+// 4. ADMIN/NGO JUNK REVIEW OVERRIDE
 const verifyJunkCase = async (req, res) => {
   const { id } = req.params;
   const { approved } = req.body;
@@ -1870,6 +1996,7 @@ module.exports = {
   getUploadSignature,
   reportCase,
   getJunkQueue,
+  retryRejectedCase,
   verifyJunkCase,
   getNearbyVolunteers,
   getAvailableCasesForVolunteers,
