@@ -1,80 +1,81 @@
 import os
-from ultralytics import YOLO
+from pathlib import Path
+
 from PIL import Image
+from ultralytics import YOLO
 
 
 class YoloGatekeeper:
     """
-    YOLO-based animal image validator for AniRescue.
+    Production YOLO-World animal gatekeeper for AniRescue.
 
-    Detects common animal categories available in the
-    YOLO COCO-trained model.
+    The production image contains a fixed-vocabulary OpenVINO model.
+    The vocabulary is baked at image-build time, so CLIP/text prompting
+    is not performed for every rescue case.
     """
 
-    # Common animal categories available in COCO
-    COMMON_ANIMALS = {
-        "bird",
-        "cat",
-        "dog",
-        "horse",
-        "sheep",
-        "cow",
-        "elephant",
-        "bear",
-        "zebra",
-        "giraffe",
-    }
+    ANIMAL_CLASSES = (
+        "bear", "bird", "cat", "cow", "deer", "dog", "elephant", "fox",
+        "giraffe", "goat", "horse", "lion", "monkey", "sheep", "snake",
+        "squirrel", "tiger", "zebra",
+    )
 
-    def __init__(self, confidence_threshold=0.35):
-        self.confidence_threshold = confidence_threshold
+    MODEL_PATH = Path(
+        os.getenv(
+            "YOLO_WORLD_OPENVINO_MODEL",
+            "/opt/yolo-world/openvino",
+        )
+    )
 
-        # Project root
-        base_dir = os.path.dirname(
-            os.path.dirname(os.path.abspath(__file__))
+    IMAGE_SIZE = int(os.getenv("YOLO_WORLD_IMGSZ", "512"))
+    MAX_DETECTIONS = int(os.getenv("YOLO_WORLD_MAX_DET", "1"))
+    CPU_THREADS = int(os.getenv("YOLO_WORLD_OPENVINO_THREADS", "1"))
+
+    def __init__(self, confidence_threshold=0.20):
+        self.confidence_threshold = float(
+            os.getenv("YOLO_WORLD_CONF", str(confidence_threshold))
         )
 
-        weights_path = os.path.join(
-            base_dir,
-            "weights",
-            "yolo11n.pt"
-        )
-
-        if not os.path.exists(weights_path):
+        if not self.MODEL_PATH.exists():
             raise FileNotFoundError(
-                f"YOLO model not found: {weights_path}"
+                f"YOLO-World OpenVINO model not found: {self.MODEL_PATH}"
             )
 
-        print(f"Loading YOLO model from: {weights_path}")
+        print(f"Loading YOLO-World OpenVINO model from: {self.MODEL_PATH}")
 
-        self.model = YOLO(weights_path)
+        self.model = YOLO(
+            str(self.MODEL_PATH),
+            task="detect",
+            verbose=False,
+        )
 
-        # Handle both dictionary and list-style model names
-        if isinstance(self.model.names, dict):
-            self.class_names = self.model.names
-        else:
-            self.class_names = {
-                index: name
-                for index, name in enumerate(self.model.names)
-            }
+        # Keep CPU inference bounded on the small worker instance.
+        if self.CPU_THREADS > 0:
+            self.model.model.ov_compiled_model = self.model.model.compile_model(
+                self.model.model.ov_model,
+                config={
+                    "PERFORMANCE_HINT": "LATENCY",
+                    "INFERENCE_NUM_THREADS": self.CPU_THREADS,
+                },
+            )
 
-        # Find the class IDs corresponding to our animal categories
-        self.animal_class_ids = {
-            class_id
-            for class_id, name in self.class_names.items()
-            if name.lower() in self.COMMON_ANIMALS
+        self.class_names = {
+            index: name
+            for index, name in enumerate(self.ANIMAL_CLASSES)
         }
 
         print(
-            "Animal classes enabled:",
-            [
-                self.class_names[class_id]
-                for class_id in sorted(self.animal_class_ids)
-            ]
+            "YOLO-World production gatekeeper ready:",
+            f"classes={len(self.ANIMAL_CLASSES)}",
+            f"imgsz={self.IMAGE_SIZE}",
+            f"conf={self.confidence_threshold}",
+            f"max_det={self.MAX_DETECTIONS}",
+            f"threads={self.CPU_THREADS}",
         )
 
     def validate_image(self, image_path):
         """
-        Detects common animals in a local image.
+        Detect the highest-confidence animal in a local image.
 
         Returns:
             (True, animal_name, confidence)
@@ -94,33 +95,29 @@ class YoloGatekeeper:
 
             results = self.model.predict(
                 source=image,
-                device="cpu",
+                device="intel:cpu",
+                imgsz=self.IMAGE_SIZE,
                 conf=self.confidence_threshold,
-                verbose=False
+                max_det=self.MAX_DETECTIONS,
+                verbose=False,
             )
 
             best_animal = None
             best_confidence = 0.0
 
             for result in results:
-
                 if result.boxes is None:
                     continue
 
                 for box in result.boxes:
-
                     class_id = int(box.cls[0])
                     confidence = float(box.conf[0])
 
-                    # Ignore objects that aren't animals
-                    if class_id not in self.animal_class_ids:
+                    if class_id not in self.class_names:
                         continue
 
-                    animal_name = self.class_names[class_id]
-
-                    # Keep the highest-confidence animal
                     if confidence > best_confidence:
-                        best_animal = animal_name
+                        best_animal = self.class_names[class_id]
                         best_confidence = confidence
 
             if best_animal:
@@ -129,5 +126,5 @@ class YoloGatekeeper:
             return False, None, 0.0
 
         except Exception as error:
-            print(f"YOLO inference error: {error}")
+            print(f"YOLO-World inference error: {error}")
             return False, None, 0.0
