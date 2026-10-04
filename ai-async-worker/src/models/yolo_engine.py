@@ -40,29 +40,15 @@ class YoloGatekeeper:
                 f"YOLO-World OpenVINO model not found: {self.MODEL_PATH}"
             )
 
-        # Ultralytics expects the OpenVINO .xml model file, not the exported
-        # model directory. Our Docker image intentionally mounts the export
-        # directory at /opt/yolo-world/openvino, so resolve its XML file here.
+        # Ultralytics expects the OpenVINO export directory here. Keep the
+        # directory intact so it can resolve the XML + BIN model pair.
+        # Do not replace the directory with the XML file itself.
         if self.MODEL_PATH.is_dir():
             xml_models = sorted(self.MODEL_PATH.glob("*.xml"))
-
             if not xml_models:
                 raise FileNotFoundError(
                     f"No OpenVINO .xml model found in: {self.MODEL_PATH}"
                 )
-
-            if len(xml_models) > 1:
-                preferred = [
-                    path
-                    for path in xml_models
-                    if "yolo-world-anirescue-focused" in path.name
-                ]
-                if preferred:
-                    self.MODEL_PATH = preferred[0]
-                else:
-                    self.MODEL_PATH = xml_models[0]
-            else:
-                self.MODEL_PATH = xml_models[0]
 
         print(f"Loading YOLO-World OpenVINO model from: {self.MODEL_PATH}")
 
