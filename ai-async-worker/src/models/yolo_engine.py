@@ -23,7 +23,7 @@ class YoloGatekeeper:
     MODEL_PATH = Path(
         os.getenv(
             "YOLO_WORLD_OPENVINO_MODEL",
-            "/opt/yolo-world/openvino",
+            "/opt/yolo-world/yolov8s-worldv2_openvino_model",
         )
     )
 
@@ -40,20 +40,49 @@ class YoloGatekeeper:
                 f"YOLO-World OpenVINO model not found: {self.MODEL_PATH}"
             )
 
-        # Ultralytics expects the OpenVINO export directory here. Keep the
-        # directory intact so it can resolve the XML + BIN model pair.
-        # Do not replace the directory with the XML file itself.
-        if self.MODEL_PATH.is_dir():
-            xml_models = sorted(self.MODEL_PATH.glob("*.xml"))
-            if not xml_models:
-                raise FileNotFoundError(
-                    f"No OpenVINO .xml model found in: {self.MODEL_PATH}"
-                )
+        # Ultralytics 8.4.90 identifies OpenVINO models by the
+        # "_openvino_model" directory suffix. Keep the exported directory
+        # name intact so AutoBackend selects the OpenVINO backend.
+        if not self.MODEL_PATH.is_dir():
+            raise FileNotFoundError(
+                f"YOLO-World OpenVINO model directory not found: "
+                f"{self.MODEL_PATH}"
+            )
 
-        print(f"Loading YOLO-World OpenVINO model from: {self.MODEL_PATH}")
+        if not self.MODEL_PATH.name.endswith("_openvino_model"):
+            raise ValueError(
+                "Invalid YOLO-World OpenVINO model directory name: "
+                f"{self.MODEL_PATH.name}. "
+                "Ultralytics requires the '*_openvino_model' suffix."
+            )
 
-        # Ultralytics handles OpenVINO loading, compilation, device selection,
-        # and inference configuration internally.
+        xml_models = sorted(self.MODEL_PATH.glob("*.xml"))
+        bin_models = sorted(self.MODEL_PATH.glob("*.bin"))
+
+        if not xml_models:
+            raise FileNotFoundError(
+                f"No OpenVINO .xml model found in: {self.MODEL_PATH}"
+            )
+
+        if not bin_models:
+            raise FileNotFoundError(
+                f"No OpenVINO .bin weights found in: {self.MODEL_PATH}"
+            )
+
+        print(
+            "Loading YOLO-World OpenVINO model from: "
+            f"{self.MODEL_PATH}"
+        )
+        print(
+            f"OpenVINO XML: {xml_models[0].name}"
+        )
+        print(
+            f"OpenVINO BIN: {bin_models[0].name}"
+        )
+
+        # Pass the OpenVINO export directory unchanged. Ultralytics 8.4.90
+        # detects the backend from the "_openvino_model" suffix and then
+        # resolves the XML + BIN pair itself.
         self.model = YOLO(
             str(self.MODEL_PATH),
             task="detect",
