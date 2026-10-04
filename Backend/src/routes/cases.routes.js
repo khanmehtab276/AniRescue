@@ -29,6 +29,13 @@ router.get(
 );
 
 router.put(
+  "/:id/retry-ai",
+  verifyToken,
+  authorizeRoles("ADMIN"),
+  ctrl.retryRejectedCase,
+);
+
+router.put(
   "/:id/verify-junk",
   verifyToken,
   authorizeRoles("NGO", "ADMIN"),
