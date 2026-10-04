@@ -9,6 +9,11 @@ ENV PATH="/opt/venv/bin:$PATH" \
     PIP_DEFAULT_TIMEOUT=600 \
     PYTHONDONTWRITEBYTECODE=1
 
+# Install Git because CLIP is installed from its GitHub repository below.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
 # Keep the Python environment isolated so only the final venv is copied
 # into the small runtime image.
 RUN python -m venv /opt/venv
