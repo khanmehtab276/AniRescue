@@ -44,6 +44,8 @@ logs/
 
 # Local test credentials
 token.txt
-
-# 
 users_creation.sql
+
+# Benchmark models
+ai-async-worker/benchmark/models/
+

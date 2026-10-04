@@ -39,7 +39,7 @@ RUN pip install --no-deps ultralytics==8.4.90
 
 # CLIP is used only during the image build to bake the fixed AniRescue
 # vocabulary into YOLO-World. It is not needed for runtime inference.
-RUN pip install --no-deps git+https://github.com/ultralytics/CLIP.git \\
+RUN pip install --no-deps git+https://github.com/ultralytics/CLIP.git \
     && pip install --index-url https://pypi.org/simple ftfy regex tqdm
 
 # Install the remaining application + Ultralytics runtime dependencies.

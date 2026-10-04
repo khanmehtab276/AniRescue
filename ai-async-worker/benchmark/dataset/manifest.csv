@@ -1,0 +1,101 @@
+image,expected,source,source_id
+bear_030f58514b.jpg,bear,COCO 2017 validation,199
+bear_45162d5cc5.jpg,bear,COCO 2017 validation,380
+bear_96df23f620.jpg,bear,COCO 2017 validation,1
+bear_a2133dbf44.jpg,bear,COCO 2017 validation,621
+bear_f30be9d5f9.jpg,bear,COCO 2017 validation,672
+bird_2988674cab.jpg,bird,COCO 2017 validation,101
+bird_566b688a5b.jpg,bird,COCO 2017 validation,156
+bird_6408dd051a.jpg,bird,COCO 2017 validation,34
+bird_777b791de5.jpg,bird,COCO 2017 validation,176
+bird_7c84772a82.jpg,bird,COCO 2017 validation,10
+cat_0a95ad19ec.jpg,cat,COCO 2017 validation,142
+cat_36c3fec75c.jpg,cat,COCO 2017 validation,136
+cat_419d99a1d7.jpg,cat,COCO 2017 validation,18
+cat_6792b2b4ed.jpg,cat,COCO 2017 validation,46
+cat_7daa411e2c.jpg,cat,COCO 2017 validation,102
+cow_2b0b7fb7a5.jpg,cow,COCO 2017 validation,468
+cow_6e6064ac6d.jpg,cow,COCO 2017 validation,893
+cow_bf05c59f70.jpg,cow,COCO 2017 validation,372
+cow_d01ad66be9.jpg,cow,COCO 2017 validation,773
+cow_f8fe89ff85.jpg,cow,COCO 2017 validation,143
+deer_381295d975.jpg,deer,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/deer/animals dataset 2gb_2bfd74862a.jpg
+deer_5fc8854162.jpg,deer,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/deer/animals dataset 2gb_3af63d96ba.jpg
+deer_821c36a27d.jpg,deer,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/deer/animals dataset 2gb_29e08e7fc1.jpg
+deer_8979adf9d0.jpg,deer,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/deer/animals dataset 2gb_0a540b4342.jpg
+deer_b184c5fcee.jpg,deer,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/deer/animals dataset 2gb_1bd462a4d8.jpg
+dog_5608c334d5.jpg,dog,COCO 2017 validation,279
+dog_6406367daa.jpg,dog,COCO 2017 validation,211
+dog_95574e2d30.jpg,dog,COCO 2017 validation,272
+dog_bacc7a3b57.jpg,dog,COCO 2017 validation,166
+dog_fdbbbdc923.jpg,dog,COCO 2017 validation,73
+elephant_0bd8f91705.jpg,elephant,COCO 2017 validation,239
+elephant_a1a7f0751d.jpg,elephant,COCO 2017 validation,210
+elephant_c81d95f1d5.jpg,elephant,COCO 2017 validation,70
+elephant_e67ba7337e.jpg,elephant,COCO 2017 validation,67
+elephant_f7ff0e22d6.jpg,elephant,COCO 2017 validation,267
+fox_3b3cc92df0.jpg,fox,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/fox/animals dataset 2gb_0cfb16f2dd.jpg
+fox_6d356007cc.jpg,fox,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/fox/animals dataset 2gb_051c0550cd.jpg
+fox_989334fc78.jpg,fox,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/fox/animals dataset 2gb_1befbe965f.jpg
+fox_ae6537114b.jpg,fox,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/fox/animals dataset 2gb_1a89f88226.jpg
+fox_d3c91b1650.jpg,fox,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/fox/animals dataset 2gb_2c515129f5.jpg
+giraffe_00c272d5b8.jpg,giraffe,COCO 2017 validation,549
+giraffe_2a83399a8b.jpg,giraffe,COCO 2017 validation,316
+giraffe_3acec8b242.jpg,giraffe,COCO 2017 validation,489
+giraffe_3d9bd2b143.jpg,giraffe,COCO 2017 validation,221
+giraffe_be8a68edc7.jpg,giraffe,COCO 2017 validation,167
+goat_543f22e034.jpg,goat,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/goat/animals dataset 2gb_3d7670d847.jpg
+goat_7a1d30eb9d.jpg,goat,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/goat/animals dataset 2gb_20b5171d15.jpg
+goat_8198d70b65.jpg,goat,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/goat/animals dataset 2gb_1cc23d3752.jpg
+goat_8af3b1b8c0.jpg,goat,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/goat/animals dataset 2gb_11b7d83354.jpg
+goat_ab6e71369c.jpg,goat,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/goat/animals dataset 2gb_22e9010257.jpg
+horse_6efafe68a0.jpg,horse,COCO 2017 validation,159
+horse_7776c3dd75.jpg,horse,COCO 2017 validation,124
+horse_810ac85f01.jpg,horse,COCO 2017 validation,169
+horse_a807ff3771.jpg,horse,COCO 2017 validation,72
+horse_aafee3819b.jpg,horse,COCO 2017 validation,157
+lion_013e2bbeec.jpg,lion,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/lion/animals dataset 2gb_16f1e28b64.jpg
+lion_2454c7e46c.jpg,lion,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/lion/animals dataset 2gb_0b36ead42d.jpg
+lion_93456c20b3.jpg,lion,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/lion/animals dataset 2gb_182efd137c.jpg
+lion_9ad1591cca.jpg,lion,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/lion/animals dataset 2gb_22aa65105f.jpg
+lion_b82537e20f.jpg,lion,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/lion/animals dataset 2gb_25b7a71420.jpg
+monkey_3b5e5ce89e.jpg,monkey,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/chimpanzee/animals dataset 2gb_0cb5551052.jpg
+monkey_3d42bd2773.jpg,monkey,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/chimpanzee/animals dataset 2gb_12c23bf9b8.jpg
+monkey_3d7076a6f8.jpg,monkey,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/chimpanzee/animals dataset 2gb_0f933419b4.jpg
+monkey_c7aed832d9.jpg,monkey,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/chimpanzee/animals dataset 2gb_0b30d5c395.jpg
+monkey_ffe524404f.jpg,monkey,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/chimpanzee/animals dataset 2gb_1b1063f785.jpg
+none_072742d4eb.jpg,none,COCO 2017 validation,8
+none_1a39535917.jpg,none,COCO 2017 validation,7
+none_4b1077b46a.jpg,none,COCO 2017 validation,4
+none_6f335a84b4.jpg,none,COCO 2017 validation,3
+none_8235995f44.jpg,none,COCO 2017 validation,6
+none_93a3293972.jpg,none,COCO 2017 validation,9
+none_b1c9bc000b.jpg,none,COCO 2017 validation,5
+none_b3cf675885.jpg,none,COCO 2017 validation,2
+none_d5adbb7dae.jpg,none,COCO 2017 validation,0
+none_f9270841fd.jpg,none,COCO 2017 validation,11
+sheep_0b5aba58d0.jpg,sheep,COCO 2017 validation,88
+sheep_4df1ee41b9.jpg,sheep,COCO 2017 validation,56
+sheep_5d3624ca2a.jpg,sheep,COCO 2017 validation,117
+sheep_cf26cb3f64.jpg,sheep,COCO 2017 validation,215
+sheep_f1191ced08.jpg,sheep,COCO 2017 validation,163
+snake_10eac14e91.jpg,snake,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/snake/animals dataset 2gb_04a37e0cde.jpg
+snake_3ec4ab902d.jpg,snake,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/snake/animals dataset 2gb_1c55460bfc.jpg
+snake_7b0f3b71fe.jpg,snake,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/snake/animals dataset 2gb_1088ac3e42.jpg
+snake_9995fa78e7.jpg,snake,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/snake/animals dataset 2gb_117fedcf77.jpg
+snake_a30a389801.jpg,snake,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/snake/animals dataset 2gb_0adeed6415.jpg
+squirrel_1b84f70287.jpg,squirrel,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/squirrel/Wildlife Animals Images_OIP--VMBJJd_NQN9bTb3hOcnVQAAAA.jpeg
+squirrel_60cd806f1f.jpg,squirrel,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/squirrel/Wildlife Animals Images_OIP--hLhXLq6iVsao8tVe9KKkgHaGe.jpeg
+squirrel_96a6b63fd7.jpg,squirrel,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/squirrel/Wildlife Animals Images_OIP--0Yr2a_yg2hs5QgCoHAOnAHaLJ.jpeg
+squirrel_afb5b8b1f9.jpg,squirrel,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/squirrel/Wildlife Animals Images_OIP--MSHBy2fsIhGtyNzQ98ssAHaFz.jpeg
+squirrel_dfb203a10c.jpg,squirrel,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/squirrel/Wildlife Animals Images_OIP--PXsMBXom_r_NE4hmSqjcAHaH3.jpeg
+tiger_12431a4aaf.jpg,tiger,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/tiger/animals dataset 2gb_0f5be6eac8.jpg
+tiger_73bd0c2abd.jpg,tiger,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/tiger/animals dataset 2gb_40be6dc37a.jpg
+tiger_9748c7f385.jpg,tiger,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/tiger/animals dataset 2gb_0fdebd9663.jpg
+tiger_9af4b39bc7.jpg,tiger,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/tiger/animals dataset 2gb_21a3753e48.jpg
+tiger_a80632e78d.jpg,tiger,Hugging Face Prentz/Unified-Animals-Dataset test.zip (HTTP-range streamed),hf-zip:test:test/tiger/animals dataset 2gb_305f17f842.jpg
+zebra_0d33886916.jpg,zebra,COCO 2017 validation,115
+zebra_39dc19cb22.jpg,zebra,COCO 2017 validation,20
+zebra_4449cff9bb.jpg,zebra,COCO 2017 validation,168
+zebra_5bca3129fd.jpg,zebra,COCO 2017 validation,241
+zebra_cbef5c17de.jpg,zebra,COCO 2017 validation,197

@@ -1,0 +1,79 @@
+{
+  "purpose": "AniRescue YOLO11n vs YOLO-World image-level gatekeeper benchmark",
+  "generated_at_utc": "2026-10-04T09:30:16Z",
+  "important": [
+    "Images are downloaded at preparation time and are not committed to Git.",
+    "The manifest records the source for every image.",
+    "COCO images are subject to the COCO image terms/Flickr terms; annotations are CC BY 4.0.",
+    "The Unified Animal Dataset is published as Apache-2.0 according to its dataset card.",
+    "This is an image-level gatekeeper benchmark, not a formal mAP/IoU object-detection benchmark."
+  ],
+  "sources": {
+    "coco": {
+      "dataset": "finedet/coco2017",
+      "split": "validation",
+      "baseline_counts": {
+        "bear": 5,
+        "bird": 5,
+        "cat": 5,
+        "cow": 5,
+        "dog": 5,
+        "elephant": 5,
+        "giraffe": 5,
+        "horse": 5,
+        "sheep": 5,
+        "zebra": 5
+      },
+      "negative_count": 10
+    },
+    "expanded": {
+      "dataset": "Prentz/Unified-Animals-Dataset",
+      "revision": "main",
+      "source_format": "authoritative dataset ZIP archives",
+      "access_method": "remote HTTP-range streaming; no full archive download",
+      "archives_scanned": [
+        {
+          "split": "test",
+          "archive": "test.zip",
+          "url": "https://huggingface.co/datasets/Prentz/Unified-Animals-Dataset/resolve/main/data/test.zip",
+          "members": 17593,
+          "access": "remote ZIP via HTTP Range requests"
+        }
+      ],
+      "expanded_counts": {
+        "goat": 5,
+        "deer": 5,
+        "monkey": 5,
+        "lion": 5,
+        "tiger": 5,
+        "snake": 5,
+        "fox": 5,
+        "squirrel": 5
+      }
+    }
+  },
+  "counts": {
+    "total": 100,
+    "by_expected": {
+      "bear": 5,
+      "bird": 5,
+      "cat": 5,
+      "cow": 5,
+      "deer": 5,
+      "dog": 5,
+      "elephant": 5,
+      "fox": 5,
+      "giraffe": 5,
+      "goat": 5,
+      "horse": 5,
+      "lion": 5,
+      "monkey": 5,
+      "none": 10,
+      "sheep": 5,
+      "snake": 5,
+      "squirrel": 5,
+      "tiger": 5,
+      "zebra": 5
+    }
+  }
+}
