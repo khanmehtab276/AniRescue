@@ -263,8 +263,8 @@ export default function CaseDetail() {
   return (
     <>
       {confirmAction && (
-        <div className="fixed inset-0 z-[120] flex items-end justify-center bg-stone-950/35 p-3 backdrop-blur-md sm:items-center sm:p-6" role="presentation" onMouseDown={() => setConfirmAction(null)}>
-          <div className="w-full max-w-md animate-rescue-pop rounded-3xl border border-stone-200 bg-white p-5 shadow-2xl dark:border-stone-800 dark:bg-stone-900" role="dialog" aria-modal="true" aria-labelledby="confirm-action-title" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-stone-950/60 p-4 backdrop-blur-sm sm:p-6" role="presentation" onMouseDown={() => setConfirmAction(null)}>
+          <div className="w-full max-w-md animate-rescue-pop rounded-3xl border border-stone-200 bg-white p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)] dark:border-stone-700 dark:bg-stone-900 dark:shadow-[0_24px_80px_rgba(0,0,0,0.7)]" role="dialog" aria-modal="true" aria-labelledby="confirm-action-title" onMouseDown={(event) => event.stopPropagation()}>
             <div className="flex items-start gap-3">
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300"><AlertTriangle size={20} /></span>
               <div className="min-w-0">
