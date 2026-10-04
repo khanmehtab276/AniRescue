@@ -89,9 +89,29 @@ class YoloGatekeeper:
             verbose=False,
         )
 
-        self.class_names = {
-            index: name
-            for index, name in enumerate(self.ANIMAL_CLASSES)
+        # Prefer the class metadata carried by the exported model. The
+        # vocabulary was baked with YOLOWorld.set_classes() during the image
+        # build, so hard-coding numeric IDs here is unnecessary and can hide
+        # a class-order mismatch between the exported model and application.
+        self.model_class_names = getattr(self.model, "names", None)
+
+        if isinstance(self.model_class_names, dict):
+            self.model_class_names = {
+                int(index): str(name)
+                for index, name in self.model_class_names.items()
+            }
+        elif isinstance(self.model_class_names, (list, tuple)):
+            self.model_class_names = {
+                index: str(name)
+                for index, name in enumerate(self.model_class_names)
+            }
+        else:
+            self.model_class_names = {}
+
+        # Keep the fixed AniRescue vocabulary as a safety allow-list.
+        self.allowed_classes = {
+            name.lower()
+            for name in self.ANIMAL_CLASSES
         }
 
         print(
@@ -100,6 +120,10 @@ class YoloGatekeeper:
             f"imgsz={self.IMAGE_SIZE}",
             f"conf={self.confidence_threshold}",
             f"max_det={self.MAX_DETECTIONS}",
+        )
+        print(
+            "YOLO-World model class metadata:",
+            self.model_class_names or "UNAVAILABLE",
         )
 
     def validate_image(self, image_path):
@@ -133,21 +157,55 @@ class YoloGatekeeper:
 
             best_animal = None
             best_confidence = 0.0
+            detection_count = 0
 
             for result in results:
                 if result.boxes is None:
+                    print("YOLO-World inference: no result boxes returned.")
                     continue
+
+                detection_count += len(result.boxes)
 
                 for box in result.boxes:
                     class_id = int(box.cls[0])
                     confidence = float(box.conf[0])
 
-                    if class_id not in self.class_names:
+                    # Use the exported model's own class metadata first.
+                    # Fall back to the known AniRescue ordering only if the
+                    # export does not expose names.
+                    class_name = self.model_class_names.get(class_id)
+                    if class_name is None and 0 <= class_id < len(self.ANIMAL_CLASSES):
+                        class_name = self.ANIMAL_CLASSES[class_id]
+
+                    print(
+                        "YOLO-World detection:",
+                        f"class_id={class_id}",
+                        f"class={class_name or 'UNKNOWN'}",
+                        f"confidence={confidence:.4f}",
+                    )
+
+                    if not class_name:
+                        continue
+
+                    normalized_name = class_name.strip().lower()
+
+                    if normalized_name not in self.allowed_classes:
+                        print(
+                            "YOLO-World detection ignored:",
+                            f"class={class_name!r} is outside the AniRescue vocabulary",
+                        )
                         continue
 
                     if confidence > best_confidence:
-                        best_animal = self.class_names[class_id]
+                        best_animal = normalized_name
                         best_confidence = confidence
+
+            print(
+                "YOLO-World inference summary:",
+                f"detections={detection_count}",
+                f"best_animal={best_animal or 'NONE'}",
+                f"best_confidence={best_confidence:.4f}",
+            )
 
             if best_animal:
                 return True, best_animal, best_confidence
