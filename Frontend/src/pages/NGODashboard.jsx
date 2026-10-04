@@ -1,685 +1,431 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import API from '../utils/api';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { useToast } from '../contexts/ToastContext.jsx';
+import useLocation from '../hooks/useLocation.js';
+import Surface from '../components/ui/Surface.jsx';
+import Button from '../components/ui/Button.jsx';
+import { AlertTriangle, Siren, Bot, X, HardHat } from 'lucide-react';
+import BentoStats from '../components/ui/BentoStats.jsx';
+import CaseCard from '../components/ui/CaseCard.jsx';
+import EmptyState from '../components/ui/EmptyState.jsx';
+import { CaseListSkeleton } from '../components/ui/LoadingState.jsx';
 
 export default function NGODashboard() {
+  const { user, refreshUser } = useAuth();
   const { showToast } = useToast();
 
   const [cases, setCases] = useState([]);
   const [junkQueue, setJunkQueue] = useState([]);
-  const [dispatchModal, setDispatchModal] = useState({
-    open: false,
-    caseId: null,
-    volunteers: [],
-  });
+  const [pendingVerificationCount, setPendingVerificationCount] = useState(0);
+  const [dispatchModal, setDispatchModal] = useState({ open: false, caseId: null, volunteers: [], radiusKm: null });
+  const [assigningId, setAssigningId] = useState(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isJunkLoading, setIsJunkLoading] = useState(true);
   const [activeSection, setActiveSection] = useState('operations');
 
-  // --------------------------------------------------
-  // LOAD ACTIVE CASES
-  // --------------------------------------------------
-  useEffect(() => {
-    const fetchCases = async () => {
-      try {
-        const response = await API.get('/cases');
+  const [radiusKm, setRadiusKm] = useState(15);
+  const [isSavingJurisdiction, setIsSavingJurisdiction] = useState(false);
+  const { location: detectedLocation, getLocation, stopLocationDetection, isLoading: isLocating } = useLocation();
 
-        const data = Array.isArray(response.data)
-          ? response.data
-          : [];
+  const hasJurisdiction =
+    user?.jurisdiction_lat !== null && user?.jurisdiction_lat !== undefined;
 
-        setCases(data);
-      } catch (error) {
-        console.error('Failed to load admin cases:', error);
-        setCases([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchCases = useCallback(async () => {
+    setIsLoading(true);
 
-    fetchCases();
-  }, []);
-
-  // --------------------------------------------------
-  // LOAD AI JUNK REVIEW QUEUE
-  // --------------------------------------------------
-  useEffect(() => {
-    const fetchJunkQueue = async () => {
-      try {
-        /*
-         * Current backend route:
-         * GET /api/cases/admin/junk
-         */
-        const response = await API.get('/cases/admin/junk');
-
-        const data = Array.isArray(response.data)
-          ? response.data
-          : [];
-
-        setJunkQueue(data);
-      } catch (error) {
-        console.error('Failed to load AI junk queue:', error);
-        setJunkQueue([]);
-      } finally {
-        setIsJunkLoading(false);
-      }
-    };
-
-    fetchJunkQueue();
-  }, []);
-
-  // --------------------------------------------------
-  // REFRESH CASES
-  // --------------------------------------------------
-  const refreshCases = async () => {
     try {
-      const response = await API.get('/cases');
-
-      const data = Array.isArray(response.data)
-        ? response.data
-        : [];
-
-      setCases(data);
+      const { data } = await API.get('/cases');
+      setCases(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('Failed to refresh cases:', error);
+      console.error('Failed to load NGO cases:', error);
+      setCases([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const fetchJunkQueue = useCallback(async () => {
+    setIsJunkLoading(true);
+
+    try {
+      const { data } = await API.get('/cases/admin/junk');
+      setJunkQueue(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Failed to load AI junk queue:', error);
+      setJunkQueue([]);
+    } finally {
+      setIsJunkLoading(false);
+    }
+  }, []);
+
+  const fetchVerificationCount = useCallback(async () => {
+    try {
+      const { data } = await API.get('/cases/verification-queue');
+      setPendingVerificationCount(Array.isArray(data) ? data.length : 0);
+    } catch (error) {
+      console.error('Failed to load verification queue count:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasJurisdiction) {
+      getLocation();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasJurisdiction]);
+
+  useEffect(() => {
+    fetchCases();
+    fetchJunkQueue();
+    fetchVerificationCount();
+  }, [fetchCases, fetchJunkQueue, fetchVerificationCount]);
+
+  const handleStopLocationDetection = () => {
+    stopLocationDetection();
+    showToast('Location detection stopped.', 'info');
+  };
+
+  const handleSaveJurisdiction = async () => {
+    if (!detectedLocation) {
+      showToast('Detecting your location — click again once it\'s found, or check location permissions.', 'warning');
+      getLocation();
+      return;
+    }
+
+    setIsSavingJurisdiction(true);
+
+    try {
+      await API.put('/auth/jurisdiction', {
+        lat: detectedLocation.lat,
+        lng: detectedLocation.lng,
+        radiusKm: Number(radiusKm),
+      });
+
+      showToast('Operating area saved. Your case feed will now reflect it.', 'success');
+      await refreshUser?.();
+      await fetchCases();
+    } catch (error) {
+      showToast(error.response?.data?.error || 'Failed to save operating area.', 'error');
+    } finally {
+      setIsSavingJurisdiction(false);
     }
   };
 
-  // --------------------------------------------------
-  // OVERRIDE AI JUNK DECISION
-  // --------------------------------------------------
   const overrideJunk = async (id) => {
     try {
       await API.put(`/cases/${id}/verify-junk`, { approved: true });
-
-      setJunkQueue((previous) =>
-        previous.filter((item) => item.id !== id)
-      );
-
+      setJunkQueue((prev) => prev.filter((item) => item.id !== id));
       showToast('Case marked as valid and returned to the active queue.', 'success');
-
-      await refreshCases();
+      await fetchCases();
     } catch (error) {
-      console.error('Failed to override junk case:', error);
-
-      showToast(
-        error.response?.data?.error ||
-        'Failed to override this case.',
-        'error'
-      );
+      showToast(error.response?.data?.error || 'Failed to override this case.', 'error');
     }
   };
 
-  // --------------------------------------------------
-  // FIND NEARBY VOLUNTEERS
-  // --------------------------------------------------
+  const closeDispatcher = () =>
+    setDispatchModal({ open: false, caseId: null, volunteers: [], radiusKm: null });
+
   const openDispatcher = async (caseId) => {
     try {
-      const response = await API.get(
-        `/cases/${caseId}/nearby-volunteers`
-      );
-
-      const volunteers = Array.isArray(response.data)
-        ? response.data
-        : [];
-
+      const { data } = await API.get(`/cases/${caseId}/nearby-volunteers`);
       setDispatchModal({
         open: true,
         caseId,
-        volunteers,
+        volunteers: Array.isArray(data.volunteers) ? data.volunteers : [],
+        radiusKm: data.searchRadiusKm ?? null,
       });
     } catch (error) {
-      console.error('Failed to find nearby volunteers:', error);
-
-      showToast(
-        error.response?.data?.error ||
-        'Unable to find nearby volunteers.',
-        'error'
-      );
+      showToast(error.response?.data?.error || 'Unable to find nearby volunteers.', 'error');
     }
   };
 
-  // --------------------------------------------------
-  // CASE FILTERING
-  // --------------------------------------------------
+  const handleAssignVolunteer = async (volunteer) => {
+    setAssigningId(volunteer.id);
+
+    try {
+      await API.put(`/cases/${dispatchModal.caseId}/assign`, { volunteerId: volunteer.id });
+      showToast(`${volunteer.full_name || 'Volunteer'} assigned. They have been notified.`, 'success');
+      closeDispatcher();
+      await fetchCases();
+    } catch (error) {
+      showToast(error.response?.data?.error || 'Failed to assign volunteer.', 'error');
+    } finally {
+      setAssigningId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (!dispatchModal.open) return undefined;
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') closeDispatcher();
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [dispatchModal.open]);
+
   const activeCases = cases.filter(
-    (item) =>
-      item.status !== 'RESOLVED' &&
-      item.status !== 'REJECTED_JUNK' &&
-      item.status !== 'CANCELLED'
+    (c) => !['RESOLVED', 'REJECTED_JUNK', 'CANCELLED'].includes(c.status),
   );
 
-  const inProgressCases = cases.filter(
-    (item) => item.status === 'IN_PROGRESS'
-  );
-
-  // --------------------------------------------------
-  // STATUS UI
-  // --------------------------------------------------
-  const getStatusStyle = (status) => {
-    switch (status) {
-      case 'VALIDATION_PASSED':
-        return {
-          label: 'Validated',
-          className:
-            'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-        };
-
-      case 'IN_PROGRESS':
-        return {
-          label: 'In Progress',
-          className:
-            'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-        };
-
-      case 'PENDING_VALIDATION':
-        return {
-          label: 'AI Validation',
-          className:
-            'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-        };
-
-      case 'RESOLVED':
-        return {
-          label: 'Resolved',
-          className:
-            'bg-green-500/10 text-green-600 dark:text-green-400',
-        };
-
-      case 'REJECTED_JUNK':
-        return {
-          label: 'Rejected',
-          className:
-            'bg-rose-500/10 text-rose-600 dark:text-rose-400',
-        };
-
-      case 'CANCELLED':
-        return {
-          label: 'Cancelled',
-          className:
-            'bg-gray-500/10 text-gray-600 dark:text-gray-400',
-        };
-
-      default:
-        return {
-          label: status || 'Pending',
-          className:
-            'bg-gray-500/10 text-gray-600 dark:text-gray-400',
-        };
-    }
-  };
+  const inProgressCases = cases.filter((c) => c.status === 'IN_PROGRESS');
 
   return (
-    <div className="min-h-[80vh] px-4 pb-24 pt-2 md:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 py-6 pb-24 sm:px-6 lg:px-8 lg:py-10 lg:pb-10">
 
-      {/* ==================================================
-          HEADER
-      ================================================== */}
-      <div className="mx-auto max-w-2xl">
-
-        <div className="mb-6">
-          <div className="flex items-center justify-between gap-3">
-
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">🏢</span>
-
-                <h1 className="text-2xl font-extrabold text-gray-800 dark:text-gray-100">
-                  Command Center
-                </h1>
-              </div>
-
-              <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">
-                Admin & NGO Operations
-              </p>
-            </div>
-
-            <Link
-              to="/map"
-              className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-[#e2e8f0] text-xl shadow-[5px_5px_10px_#cbd5e1,-5px_-5px_10px_#f8fafc] transition-transform active:scale-95 dark:bg-[#0f172a] dark:shadow-[5px_5px_10px_#070a13,-5px_-5px_10px_#172441]"
-              title="Open Map"
-            >
-              🗺️
-            </Link>
-
-          </div>
+      <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+            NGO Operations
+          </p>
+          <h1 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100">
+            Command Center
+          </h1>
         </div>
 
-        {/* ==================================================
-            QUICK STAT CARDS
-        ================================================== */}
+        {pendingVerificationCount > 0 && (
+          <Button as={Link} to="/verification" size="sm" variant="secondary">
+            📋 {pendingVerificationCount} to verify
+          </Button>
+        )}
+      </div>
 
-        <div className="mb-6 grid grid-cols-3 gap-3">
+      {/* JURISDICTION SETUP — required for the case feed to return anything */}
+      {!hasJurisdiction && (
+        <Surface className="p-5 mb-6">
+          <p className="font-extrabold text-stone-800 dark:text-stone-100 mb-1">
+            Set your operating area
+          </p>
+          <p className="text-sm text-stone-500 dark:text-stone-400 mb-4">
+            Your case feed only shows cases within your service radius. Set this once so cases start appearing below.
+          </p>
 
-          <div className="rounded-2xl bg-[#e2e8f0] p-4 text-center shadow-[5px_5px_10px_#cbd5e1,-5px_-5px_10px_#f8fafc] dark:bg-[#0f172a] dark:shadow-[5px_5px_10px_#070a13,-5px_-5px_10px_#172441]">
-            <p className="text-2xl font-black text-rose-500">
-              {activeCases.length}
-            </p>
-
-            <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-              Active
-            </p>
+          <div className="flex items-center gap-3 mb-4">
+            <label className="text-xs font-bold text-stone-500 dark:text-stone-400 shrink-0">
+              Radius (km)
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={200}
+              value={radiusKm}
+              onChange={(e) => setRadiusKm(e.target.value)}
+              className="w-24 p-2 rounded-lg text-sm bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-200"
+            />
           </div>
 
-          <div className="rounded-2xl bg-[#e2e8f0] p-4 text-center shadow-[5px_5px_10px_#cbd5e1,-5px_-5px_10px_#f8fafc] dark:bg-[#0f172a] dark:shadow-[5px_5px_10px_#070a13,-5px_-5px_10px_#172441]">
-            <p className="text-2xl font-black text-amber-500">
-              {inProgressCases.length}
-            </p>
+          {isLocating ? (
+            <Button onClick={handleStopLocationDetection} variant="secondary" className="w-full">
+              Stop Detecting Location
+            </Button>
+          ) : (
+            <Button onClick={handleSaveJurisdiction} disabled={isSavingJurisdiction} className="w-full">
+              {detectedLocation ? 'Save Operating Area (uses current location)' : 'Detect My Location'}
+            </Button>
+          )}
+        </Surface>
+      )}
 
-            <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-              Rescue
-            </p>
-          </div>
+      {/* STATS */}
+      <div className="mb-6">
+        <BentoStats
+          items={[
+            { label: 'Active Cases', value: activeCases.length, tone: 'danger', Icon: AlertTriangle },
+            { label: 'Rescue', value: inProgressCases.length, tone: 'warning', Icon: Siren },
+            { label: 'AI Review', value: junkQueue.length, tone: 'info', Icon: Bot },
+          ]}
+        />
+      </div>
 
-          <div className="rounded-2xl bg-[#e2e8f0] p-4 text-center shadow-[5px_5px_10px_#cbd5e1,-5px_-5px_10px_#f8fafc] dark:bg-[#0f172a] dark:shadow-[5px_5px_10px_#070a13,-5px_-5px_10px_#172441]">
-            <p className="text-2xl font-black text-purple-500">
-              {junkQueue.length}
-            </p>
-
-            <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-              AI Review
-            </p>
-          </div>
-
-        </div>
-
-        {/* ==================================================
-            MOBILE SECTION SWITCHER
-        ================================================== */}
-
-        <div className="mb-6 flex rounded-2xl bg-[#e2e8f0] p-1.5 shadow-[inset_3px_3px_6px_#cbd5e1,inset_-3px_-3px_6px_#f8fafc] dark:bg-[#0f172a] dark:shadow-[inset_3px_3px_6px_#070a13,inset_-3px_-3px_6px_#172441]">
-
+      {/* SECTION SWITCHER */}
+      <Surface className="p-2 mb-6">
+        <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => setActiveSection('operations')}
-            className={`flex-1 rounded-xl px-3 py-3 text-xs font-extrabold transition-all ${
+            className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
               activeSection === 'operations'
-                ? 'bg-emerald-500 text-white shadow-md'
-                : 'text-gray-500 dark:text-gray-400'
+                ? 'bg-stone-900 dark:bg-stone-100 dark:text-stone-900 text-white'
+                : 'text-stone-500 dark:text-stone-400'
             }`}
           >
             🚨 Operations
           </button>
-
           <button
             onClick={() => setActiveSection('ai')}
-            className={`flex-1 rounded-xl px-3 py-3 text-xs font-extrabold transition-all ${
+            className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
               activeSection === 'ai'
-                ? 'bg-purple-500 text-white shadow-md'
-                : 'text-gray-500 dark:text-gray-400'
+                ? 'bg-[#1a1f2e] dark:bg-black text-white'
+                : 'text-stone-500 dark:text-stone-400'
             }`}
           >
             🤖 AI Review
           </button>
-
         </div>
+      </Surface>
 
-        {/* ==================================================
-            OPERATIONS
-        ================================================== */}
-
-        {activeSection === 'operations' && (
-          <section>
-
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-extrabold text-gray-800 dark:text-gray-100">
-                  Active Rescue Queue
-                </h2>
-
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                  Live rescue cases
-                </p>
-              </div>
-
-              <button
-                onClick={refreshCases}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-[#e2e8f0] text-lg shadow-[4px_4px_8px_#cbd5e1,-4px_-4px_8px_#f8fafc] transition-transform active:scale-90 dark:bg-[#0f172a] dark:shadow-[4px_4px_8px_#070a13,-4px_-4px_8px_#172441]"
-                title="Refresh"
-              >
-                🔄
-              </button>
+      {activeSection === 'operations' && (
+        <section>
+          {isLoading ? (
+            <CaseListSkeleton />
+          ) : activeCases.length === 0 ? (
+            <EmptyState
+              icon="🐾"
+              title="No active cases"
+              message={
+                hasJurisdiction
+                  ? 'No active cases within your operating area right now.'
+                  : 'Set your operating area above to start seeing cases here.'
+              }
+            />
+          ) : (
+            <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900">
+              {activeCases.map((caseItem) => (
+                <CaseCard
+                  key={caseItem.id}
+                  caseItem={caseItem}
+                  action={
+                    caseItem.status === 'VALIDATION_PASSED' ? (
+                      <Button size="sm" className="w-full" onClick={() => openDispatcher(caseItem.id)}>
+                        🦺 Find Nearby Volunteers
+                      </Button>
+                    ) : (
+                      <Link
+                        to={`/cases/${caseItem.id}`}
+                        className="text-xs font-bold text-emerald-600 dark:text-emerald-400"
+                      >
+                        View Details →
+                      </Link>
+                    )
+                  }
+                />
+              ))}
             </div>
+          )}
+        </section>
+      )}
 
-            {isLoading ? (
-              <div className="rounded-3xl bg-[#e2e8f0] p-10 text-center shadow-[8px_8px_16px_#cbd5e1,-8px_-8px_16px_#f8fafc] dark:bg-[#0f172a] dark:shadow-[8px_8px_16px_#070a13,-8px_-8px_16px_#172441]">
-                <div className="mb-3 text-3xl animate-pulse">
-                  📡
-                </div>
-
-                <p className="text-sm font-bold text-gray-500 dark:text-gray-400">
-                  Syncing rescue database...
-                </p>
-              </div>
-            ) : activeCases.length === 0 ? (
-              <div className="rounded-3xl bg-[#e2e8f0] p-10 text-center shadow-[8px_8px_16px_#cbd5e1,-8px_-8px_16px_#f8fafc] dark:bg-[#0f172a] dark:shadow-[8px_8px_16px_#070a13,-8px_-8px_16px_#172441]">
-                <div className="mb-3 text-4xl">
-                  🐾
-                </div>
-
-                <p className="font-extrabold text-gray-700 dark:text-gray-200">
-                  No active cases
-                </p>
-
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  The rescue queue is currently clear.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-
-                {activeCases.map((caseItem) => {
-                  const status = getStatusStyle(caseItem.status);
-
-                  return (
-                    <div
-                      key={caseItem.id}
-                      className="rounded-3xl bg-[#e2e8f0] p-5 shadow-[8px_8px_16px_#cbd5e1,-8px_-8px_16px_#f8fafc] dark:bg-[#0f172a] dark:shadow-[8px_8px_16px_#070a13,-8px_-8px_16px_#172441]"
-                    >
-
-                      {/* Case Header */}
-                      <div className="mb-4 flex items-start justify-between gap-3">
-
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-wider text-gray-400">
-                            Case #{caseItem.id}
-                          </p>
-
-                          <h3 className="mt-1 text-lg font-extrabold text-gray-800 dark:text-gray-100">
-                            {caseItem.species || 'Unknown Animal'}
-                          </h3>
-                        </div>
-
-                        <span
-                          className={`rounded-full px-3 py-1 text-[10px] font-black uppercase ${status.className}`}
-                        >
-                          {status.label}
-                        </span>
-
-                      </div>
-
-                      {/* Description */}
-                      <div className="mb-4 rounded-2xl bg-[#e2e8f0] p-4 shadow-[inset_3px_3px_6px_#cbd5e1,inset_-3px_-3px_6px_#f8fafc] dark:bg-[#0f172a] dark:shadow-[inset_3px_3px_6px_#070a13,inset_-3px_-3px_6px_#172441]">
-
-                        <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-300">
-                          {caseItem.issue_description ||
-                            'No description provided.'}
-                        </p>
-
-                      </div>
-
-                      {/* Location */}
-                      <div className="mb-4 flex items-start gap-3">
-
-                        <span className="text-lg">
-                          📍
-                        </span>
-
-                        <div className="min-w-0">
-
-                          <p className="text-xs font-bold uppercase text-gray-400">
-                            Location
-                          </p>
-
-                          <p className="mt-1 text-sm font-medium text-gray-600 dark:text-gray-300">
-                            {caseItem.manual_address ||
-                              'GPS coordinates available'}
-                          </p>
-
-                        </div>
-
-                      </div>
-
-                      {/* Action */}
-                      {caseItem.status === 'VALIDATION_PASSED' && (
-                        <button
-                          onClick={() =>
-                            openDispatcher(caseItem.id)
-                          }
-                          className="w-full rounded-2xl bg-emerald-500 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98]"
-                        >
-                          🦺 Find Nearby Volunteers
-                        </button>
-                      )}
-
-                      {caseItem.status === 'IN_PROGRESS' && (
-                        <div className="rounded-2xl bg-amber-500/10 p-3 text-center">
-                          <p className="text-xs font-bold text-amber-600 dark:text-amber-400">
-                            🦺 Volunteer currently handling this rescue
-                          </p>
-                        </div>
-                      )}
-
+      {activeSection === 'ai' && (
+        <section>
+          {isJunkLoading ? (
+            <CaseListSkeleton />
+          ) : junkQueue.length === 0 ? (
+            <EmptyState icon="✅" title="Review queue is clear" message="No AI-flagged cases require review." />
+          ) : (
+            <div className="grid gap-3 lg:grid-cols-2">
+              {junkQueue.map((caseItem) => (
+                <Surface key={caseItem.id} className="p-5">
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-stone-400">
+                        Case #{caseItem.id}
+                      </p>
+                      <h3 className="mt-1 font-extrabold text-stone-800 dark:text-stone-100">
+                        {caseItem.species || 'Animal Case'}
+                      </h3>
                     </div>
-                  );
-                })}
-
-              </div>
-            )}
-
-          </section>
-        )}
-
-        {/* ==================================================
-            AI REVIEW
-        ================================================== */}
-
-        {activeSection === 'ai' && (
-          <section>
-
-            <div className="mb-4">
-              <h2 className="text-lg font-extrabold text-gray-800 dark:text-gray-100">
-                AI Triage Review
-              </h2>
-
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                Review cases flagged by the AI pipeline
-              </p>
-            </div>
-
-            {isJunkLoading ? (
-              <div className="rounded-3xl bg-[#e2e8f0] p-10 text-center shadow-[8px_8px_16px_#cbd5e1,-8px_-8px_16px_#f8fafc] dark:bg-[#0f172a] dark:shadow-[8px_8px_16px_#070a13,-8px_-8px_16px_#172441]">
-
-                <div className="mb-3 text-3xl animate-pulse">
-                  🤖
-                </div>
-
-                <p className="text-sm font-bold text-gray-500 dark:text-gray-400">
-                  Loading AI review queue...
-                </p>
-
-              </div>
-            ) : junkQueue.length === 0 ? (
-              <div className="rounded-3xl bg-[#e2e8f0] p-10 text-center shadow-[8px_8px_16px_#cbd5e1,-8px_-8px_16px_#f8fafc] dark:bg-[#0f172a] dark:shadow-[8px_8px_16px_#070a13,-8px_-8px_16px_#172441]">
-
-                <div className="mb-3 text-4xl">
-                  ✅
-                </div>
-
-                <p className="font-extrabold text-gray-700 dark:text-gray-200">
-                  Review queue is clear
-                </p>
-
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  No AI-flagged cases require review.
-                </p>
-
-              </div>
-            ) : (
-              <div className="space-y-4">
-
-                {junkQueue.map((caseItem) => (
-                  <div
-                    key={caseItem.id}
-                    className="rounded-3xl bg-[#e2e8f0] p-5 shadow-[8px_8px_16px_#cbd5e1,-8px_-8px_16px_#f8fafc] dark:bg-[#0f172a] dark:shadow-[8px_8px_16px_#070a13,-8px_-8px_16px_#172441]"
-                  >
-
-                    <div className="mb-4 flex items-start justify-between gap-3">
-
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-400">
-                          Case #{caseItem.id}
-                        </p>
-
-                        <h3 className="mt-1 font-extrabold text-gray-800 dark:text-gray-100">
-                          {caseItem.species || 'Animal Case'}
-                        </h3>
-                      </div>
-
-                      <span className="text-2xl">
-                        ⚠️
-                      </span>
-
-                    </div>
-
-                    <p className="mb-5 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
-                      {caseItem.issue_description ||
-                        caseItem.description ||
-                        'No description available.'}
-                    </p>
-
-                    <button
-                      onClick={() =>
-                        overrideJunk(caseItem.id)
-                      }
-                      className="w-full rounded-2xl bg-purple-500 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-purple-500/20 transition-all active:scale-[0.98]"
-                    >
-                      ✓ Override — Mark as Valid
-                    </button>
-
+                    <span className="text-2xl">⚠️</span>
                   </div>
-                ))}
 
-              </div>
-            )}
+                  <p className="mb-4 text-sm text-stone-600 dark:text-stone-300">
+                    {caseItem.issue_description || 'No description available.'}
+                  </p>
 
-          </section>
-        )}
+                  <Button className="w-full" onClick={() => overrideJunk(caseItem.id)}>
+                    ✓ Override — Mark as Valid
+                  </Button>
+                </Surface>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
-      </div>
-
-      {/* ==================================================
-          VOLUNTEER MODAL
-      ================================================== */}
-
+      {/* NEARBY VOLUNTEER DISPATCH MODAL */}
       {dispatchModal.open && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-
-          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-[2rem] bg-[#e2e8f0] p-5 shadow-2xl dark:bg-[#0f172a] sm:rounded-[2rem]">
-
-            {/* Modal Handle */}
-            <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-gray-400/40 sm:hidden"></div>
+        <div
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+          onClick={closeDispatcher}
+        >
+          <Surface
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dispatch-modal-title"
+            className="max-h-[85vh] w-full max-w-lg overflow-y-auto p-5 sm:rounded-2xl animate-rescue-fade-up"
+            onClick={(e) => e.stopPropagation()}
+          >
 
             <div className="mb-5 flex items-center justify-between">
-
               <div>
-                <h3 className="text-lg font-extrabold text-gray-800 dark:text-gray-100">
+                <h3 id="dispatch-modal-title" className="text-lg font-extrabold text-stone-800 dark:text-stone-100">
                   Nearby Volunteers
                 </h3>
-
-                <p className="mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">
-                  Within 5 km of Case #{dispatchModal.caseId}
+                <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
+                  {dispatchModal.radiusKm
+                    ? `Within ${dispatchModal.radiusKm} km of Case #${dispatchModal.caseId}, from your volunteer roster`
+                    : `Case #${dispatchModal.caseId}`}
                 </p>
               </div>
 
               <button
-                onClick={() =>
-                  setDispatchModal({
-                    open: false,
-                    caseId: null,
-                    volunteers: [],
-                  })
-                }
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-[#e2e8f0] text-gray-500 shadow-[4px_4px_8px_#cbd5e1,-4px_-4px_8px_#f8fafc] transition-transform active:scale-90 dark:bg-[#0f172a] dark:shadow-[4px_4px_8px_#070a13,-4px_-4px_8px_#172441]"
+                onClick={closeDispatcher}
+                aria-label="Close nearby volunteers dialog"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-stone-200 dark:bg-stone-800 text-stone-500"
               >
-                ✕
+                <X size={18} strokeWidth={2.5} aria-hidden="true" />
               </button>
-
             </div>
 
             {dispatchModal.volunteers.length === 0 ? (
-              <div className="rounded-2xl bg-[#e2e8f0] p-8 text-center shadow-[inset_3px_3px_6px_#cbd5e1,inset_-3px_-3px_6px_#f8fafc] dark:bg-[#0f172a] dark:shadow-[inset_3px_3px_6px_#070a13,inset_-3px_-3px_6px_#172441]">
-
-                <div className="mb-3 text-3xl">
-                  🦺
-                </div>
-
-                <p className="font-bold text-gray-700 dark:text-gray-200">
-                  No nearby volunteers
-                </p>
-
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  No volunteers were found within the 5 km radius.
-                </p>
-
-              </div>
+              <EmptyState
+                icon="🦺"
+                title="No one available right now"
+                message="No volunteers on your roster are both available and within range. Add volunteers to your roster, or check back shortly."
+              />
             ) : (
-              <div className="space-y-3">
-
+              <div className="space-y-3 rescue-stagger">
                 {dispatchModal.volunteers.map((volunteer) => (
                   <div
                     key={volunteer.id}
-                    className="flex items-center justify-between gap-3 rounded-2xl bg-[#e2e8f0] p-4 shadow-[5px_5px_10px_#cbd5e1,-5px_-5px_10px_#f8fafc] dark:bg-[#0f172a] dark:shadow-[5px_5px_10px_#070a13,-5px_-5px_10px_#172441]"
+                    className="flex items-center justify-between gap-3 rounded-2xl bg-stone-100 dark:bg-stone-800 p-4"
                   >
-
                     <div className="flex min-w-0 items-center gap-3">
-
-                      <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-xl">
-                        🦺
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                        <HardHat size={20} strokeWidth={2} aria-hidden="true" />
                       </div>
-
                       <div className="min-w-0">
-
-                        <p className="truncate font-extrabold text-gray-800 dark:text-gray-100">
-                          {volunteer.name ||
-                            volunteer.full_name ||
-                            'Volunteer'}
+                        <p className="truncate font-extrabold text-stone-800 dark:text-stone-100">
+                          {volunteer.full_name || 'Volunteer'}
                         </p>
-
                         <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                          {Number(volunteer.distance || 0).toFixed(2)} km away
+                          {Number(volunteer.distance_km || 0).toFixed(2)} km away
                         </p>
-
                       </div>
-
                     </div>
 
-                    {/*
-                     * IMPORTANT:
-                     * The current backend only provides the nearby-volunteer
-                     * search endpoint. It does not currently provide an
-                     * admin "dispatch volunteer" endpoint.
-                     *
-                     * Therefore we do NOT pretend this button actually
-                     * dispatches someone.
-                     */}
-
-                    <span className="rounded-full bg-gray-500/10 px-3 py-1.5 text-[10px] font-black text-gray-500 dark:text-gray-400">
-                      AVAILABLE
-                    </span>
-
+                    <Button
+                      size="sm"
+                      disabled={assigningId === volunteer.id}
+                      onClick={() => handleAssignVolunteer(volunteer)}
+                    >
+                      {assigningId === volunteer.id ? 'Assigning...' : 'Assign'}
+                    </Button>
                   </div>
                 ))}
-
               </div>
             )}
 
-            <button
-              onClick={() =>
-                setDispatchModal({
-                  open: false,
-                  caseId: null,
-                  volunteers: [],
-                })
-              }
-              className="mt-5 w-full rounded-2xl bg-gray-300 py-3.5 text-sm font-extrabold text-gray-700 transition-all active:scale-[0.98] dark:bg-gray-700 dark:text-gray-100"
+            <Button
+              variant="secondary"
+              className="mt-5 w-full"
+              onClick={closeDispatcher}
             >
               Close
-            </button>
-
-          </div>
-
+            </Button>
+          </Surface>
         </div>
       )}
 

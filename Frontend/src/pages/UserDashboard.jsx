@@ -1,280 +1,32 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext.jsx';
-import API from '../utils/api';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { ArrowRight, CheckCircle2, Clock3, PawPrint, Siren, Sparkles } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext.jsx";
+import API from "../utils/api";
+import Surface from "../components/ui/Surface.jsx";
+import Button from "../components/ui/Button.jsx";
+import EmptyState from "../components/ui/EmptyState.jsx";
+import { CaseListSkeleton } from "../components/ui/LoadingState.jsx";
+import { StatusBadge } from "../components/ui/Badge.jsx";
 
-/* =========================================================
-   STATUS CONFIG
-========================================================= */
+const ACTIVE=["PENDING_VALIDATION","PROCESSING_ANALYSIS","VALIDATION_PASSED","IN_PROGRESS","RESCUE_COMPLETED"];
 
-const STATUS_CONFIG = {
-  PENDING_VALIDATION: {
-    label: 'Pending AI Review',
-    icon: '🤖',
-    className:
-      'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-  },
-  PROCESSING_ANALYSIS: {
-    label: 'Analyzing',
-    icon: '🔍',
-    className:
-      'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-  },
-  VALIDATION_PASSED: {
-    label: 'Verified — Awaiting Volunteer',
-    icon: '✅',
-    className:
-      'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  },
-  IN_PROGRESS: {
-    label: 'Rescue In Progress',
-    icon: '🚑',
-    className:
-      'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  },
-  RESOLVED: {
-    label: 'Resolved',
-    icon: '🎉',
-    className:
-      'bg-green-500/10 text-green-600 dark:text-green-400',
-  },
-  REJECTED_JUNK: {
-    label: 'Not Verified',
-    icon: '🚫',
-    className:
-      'bg-rose-500/10 text-rose-600 dark:text-rose-400',
-  },
-  CANCELLED: {
-    label: 'Cancelled',
-    icon: '⛔',
-    className:
-      'bg-gray-500/10 text-gray-600 dark:text-gray-400',
-  },
-};
-
-function getStatusConfig(status) {
-  return (
-    STATUS_CONFIG[status] || {
-      label: status || 'Unknown',
-      icon: '❔',
-      className:
-        'bg-gray-500/10 text-gray-600 dark:text-gray-400',
-    }
-  );
+export default function UserDashboard(){
+ const {user}=useAuth(); const [cases,setCases]=useState([]); const [loading,setLoading]=useState(true); const [error,setError]=useState("");
+ const load=useCallback(async()=>{setLoading(true);setError("");try{const {data}=await API.get("/cases/mine");setCases(Array.isArray(data)?data:[]);}catch(e){setError(e.response?.data?.error||"We could not load your rescue activity.");}finally{setLoading(false);}},[]);
+ useEffect(()=>{load();},[load]);
+ const stats=useMemo(()=>({total:cases.length,active:cases.filter(c=>ACTIVE.includes(c.status)).length,resolved:cases.filter(c=>c.status==="RESOLVED").length}),[cases]);
+ const current=cases.find(c=>["IN_PROGRESS","RESCUE_COMPLETED"].includes(c.status))||cases.find(c=>c.status==="VALIDATION_PASSED");
+ return <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+  <section className="grid gap-6 lg:grid-cols-[1.4fr_.6fr]">
+   <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950 via-stone-900 to-stone-950 p-6 text-white sm:p-9"><div className="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-emerald-400/20 blur-3xl"/><div className="relative"><div className="flex items-center gap-2 text-emerald-300"><PawPrint size={17}/><span className="text-xs font-black uppercase tracking-[0.18em]">Reporter overview</span></div><h1 className="mt-3 text-3xl font-black sm:text-5xl">Hi, {user?.name?.split(" ")[0]||"there"}.</h1><p className="mt-3 max-w-xl text-sm leading-6 text-stone-300">Your overview shows what needs your attention. Open My Cases when you want the complete report history.</p><div className="mt-6 flex flex-wrap gap-3"><Button as={Link} to="/report" className="bg-emerald-500 hover:bg-emerald-400"><Siren size={16}/> Report an animal</Button><Button as={Link} to="/dashboard/cases" variant="dark" className="border border-stone-700"><ArrowRight size={16}/> My cases</Button></div></div></div>
+   <Surface className="p-6"><div className="flex items-center gap-2"><Sparkles size={17} className="text-emerald-600"/><h2 className="font-black dark:text-white">Current rescue</h2></div>{current?<div className="mt-5"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-wider text-stone-400">Case #{current.id}</p><h3 className="mt-1 text-xl font-black dark:text-white">{current.species||"Animal rescue"}</h3></div><StatusBadge status={current.status} friendly/></div><p className="mt-4 text-sm leading-6 text-stone-500">{current.issue_description||"Your case is moving through the rescue workflow."}</p><Link to={"/cases/"+current.id} className="mt-5 inline-flex items-center gap-2 text-sm font-black text-emerald-600">Track this rescue <ArrowRight size={15}/></Link></div>:<div className="mt-5 rounded-2xl bg-stone-50 p-5 dark:bg-stone-800/60"><p className="text-sm font-bold dark:text-white">No active rescue needs your attention.</p><p className="mt-1 text-xs text-stone-500">Submit a report whenever you see an animal that needs help.</p></div>}</Surface>
+  </section>
+  <section className="mt-6 grid grid-cols-3 gap-3"><Metric label="Reports" value={stats.total} Icon={PawPrint}/><Metric label="Active" value={stats.active} Icon={Clock3}/><Metric label="Resolved" value={stats.resolved} Icon={CheckCircle2}/></section>
+  {error&&<div role="alert" className="mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">{error}</div>}
+  <section className="mt-8"><div className="flex items-end justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-400">Your activity</p><h2 className="mt-1 text-2xl font-black dark:text-white">Recent cases</h2><p className="mt-1 text-sm text-stone-500">Your latest rescue reports and their current progress.</p></div><Link to="/dashboard/cases" className="shrink-0 text-sm font-black text-emerald-600 hover:text-emerald-700">View all <ArrowRight size={15} className="ml-1 inline"/></Link></div>{cases.length===0?<Surface className="mt-4 p-6"><EmptyState icon="🐾" title="No cases yet" message="Your recent rescue activity will appear here after you submit a report."/></Surface>:<div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-3">{cases.slice(0,3).map((item,index)=><Link key={item.id} to={"/cases/"+item.id} className="group relative overflow-hidden rounded-[1.35rem] border border-stone-200/90 bg-white p-5 shadow-[0_8px_24px_rgba(28,25,23,0.05)] transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(28,25,23,0.09)] dark:border-stone-800 dark:bg-stone-900 dark:shadow-none"><div className="flex items-start justify-between gap-3"><span className={"grid h-10 w-10 place-items-center rounded-xl "+(index===0?"bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40":"bg-stone-100 text-stone-500 dark:bg-stone-800")}><PawPrint size={17}/></span><StatusBadge status={item.status} friendly compact/></div><p className="mt-4 text-[11px] font-black uppercase tracking-wider text-stone-400">Case #{item.id}</p><h3 className="mt-1 font-black dark:text-white">{item.species||"Animal rescue"}</h3><p className="mt-1 line-clamp-2 text-sm text-stone-500">{item.issue_description||"Rescue report submitted."}</p><div className="mt-4 flex items-center justify-between text-xs font-bold text-stone-400"><span className="truncate pr-3">{item.manual_address||"Location available"}</span><ArrowRight size={14} className="shrink-0 transition-transform group-hover:translate-x-1"/></div></Link>)}</div>}</section>
+  {loading&&<div className="mt-8"><CaseListSkeleton/></div>}
+  {!loading&&cases.length===0&&<Surface className="mt-8 p-8"><EmptyState icon="🐾" title="Your first report starts the rescue" message="Use Report an animal to create your first rescue case."/></Surface>}
+ </main>;
 }
-
-/* =========================================================
-   USER DASHBOARD
-========================================================= */
-
-export default function UserDashboard() {
-  const { user } = useAuth();
-
-  const [cases, setCases] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  const fetchMyCases = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const { data } = await API.get('/cases/mine');
-
-      setCases(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error('Failed to load your reported cases:', err);
-
-      setError(
-        err.response?.data?.error ||
-          'Unable to load your reported cases right now.',
-      );
-
-      setCases([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchMyCases();
-  }, [fetchMyCases]);
-
-  const stats = {
-    total: cases.length,
-    active: cases.filter((c) =>
-      ['PENDING_VALIDATION', 'PROCESSING_ANALYSIS', 'VALIDATION_PASSED', 'IN_PROGRESS'].includes(
-        c.status,
-      ),
-    ).length,
-    resolved: cases.filter((c) => c.status === 'RESOLVED').length,
-  };
-
-  return (
-    <div className="p-4 md:p-8 max-w-2xl mx-auto mb-20 md:mb-0 transition-colors duration-300">
-
-      {/* HEADER */}
-      <div className="flex items-center gap-4 mb-8">
-        <div className="w-14 h-14 shrink-0 rounded-2xl flex items-center justify-center text-2xl bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441]">
-          🐾
-        </div>
-
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-            My AniRescue
-          </p>
-
-          <h1 className="text-2xl font-extrabold text-gray-800 dark:text-gray-100">
-            Hi, {user?.name?.split(' ')[0] || 'there'} 👋
-          </h1>
-        </div>
-      </div>
-
-      {/* STATS */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <StatCard label="Reported" value={stats.total} color="text-gray-800 dark:text-gray-100" />
-        <StatCard label="In Progress" value={stats.active} color="text-amber-500" />
-        <StatCard label="Resolved" value={stats.resolved} color="text-emerald-500" />
-      </div>
-
-      {/* QUICK ACTIONS */}
-      <div className="grid grid-cols-2 gap-3 mb-8">
-        <Link
-          to="/report"
-          className="flex flex-col items-center justify-center gap-2 p-5 rounded-2xl bg-emerald-600 text-white font-extrabold shadow-lg hover:-translate-y-0.5 transition-all text-center"
-        >
-          <span className="text-2xl">🚨</span>
-          Report a Case
-        </Link>
-
-        <Link
-          to="/map"
-          className="flex flex-col items-center justify-center gap-2 p-5 rounded-2xl bg-[#e2e8f0] dark:bg-[#0f172a] text-gray-700 dark:text-gray-200 font-extrabold shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441] hover:-translate-y-0.5 transition-all text-center"
-        >
-          <span className="text-2xl">🗺️</span>
-          View Live Map
-        </Link>
-      </div>
-
-      {/* MY REPORTED CASES */}
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-extrabold text-gray-800 dark:text-gray-100">
-          My Reported Cases
-        </h2>
-
-        <button
-          type="button"
-          onClick={fetchMyCases}
-          disabled={isLoading}
-          className="text-xs font-bold text-blue-600 dark:text-blue-400 disabled:opacity-50"
-        >
-          Refresh
-        </button>
-      </div>
-
-      {error && (
-        <div className="mb-4 p-3 text-sm font-bold text-center text-rose-500 bg-rose-100 dark:bg-rose-900/30 rounded-xl border border-rose-200 dark:border-rose-800/50">
-          {error}
-        </div>
-      )}
-
-      <div className="space-y-4">
-        {isLoading ? (
-          <div className="p-8 text-center text-sm font-bold text-gray-500 dark:text-gray-400 rounded-2xl bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441]">
-            Loading your reports...
-          </div>
-        ) : cases.length === 0 ? (
-          <div className="p-10 text-center rounded-2xl bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441]">
-            <div className="text-4xl mb-3">🐕</div>
-
-            <p className="font-extrabold text-gray-700 dark:text-gray-200">
-              No reports yet
-            </p>
-
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Cases you report will show up here so you can track their rescue status.
-            </p>
-          </div>
-        ) : (
-          cases.map((caseItem) => {
-            const status = getStatusConfig(caseItem.status);
-
-            return (
-              <div
-                key={caseItem.id}
-                className="p-5 rounded-2xl bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441]"
-              >
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="min-w-0">
-                    <h3 className="font-bold text-gray-800 dark:text-gray-100 truncate">
-                      {caseItem.species || 'Animal Rescue Case'}
-                    </h3>
-
-                    <p className="text-xs font-bold text-gray-500 dark:text-gray-400">
-                      CASE-{caseItem.id}
-                      {caseItem.created_at &&
-                        ` • ${new Date(caseItem.created_at).toLocaleDateString()}`}
-                    </p>
-                  </div>
-
-                  <span
-                    className={`shrink-0 inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-full ${status.className}`}
-                  >
-                    {status.icon} {status.label}
-                  </span>
-                </div>
-
-                {caseItem.image_payload && (
-                  <img
-                    src={caseItem.image_payload}
-                    alt="Reported animal"
-                    className="w-full h-40 object-cover rounded-xl mb-3"
-                    loading="lazy"
-                  />
-                )}
-
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                  {caseItem.issue_description || 'No description provided.'}
-                </p>
-
-                {caseItem.manual_address && (
-                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    📍 {caseItem.manual_address}
-                  </p>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* COMING SOON — kept honest rather than faking functionality */}
-      <div className="mt-8 p-5 rounded-2xl text-center bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441]">
-        <p className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-          Coming Soon
-        </p>
-
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Adoption feed and rescuer badges are on the roadmap.
-        </p>
-      </div>
-
-    </div>
-  );
-}
-
-/* =========================================================
-   STAT CARD
-========================================================= */
-
-function StatCard({ label, value, color }) {
-  return (
-    <div className="p-4 rounded-2xl text-center bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[5px_5px_10px_#cbd5e1,_-5px_-5px_10px_#f8fafc] dark:shadow-[5px_5px_10px_#070a13,_-5px_-5px_10px_#172441]">
-      <p className={`text-2xl font-black ${color}`}>{value}</p>
-
-      <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-        {label}
-      </p>
-    </div>
-  );
-}
+function Metric({label,value,Icon}){return <Surface className="p-4"><div className="flex items-center justify-between"><Icon size={17} className="text-emerald-600"/><span className="text-2xl font-black dark:text-white">{value}</span></div><p className="mt-3 text-[11px] font-black uppercase tracking-wider text-stone-400">{label}</p></Surface>}

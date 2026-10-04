@@ -59,7 +59,7 @@ export default function useOfflineSync() {
       return;
     }
 
-    let queue = [];
+    let queue;
 
     try {
       const stored = localStorage.getItem(
@@ -71,12 +71,14 @@ export default function useOfflineSync() {
         return;
       }
 
-      queue = JSON.parse(stored);
+      const parsedQueue = JSON.parse(stored);
 
-      if (!Array.isArray(queue) || queue.length === 0) {
+      if (!Array.isArray(parsedQueue) || parsedQueue.length === 0) {
         setPendingCases([]);
         return;
       }
+
+      queue = parsedQueue;
     } catch (error) {
       console.error(
         'Failed to read offline queue:',
@@ -86,46 +88,28 @@ export default function useOfflineSync() {
       return;
     }
 
-    /*
-     * The API interceptor normally attaches the JWT.
-     * This check prevents unnecessary sync attempts when
-     * there is no authenticated session.
-     */
-    const token =
-      localStorage.getItem('token') ||
-      localStorage.getItem('anirescue_token');
+    // Authentication is maintained by the backend's HttpOnly session cookie.
+    // Protected API calls carry the session automatically.
 
-    if (!token) {
-      console.warn(
-        'Cannot sync offline cases: User is not logged in.'
-      );
-
-      return;
-    }
-
-    isSyncingRef.current = true;
+        isSyncingRef.current = true;
 
     let remainingQueue = [...queue];
 
     try {
       for (const caseData of queue) {
         try {
-          /*
-           * Send the report through the same API utility
-           * used by the rest of the application.
-           *
-           * API automatically adds:
-           * Authorization: Bearer <JWT>
-           */
+          const syncPayload = {
+            ...caseData,
+            clientRequestId:
+              caseData.clientRequestId ||
+              crypto.randomUUID(),
+          };
+
           await API.post(
             '/cases/report',
-            caseData
+            syncPayload
           );
 
-          /*
-           * Backend accepted the report.
-           * Remove only this successfully synced case.
-           */
           remainingQueue =
             remainingQueue.filter(
               (item) =>

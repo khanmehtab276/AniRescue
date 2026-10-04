@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-  
+
   <head>
     <meta charset="UTF-8" />
 
@@ -8,7 +8,7 @@
 
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
 
     <meta
@@ -16,15 +16,19 @@
       content="AniRescue - Animal Rescue and Volunteer Coordination Platform"
     />
 
-    <meta name="theme-color" content="#059669" />
+    <meta name="theme-color" content="#0d9488" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap"
+      rel="stylesheet"
+    />
 
     <title>AniRescue</title>
     <script>
       (function () {
-        const theme = localStorage.getItem('anirescue_theme');
-        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-        if (theme === 'dark' || (theme === 'system' && systemDark)) {
+        if (localStorage.getItem('anirescue_theme') === 'dark') {
           document.documentElement.classList.add('dark');
         }
       })();

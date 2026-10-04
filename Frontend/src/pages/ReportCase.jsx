@@ -1,4 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { Camera, CheckCircle2, HandHeart, ImagePlus, Map, MapPin, Search } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import useLocation from '../hooks/useLocation';
 import useOfflineSync from '../hooks/useOfflineSync';
 import { useToast } from '../contexts/ToastContext.jsx';
@@ -6,7 +9,8 @@ import {
   MapContainer,
   TileLayer,
   Marker,
-  useMapEvents
+  useMapEvents,
+  useMap
 } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -24,12 +28,125 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow
 });
 
+
+const REPORT_DRAFT_KEY = 'anirescue_report_draft_v1';
+const REPORT_DRAFT_DB = 'anirescue_report_drafts';
+const REPORT_DRAFT_STORE = 'images';
+const REPORT_DRAFT_IMAGE_KEY = 'current';
+
+function openReportDraftDb() {
+  return new Promise((resolve, reject) => {
+    if (!('indexedDB' in window)) {
+      reject(new Error('IndexedDB is not available.'));
+      return;
+    }
+
+    const request = indexedDB.open(REPORT_DRAFT_DB, 1);
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(REPORT_DRAFT_STORE)) {
+        db.createObjectStore(REPORT_DRAFT_STORE);
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('Could not open draft storage.'));
+  });
+}
+
+async function saveReportDraftImage(file) {
+  const db = await openReportDraftDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(REPORT_DRAFT_STORE, 'readwrite');
+    transaction.objectStore(REPORT_DRAFT_STORE).put(file, REPORT_DRAFT_IMAGE_KEY);
+    transaction.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    transaction.onerror = () => {
+      db.close();
+      reject(transaction.error || new Error('Could not save the draft image.'));
+    };
+  });
+}
+
+async function loadReportDraftImage() {
+  const db = await openReportDraftDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(REPORT_DRAFT_STORE, 'readonly');
+    const request = transaction.objectStore(REPORT_DRAFT_STORE).get(REPORT_DRAFT_IMAGE_KEY);
+    request.onsuccess = () => {
+      db.close();
+      resolve(request.result || null);
+    };
+    request.onerror = () => {
+      db.close();
+      reject(request.error || new Error('Could not load the draft image.'));
+    };
+  });
+}
+
+async function clearReportDraftImage() {
+  try {
+    const db = await openReportDraftDb();
+    await new Promise((resolve, reject) => {
+      const transaction = db.transaction(REPORT_DRAFT_STORE, 'readwrite');
+      transaction.objectStore(REPORT_DRAFT_STORE).delete(REPORT_DRAFT_IMAGE_KEY);
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+    });
+    db.close();
+  } catch (error) {
+    console.warn('Could not clear the saved draft image:', error);
+  }
+}
+
+function saveReportDraftFields(fields) {
+  try {
+    localStorage.setItem(REPORT_DRAFT_KEY, JSON.stringify(fields));
+  } catch (error) {
+    console.warn('Could not save the rescue report draft:', error);
+  }
+}
+
+function loadReportDraftFields() {
+  try {
+    const stored = localStorage.getItem(REPORT_DRAFT_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch (error) {
+    console.warn('Could not load the rescue report draft:', error);
+    return null;
+  }
+}
+
+function clearReportDraftFields() {
+  localStorage.removeItem(REPORT_DRAFT_KEY);
+}
+
+function MapViewportController({ center }) {
+  const map = useMap();
+  const hasCenteredInitialLocation = useRef(false);
+
+  useEffect(() => {
+    if (!center || hasCenteredInitialLocation.current) return;
+    hasCenteredInitialLocation.current = true;
+    map.setView(center, map.getZoom(), { animate: true });
+  }, [map, center]);
+
+  return null;
+}
+
 function MapPinDropper({ position, setPosition }) {
+  const map = useMap();
+
   useMapEvents({
     click(e) {
-      setPosition({
-        lat: e.latlng.lat,
-        lng: e.latlng.lng
+      const nextPosition = { lat: e.latlng.lat, lng: e.latlng.lng };
+      setPosition(nextPosition);
+      map.panTo([nextPosition.lat, nextPosition.lng], {
+        animate: true,
+        duration: 0.45,
       });
     }
   });
@@ -45,10 +162,12 @@ export default function ReportCase() {
   const [imagePreview, setImagePreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionResult, setSubmissionResult] = useState(null);
-  
+  const [detailsSkipped, setDetailsSkipped] = useState(false);
+
   const [locationMode, setLocationMode] = useState('auto');
   const [manualAddress, setManualAddress] = useState('');
   const [pinnedLocation, setPinnedLocation] = useState(null);
+  const draftHydratedRef = useRef(false);
 
   const { showToast } = useToast();
 
@@ -59,18 +178,159 @@ export default function ReportCase() {
     getLocation
   } = useLocation();
 
+  const { user } = useAuth();
+  // Every role can report, and the backend always allows a reporter to
+  // access their own case detail.
+  const canOpenOwnCase = Boolean(user?.id);
+
   const {
     isOffline,
-    saveForOfflineSync
+    saveForOfflineSync,
+    syncCases
   } = useOfflineSync();
 
-  const defaultMapCenter = [19.0760, 72.8777];
+  // Neutral world view center as fallback when user location is unavailable
+  const defaultMapCenter = [0, 0];
+
+  const photoReady = Boolean(imageFile);
+  // A landmark can help the rescue team find the animal, but it is not the
+  // same completion item as an actual GPS/map location. Keep these signals
+  // separate so one landmark cannot count as two progress steps.
+  const locationReady = Boolean(
+    locationMode === 'auto' ? location : pinnedLocation
+  );
+  const detailsReady = Boolean(description.trim()) || detailsSkipped;
+  const landmarkReady = Boolean(manualAddress.trim());
+  const locationOrLandmarkReady = locationReady || landmarkReady;
+  const coreReady = photoReady && locationOrLandmarkReady && detailsReady;
+  // Landmark is optional: step 4 shows completion when supplied but never
+  // blocks transmission when it is left blank.
+  const reportReady = Boolean(coreReady);
+  const reportSteps = [
+    { label: 'Photo', done: photoReady, Icon: Camera },
+    { label: 'Location', done: locationReady, Icon: Map },
+    { label: 'Details', done: detailsReady, Icon: Search },
+    { label: 'Landmark (optional)', done: landmarkReady, Icon: MapPin },
+  ];
+  const completedSteps = reportSteps.filter((step) => step.done).length;
+  const progressState = completedSteps === 0
+    ? {
+        label: 'Start with the rescue essentials.',
+        message: 'Add a clear photo first. AI will handle the animal assessment after submission.',
+        bar: 'bg-[#DC143C]',
+        soft: 'bg-[#DC143C]/5 dark:bg-[#DC143C]/10',
+        border: 'border-[#DC143C]/20 dark:border-[#DC143C]/40',
+        text: 'text-[#DC143C] dark:text-[#FF4D6D]',
+        icon: 'bg-[#DC143C]/10 text-[#DC143C] dark:bg-[#DC143C]/20 dark:text-[#FF6B81]',
+      }
+    : completedSteps === 1
+      ? {
+          label: 'Photo received. Now pinpoint the location.',
+          message: 'A precise location helps the rescue team reach the animal faster.',
+          bar: 'bg-red-500',
+          soft: 'bg-red-50/80 dark:bg-red-900/15',
+          border: 'border-red-300 dark:border-red-800/40',
+          text: 'text-red-600 dark:text-red-300',
+          icon: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300',
+        }
+      : completedSteps === 2
+        ? {
+            label: 'Location details received. Tell us what you noticed.',
+            message: 'Description is optional. Share anything useful, or skip it and let AI handle the assessment.',
+            bar: 'bg-amber-500',
+            soft: 'bg-amber-50 dark:bg-amber-950/20',
+            border: 'border-amber-200 dark:border-amber-900/50',
+            text: 'text-amber-700 dark:text-amber-400',
+            icon: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300',
+          }
+        : completedSteps === 3
+          ? {
+              label: 'Report essentials are ready.',
+              message: 'Landmark is optional. You can transmit the rescue case now or add a landmark for the rescue team.',
+              bar: 'bg-yellow-500',
+              soft: 'bg-yellow-50 dark:bg-yellow-950/20',
+              border: 'border-yellow-200 dark:border-yellow-900/50',
+              text: 'text-yellow-700 dark:text-yellow-400',
+              icon: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300',
+            }
+          : {
+              label: 'All set! Broadcast to the rescue network 🐾',
+              message: 'Photo, location, details and landmark are ready. AI will assess the animal after submission.',
+              bar: 'bg-emerald-600',
+              soft: 'bg-emerald-50 dark:bg-emerald-950/20',
+              border: 'border-emerald-200 dark:border-emerald-900/50',
+              text: 'text-emerald-700 dark:text-emerald-400',
+              icon: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300',
+            };
 
   useEffect(() => {
     if (gpsError) {
       setLocationMode('custom');
     }
   }, [gpsError]);
+
+  // Restore an unfinished report when the user returns to the Rescue page.
+  useEffect(() => {
+    let cancelled = false;
+
+    const restoreDraft = async () => {
+      const fields = loadReportDraftFields();
+
+      if (fields) {
+        setDescription(fields.description || '');
+        setDetailsSkipped(Boolean(fields.detailsSkipped));
+        setLocationMode(fields.locationMode || 'auto');
+        setManualAddress(fields.manualAddress || '');
+        setPinnedLocation(fields.pinnedLocation || null);
+      }
+
+      try {
+        const savedImage = await loadReportDraftImage();
+        if (!cancelled && savedImage) {
+          setImageFile(savedImage);
+          setImagePreview(URL.createObjectURL(savedImage));
+        }
+      } catch (error) {
+        console.warn('Could not restore the saved rescue photo:', error);
+      } finally {
+        if (!cancelled) {
+          draftHydratedRef.current = true;
+        }
+      }
+    };
+
+    restoreDraft();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Keep the unfinished report available across navigation, refreshes and
+  // PWA page recreation. The actual image is stored in IndexedDB because a
+  // File object should not be placed in localStorage.
+  useEffect(() => {
+    if (!draftHydratedRef.current) return;
+
+    const hasDraftFields = Boolean(
+      description.trim() ||
+      detailsSkipped ||
+      manualAddress.trim() ||
+      pinnedLocation
+    );
+
+    if (hasDraftFields) {
+      saveReportDraftFields({
+        description,
+        detailsSkipped,
+        locationMode,
+        manualAddress,
+        pinnedLocation,
+      });
+    } else {
+      clearReportDraftFields();
+    }
+  }, [description, detailsSkipped, locationMode, manualAddress, pinnedLocation]);
 
   useEffect(() => {
     getLocation();
@@ -84,8 +344,11 @@ export default function ReportCase() {
     };
   }, [imagePreview]);
 
-  const handleImageChange = (e) => {
+  const handleImageChange = async (e) => {
     const file = e.target.files?.[0];
+
+    // Allow the same photo to be selected again after replacing it.
+    e.target.value = '';
 
     if (!file) {
       return;
@@ -109,6 +372,13 @@ export default function ReportCase() {
 
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
+
+    try {
+      await saveReportDraftImage(file);
+    } catch (error) {
+      console.warn('Could not persist the rescue photo draft:', error);
+      showToast('Photo selected, but it could not be saved for later.', 'warning');
+    }
 
     if (!location && locationMode === 'auto') {
       getLocation();
@@ -162,11 +432,6 @@ export default function ReportCase() {
       return;
     }
 
-    if (!description.trim()) {
-      showToast('Please describe the animal\'s condition or situation.', 'warning');
-      return;
-    }
-
     /*
      * A complete offline photo report is not supported by the
      * current Cloudinary + localStorage architecture.
@@ -176,7 +441,7 @@ export default function ReportCase() {
      */
     if (isOffline) {
       showToast('You are currently offline. Please reconnect to the internet to submit the rescue report.', 'warning');
-        return;
+      return;
     }
 
     setIsSubmitting(true);
@@ -184,22 +449,36 @@ export default function ReportCase() {
 
     try {
       // ---------------------------------------------------------
-      // 1. Upload image directly to Cloudinary
+      // 1. Get a short-lived signed Cloudinary upload authorization
+      // ---------------------------------------------------------
+      const signatureResponse = await API.post('/cases/upload-signature');
+      const {
+        cloudName,
+        apiKey,
+        timestamp,
+        signature,
+        resourceType = 'image',
+      } = signatureResponse.data || {};
+
+      if (!cloudName || !apiKey || !timestamp || !signature) {
+        throw new Error('Image upload authorization could not be created.');
+      }
+
+      // ---------------------------------------------------------
+      // 2. Upload directly to Cloudinary without exposing the API secret
       // ---------------------------------------------------------
       const cloudinaryData = new FormData();
-
       cloudinaryData.append('file', imageFile);
-      cloudinaryData.append(
-        'upload_preset',
-        'anirescue_uploads'
-      );
+      cloudinaryData.append('api_key', apiKey);
+      cloudinaryData.append('timestamp', String(timestamp));
+      cloudinaryData.append('signature', signature);
 
       const cloudRes = await fetch(
-        'https://api.cloudinary.com/v1_1/tsacc3bn/image/upload',
+        `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`,
         {
           method: 'POST',
-          body: cloudinaryData
-        }
+          body: cloudinaryData,
+        },
       );
 
       const cloudData = await cloudRes.json();
@@ -207,25 +486,27 @@ export default function ReportCase() {
       if (!cloudRes.ok) {
         throw new Error(
           cloudData.error?.message ||
-          'Cloudinary image upload failed.'
+          'Cloudinary image upload failed.',
         );
       }
 
       const imageUrl = cloudData.secure_url;
 
       if (!imageUrl) {
-        throw new Error(
-          'Cloudinary did not return an image URL.'
-        );
+        throw new Error('Cloudinary did not return an image URL.');
       }
 
       // ---------------------------------------------------------
-      // 2. Send lightweight report to Express
+      // 3. Send the lightweight report to Express.
+      // The client request ID makes retries safe and idempotent.
       // ---------------------------------------------------------
+      const clientRequestId = crypto.randomUUID();
+
       const reportData = {
+        clientRequestId,
         location: finalLocation,
         description: description.trim(),
-        imageUrl
+        imageUrl,
       };
 
       try {
@@ -236,333 +517,503 @@ export default function ReportCase() {
 
         setSubmissionResult({
           success: true,
-          reportId: response.data?.reportId || null,
+          reportId: response.data?.reportId || response.data?.case?.id || null,
           status:
             response.data?.status ||
+            response.data?.case?.status ||
             'PENDING_VALIDATION'
         });
 
-        resetForm();
+        clearForm();
       } catch (apiError) {
         /*
          * Cloudinary upload succeeded, but backend submission failed.
          * The report now contains only lightweight serializable data,
          * so it can safely be placed in the retry queue.
+         *
+         * Two genuinely different situations land here, and they need
+         * different messages:
+         *
+         * - No response at all (apiError.response is undefined): a
+         *   real network failure. The existing "reconnect and it will
+         *   sync" framing is accurate.
+         *
+         * - A response came back (e.g. 503 when the backend's queue
+         *   to the AI worker is down): the user IS online, so the
+         *   offline-sync hook's "retry on the browser's online event"
+         *   will not fire on its own — nothing about connectivity
+         *   changed. Say so plainly, and also attempt an immediate
+         *   retry rather than silently waiting for a reload.
          */
         saveForOfflineSync(reportData);
 
+        const isNetworkFailure = !apiError.response;
+
+        if (isNetworkFailure) {
+          throw new Error(
+            'The image was uploaded, but the rescue report could not reach the server. It has been saved and will send automatically once you\'re back online.',
+            { cause: apiError }
+          );
+        }
+
+        setTimeout(() => {
+          syncCases();
+        }, 4000);
+
         throw new Error(
-          'The image was uploaded, but the rescue report could not reach the server. It has been saved for retry.',
+          apiError.response?.data?.error ||
+          'The image was uploaded, but the server could not queue the report right now. It has been saved and we\'ll retry automatically in a few seconds \u2014 you can also just try submitting again.',
           { cause: apiError }
         );
       }
     } catch (err) {
-  console.error('Report submission failed:', err);
+      console.error('Report submission failed:', err);
 
-  showToast(
-    err.message || 'Server error. Case could not be submitted.',
-    'error'
-  );
-} finally {
+      showToast(
+        err.message || 'Server error. Case could not be submitted.',
+        'error'
+      );
+    } finally {
       setIsSubmitting(false);
     }
   };
 
-  const resetForm = () => {
+  const clearForm = () => {
     if (imagePreview) {
       URL.revokeObjectURL(imagePreview);
     }
 
-    setSubmissionResult(null);
     setImagePreview(null);
     setImageFile(null);
     setDescription('');
+    setDetailsSkipped(false);
     setManualAddress('');
     setPinnedLocation(null);
     setLocationMode('auto');
 
+    clearReportDraftFields();
+    clearReportDraftImage();
+
     getLocation();
   };
 
-  return (
-    <div className="p-4 md:p-8 max-w-lg mx-auto mb-20 md:mb-0 transition-colors duration-300">
-      <div className="rounded-[2rem] p-6 md:p-8 relative transition-colors duration-300 bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[10px_10px_20px_#cbd5e1,_-10px_-10px_20px_#f8fafc] dark:shadow-[10px_10px_20px_#070a13,_-10px_-10px_20px_#172441]">
+  const resetForm = () => {
+    setSubmissionResult(null);
+    clearForm();
+  };
 
-        <h2 className="text-2xl font-extrabold mb-6 text-gray-800 dark:text-gray-100 text-center">
-          Emergency Report
-        </h2>
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-6 pb-24 sm:px-6 lg:px-8 lg:py-10 lg:pb-10 transition-colors duration-300">
+      <div className="rounded-2xl p-6 md:p-8 relative transition-colors duration-300 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm">
+
+        <div className="mb-6 text-center">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300">
+            <HandHeart size={24} aria-hidden="true" />
+          </div>
+          <h2 className="mt-3 text-2xl font-extrabold text-stone-800 dark:text-stone-100">Report an animal 🐾</h2>
+          <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-stone-500 dark:text-stone-400">
+            Share the photo and location. We’ll take care of the rescue workflow from there.
+          </p>
+        </div>
 
         {submissionResult ? (
-          <div className="text-center animate-fade-in space-y-6">
+          <div className="text-center space-y-6 animate-rescue-fade-up" role="status" aria-live="polite">
 
-            <div className="flex justify-center mb-2">
-              <div className="relative group">
-                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-12 h-6 bg-emerald-500 blur-xl rounded-full"></div>
+            <div className="flex justify-center">
+              <div className="w-20 h-20 rounded-full flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 animate-rescue-pop">
+                <CheckCircle2 size={44} strokeWidth={2} aria-hidden="true" />
+              </div>
+            </div>
 
-                <div className="w-20 h-20 bg-[#1a1f2e] dark:bg-black rounded-full flex items-center justify-center text-4xl relative z-10 shadow-[0_8px_15px_rgba(0,0,0,0.4)]">
-                  ✅
+            <div>
+              <h3 className="font-extrabold text-xl text-stone-800 dark:text-stone-100">
+                Report received
+              </h3>
+
+              {submissionResult.reportId && (
+                <p className="mt-1 text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                  Case #{submissionResult.reportId}
+                </p>
+              )}
+
+              <p className="text-sm text-stone-500 dark:text-stone-400 mt-2">
+                Thank you for speaking up for this animal. AI validation has started.
+              </p>
+            </div>
+
+            <ol className="text-left space-y-3 p-4 rounded-xl bg-stone-100/70 dark:bg-stone-800/40 border border-stone-200/60 dark:border-stone-800/60">
+              <li className="flex items-start gap-3">
+                <Search size={18} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+                <span className="text-sm text-stone-600 dark:text-stone-300">
+                  <strong className="text-stone-800 dark:text-stone-100">AI check</strong> — we confirm the photo shows an animal that needs help.
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <HandHeart size={18} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+                <span className="text-sm text-stone-600 dark:text-stone-300">
+                  <strong className="text-stone-800 dark:text-stone-100">Rescuer</strong> — once verified, a volunteer or partner organization can take the case.
+                </span>
+              </li>
+            </ol>
+
+            <div className="space-y-3">
+              {canOpenOwnCase && submissionResult.reportId && (
+                <Link
+                  to={`/cases/${submissionResult.reportId}`}
+                  className="block w-full bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-xl font-bold text-center transition-colors"
+                >
+                  Track my rescue
+                </Link>
+              )}
+
+              <button
+                type="button"
+                onClick={resetForm}
+                className="w-full p-4 rounded-xl font-bold text-stone-700 dark:text-stone-200 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors"
+              >
+                Report another case 🐾
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form
+            className="grid gap-5 sm:gap-8 lg:grid-cols-[1.1fr_.9fr]"
+            onSubmit={handleSubmit}
+          >
+
+            <div className="space-y-5 sm:space-y-6">{/* IMAGE */}
+              <div>
+                <input
+                  type="file"
+                  id="cameraInput"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
+                <input
+                  type="file"
+                  id="photoLibraryInput"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
+
+                <div className={`overflow-hidden rounded-2xl bg-white dark:bg-stone-900 border transition-all duration-300 ${imagePreview
+                  ? 'border-2 border-emerald-500/50 shadow-sm'
+                  : 'border-stone-200 dark:border-stone-800'
+                  }`}>
+                  {imagePreview ? (
+                    <div>
+                      <img
+                        src={imagePreview}
+                        alt="Selected rescue animal"
+                        className="w-full h-auto max-h-[28rem] object-contain rescue-image-fade"
+                      />
+                      <div className="grid grid-cols-2 gap-2 border-t border-stone-200 p-3 dark:border-stone-800">
+                        <label
+                          htmlFor="cameraInput"
+                          className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-3 text-xs font-extrabold text-white transition-all duration-300 hover:bg-emerald-700 active:scale-[0.98]"
+                        >
+                          <Camera size={17} aria-hidden="true" />
+                          Retake photo
+                        </label>
+                        <label
+                          htmlFor="photoLibraryInput"
+                          className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-xs font-extrabold text-stone-700 transition-all duration-300 hover:bg-stone-100 active:scale-[0.98] dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:hover:bg-stone-700"
+                        >
+                          <ImagePlus size={17} aria-hidden="true" />
+                          Choose photo
+                        </label>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-6 sm:p-8">
+                      <div className="mb-5 text-center">
+                        <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-emerald-50 text-emerald-600 shadow-sm dark:bg-emerald-950/40 dark:text-emerald-300">
+                          <Camera size={30} strokeWidth={2} aria-hidden="true" />
+                        </div>
+                        <p className="mt-3 text-sm font-extrabold text-stone-700 dark:text-stone-200">
+                          Add a photo of the animal
+                        </p>
+                        <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">
+                          Take a new photo with your camera or choose one already on your phone.
+                        </p>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label
+                          htmlFor="cameraInput"
+                          className="flex min-h-14 cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-extrabold text-white shadow-lg transition-all duration-300 hover:bg-emerald-700 active:scale-[0.98]"
+                        >
+                          <Camera size={19} aria-hidden="true" />
+                          Take photo
+                        </label>
+                        <label
+                          htmlFor="photoLibraryInput"
+                          className="flex min-h-14 cursor-pointer items-center justify-center gap-2 rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm font-extrabold text-stone-700 transition-all duration-300 hover:bg-stone-100 active:scale-[0.98] dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:hover:bg-stone-700"
+                        >
+                          <ImagePlus size={19} aria-hidden="true" />
+                          Photos / Files
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* LOCATION */}
+              <div>
+                <label className="block text-xs uppercase tracking-wider font-bold text-stone-500 dark:text-stone-400 mb-2 ml-2">
+                  Location
+                </label>
+
+                <div className="flex gap-1 mb-4 p-1.5 rounded-xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800">
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLocationMode('auto');
+
+                      if (!location) {
+                        getLocation();
+                      }
+                    }}
+                    className={`flex-1 py-2.5 rounded-lg text-xs uppercase tracking-wide font-bold transition-all duration-300 ${locationMode === 'auto'
+                      ? 'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 shadow-[0_8px_20px_rgba(16,185,129,0.22)]'
+                      : 'text-stone-500 hover:bg-black/5 dark:hover:bg-white/5'
+                      }`}
+                  >
+                    Auto GPS
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setLocationMode('custom')
+                    }
+                    className={`flex-1 py-2.5 rounded-lg text-xs uppercase tracking-wide font-bold transition-all duration-300 ${locationMode === 'custom'
+                      ? 'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 shadow-[0_8px_20px_rgba(16,185,129,0.22)]'
+                      : 'text-stone-500 hover:bg-black/5 dark:hover:bg-white/5'
+                      }`}
+                  >
+                    Pin & Describe
+                  </button>
+                </div>
+
+                <div className="animate-fade-in">
+
+                  {locationMode === 'auto' ? (
+                    <div className="space-y-3">
+
+                      <input
+                        type="text"
+                        readOnly
+                        value={
+                          isLoading
+                            ? 'Getting your location...'
+                            : location
+                              ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`
+                              : 'Location unavailable'
+                        }
+                        className={`w-full p-4 rounded-xl text-sm font-bold outline-none border-none transition-all duration-300 bg-white dark:bg-stone-900 ${location
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-stone-400'
+                          } border border-stone-200 dark:border-stone-800`}
+                      />
+
+                      <div className="space-y-2">
+                        <label className="block text-xs uppercase tracking-wider font-bold text-stone-500 dark:text-stone-400 ml-2">
+                          Landmark (optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={manualAddress}
+                          onChange={(e) =>
+                            setManualAddress(e.target.value)
+                          }
+                          placeholder="e.g. near Axis Bank ATM"
+                          className="w-full rounded-xl border border-stone-200 bg-white p-4 text-sm font-medium text-stone-700 outline-none transition-all duration-300 placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/10 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder:text-stone-500 dark:focus:border-emerald-700"
+                        />
+                      </div>
+
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+
+                      {!isOffline ? (
+                        <div className="rounded-2xl overflow-hidden h-56 sm:h-48 border border-stone-200 dark:border-stone-800 border border-stone-300/50 dark:border-white/5 relative z-0">
+
+                          <MapContainer
+                            center={
+                              location
+                                ? [location.lat, location.lng]
+                                : defaultMapCenter
+                            }
+                            zoom={13}
+                            scrollWheelZoom={true}
+                            className="w-full h-full"
+                            maxBounds={[[-85.05112878, -180], [85.05112878, 180]]}
+                            maxBoundsViscosity={1}
+                            worldCopyJump={false}
+                          >
+                            <MapViewportController
+                              center={location ? [location.lat, location.lng] : null}
+                            />
+                            <TileLayer
+                              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            />
+
+                            <MapPinDropper
+                              position={pinnedLocation}
+                              setPosition={setPinnedLocation}
+                            />
+                          </MapContainer>
+
+                          {!pinnedLocation && (
+                            <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-3 py-1.5 rounded-full z-[400] backdrop-blur-sm pointer-events-none">
+                              Tap map to drop pin
+                            </div>
+                          )}
+
+                        </div>
+                      ) : (
+                        <div className="rounded-2xl h-32 flex flex-col items-center justify-center text-center p-4 border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900">
+
+                          <span className="text-3xl mb-2 grayscale opacity-50">
+                            <Map size={28} strokeWidth={2} aria-hidden="true" />
+                          </span>
+
+                          <p className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wide">
+                            Map offline
+                          </p>
+
+                          <p className="text-[10px] text-stone-400 dark:text-stone-500 mt-1 font-medium">
+                            Please provide a descriptive landmark below.
+                          </p>
+
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <label className="block text-xs uppercase tracking-wider font-bold text-stone-500 dark:text-stone-400 ml-2">
+                          Landmark (optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={manualAddress}
+                          onChange={(e) =>
+                            setManualAddress(e.target.value)
+                          }
+                          placeholder="e.g. near Axis Bank ATM"
+                          className="w-full rounded-xl border border-stone-200 bg-white p-4 text-sm font-medium text-stone-700 outline-none transition-all duration-300 placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/10 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder:text-stone-500 dark:focus:border-emerald-700"
+                        />
+                      </div>
+
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* DESCRIPTION */}
+              <div className="space-y-2">
+                <label className="block text-xs uppercase tracking-wider font-bold text-stone-500 dark:text-stone-400 ml-2">
+                  Description (optional)
+                </label>
+
+                <textarea
+                  value={description}
+                  onChange={(e) => {
+                    setDescription(e.target.value);
+                    if (e.target.value.trim()) setDetailsSkipped(false);
+                  }}
+                  placeholder="Tell us what you noticed — behavior, surroundings, or anything that may help the rescue team..."
+                  className="w-full rounded-xl border border-stone-200 bg-white p-4 text-sm font-medium text-stone-700 outline-none transition-all duration-300 placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/10 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder:text-stone-500 dark:focus:border-emerald-700 h-24 resize-none"
+                />
+
+                <p className="text-[11px] text-stone-400 dark:text-stone-500 ml-2">
+                  Example: "Dog is staying near the construction gate and seems scared."
+                </p>
+                {!detailsReady && photoReady && locationReady && (
+                  <button
+                    type="button"
+                    onClick={() => setDetailsSkipped(true)}
+                    className="ml-2 mt-1 text-[11px] font-bold text-stone-500 underline decoration-stone-300 underline-offset-2 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
+                  >
+                    Skip optional details
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* TRANSMIT RESCUE CASE — single responsive progress/action container */}
+            <div className="lg:hidden">
+              <div className={`overflow-hidden rounded-2xl border shadow-sm transition-all duration-500 ${progressState.soft} ${progressState.border}`}>
+                <div className={`relative overflow-hidden border-b px-4 py-3 transition-colors duration-500 ${progressState.soft} ${progressState.border}`}>
+                  <div className="absolute inset-x-0 bottom-0 h-1 bg-stone-200/70 dark:bg-stone-800/70">
+                    <div className={`h-full rounded-full transition-all duration-700 ease-out ${progressState.bar}`} style={{ width: `${(completedSteps / reportSteps.length) * 100}%` }} />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-colors duration-500 ${progressState.icon}`}>
+                      <HandHeart size={18} aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 className="text-sm font-extrabold text-stone-800 dark:text-stone-100">Transmit rescue case</h3>
+                        <span className={`text-[11px] font-black whitespace-nowrap ${progressState.text}`}>{completedSteps}/4</span>
+                      </div>
+                      <p className={`mt-0.5 text-[11px] font-bold transition-colors duration-500 ${progressState.text}`}>{progressState.label}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-3 p-4">
+                  <p className={`text-[11px] leading-4 font-medium ${progressState.text}`}>{progressState.message}</p>
+                  <button type="submit" disabled={isSubmitting || isOffline || !reportReady} className={`w-full rounded-xl px-4 py-4 text-sm font-extrabold text-white shadow-lg transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${progressState.bar}`}>
+                    {isSubmitting ? 'Transmitting rescue case…' : isOffline ? 'Waiting for connection…' : 'Transmit rescue case'}
+                  </button>
+                  <p className="text-center text-[10px] leading-4 text-stone-400 dark:text-stone-500">
+                    {reportReady ? (landmarkReady ? 'Everything is ready for rescue coordination.' : 'Ready to transmit. The landmark is optional.') : 'Add the missing report details above to continue.'}
+                  </p>
                 </div>
               </div>
             </div>
 
-            <div>
-              <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">
-                Rescue Report Submitted
-              </h3>
-
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                Your report has been received and is being processed for AI validation.
-              </p>
-
-              {submissionResult.reportId && (
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
-                  Report ID: {submissionResult.reportId}
-                </p>
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={resetForm}
-              className="w-full bg-[#1a1f2e] dark:bg-black text-white p-4 rounded-xl font-bold shadow-[0_8px_20px_rgba(0,0,0,0.3)] hover:-translate-y-0.5 transition-all text-center"
-            >
-              Report Another Case
-            </button>
-          </div>
-        ) : (
-          <form
-            className="space-y-6"
-            onSubmit={handleSubmit}
-          >
-
-            {/* IMAGE */}
-            <div>
-              <input
-                type="file"
-                id="cameraInput"
-                accept="image/*"
-                className="hidden"
-                onChange={handleImageChange}
-              />
-
-              <label
-                htmlFor="cameraInput"
-                className={`block overflow-hidden transition-all duration-300 cursor-pointer rounded-2xl bg-[#e2e8f0] dark:bg-[#0f172a] ${
-                  imagePreview
-                    ? 'shadow-[4px_4px_10px_#cbd5e1,_-4px_-4px_10px_#f8fafc] dark:shadow-[4px_4px_10px_#070a13,_-4px_-4px_10px_#172441] border-2 border-emerald-500/50'
-                    : 'shadow-[inset_6px_6px_12px_#cbd5e1,inset_-6px_-6px_12px_#f8fafc] dark:shadow-[inset_6px_6px_12px_#070a13,inset_-6px_-6px_12px_#172441]'
-                }`}
-              >
-                {imagePreview ? (
-                  <img
-                    src={imagePreview}
-                    alt="Selected rescue animal"
-                    className="w-full h-56 object-cover rounded-xl"
-                  />
-                ) : (
-                  <div className="p-10 flex flex-col items-center justify-center h-56">
-                    <div className="w-16 h-16 rounded-full flex items-center justify-center text-3xl mb-4 bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[4px_4px_10px_#cbd5e1,_-4px_-4px_10px_#f8fafc] dark:shadow-[4px_4px_10px_#070a13,_-4px_-4px_10px_#172441]">
-                      📸
+            <div className="hidden lg:block">
+              <div className={`overflow-hidden rounded-2xl border shadow-sm transition-all duration-500 lg:sticky lg:top-24 ${progressState.soft} ${progressState.border}`}>
+                <div className={`relative overflow-hidden border-b px-5 py-4 transition-colors duration-500 ${progressState.soft} ${progressState.border}`}>
+                  <div className="absolute inset-x-0 bottom-0 h-1 bg-stone-200/70 dark:bg-stone-800/70">
+                    <div className={`h-full rounded-full transition-all duration-700 ease-out ${progressState.bar}`} style={{ width: `${(completedSteps / reportSteps.length) * 100}%` }} />
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl transition-colors duration-500 ${progressState.icon}`}>
+                      <HandHeart size={19} aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 className="font-extrabold text-stone-800 dark:text-stone-100">Transmit rescue case</h3>
+                        <span className={`text-xs font-black ${progressState.text}`}>{completedSteps}/4</span>
+                      </div>
+                      <p className={`mt-1 text-xs font-bold ${progressState.text}`}>{progressState.label}</p>
+                      <p className="mt-1 text-xs leading-5 text-stone-500 dark:text-stone-400">Send the report for validation and rescue coordination.</p>
                     </div>
-
-                    <p className="text-sm text-gray-500 font-bold">
-                      Tap to take or select a photo
-                    </p>
                   </div>
-                )}
-              </label>
-            </div>
-
-            {/* LOCATION */}
-            <div>
-              <label className="block text-xs uppercase tracking-wider font-bold text-gray-500 dark:text-gray-400 mb-2 ml-2">
-                Location
-              </label>
-
-              <div className="flex gap-1 mb-4 p-1.5 rounded-xl bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441]">
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLocationMode('auto');
-
-                    if (!location) {
-                      getLocation();
-                    }
-                  }}
-                  className={`flex-1 py-2.5 rounded-lg text-xs uppercase tracking-wide font-bold transition-all duration-300 ${
-                    locationMode === 'auto'
-                      ? 'bg-[#1a1f2e] dark:bg-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.3)]'
-                      : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/5'
-                  }`}
-                >
-                  Auto GPS
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setLocationMode('custom')
-                  }
-                  className={`flex-1 py-2.5 rounded-lg text-xs uppercase tracking-wide font-bold transition-all duration-300 ${
-                    locationMode === 'custom'
-                      ? 'bg-[#1a1f2e] dark:bg-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.3)]'
-                      : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/5'
-                  }`}
-                >
-                  Pin & Describe
-                </button>
-              </div>
-
-              <div className="animate-fade-in">
-
-                {locationMode === 'auto' ? (
-                  <div className="space-y-3">
-
-                    <input
-                      type="text"
-                      readOnly
-                      value={
-                        isLoading
-                          ? 'Getting your location...'
-                          : location
-                            ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`
-                            : 'Location unavailable'
-                      }
-                      className={`w-full p-4 rounded-xl text-sm font-bold outline-none border-none transition-all duration-300 bg-[#e2e8f0] dark:bg-[#0f172a] ${
-                        location
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : 'text-gray-400'
-                      } shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441]`}
-                    />
-
-                    <input
-                      type="text"
-                      value={manualAddress}
-                      onChange={(e) =>
-                        setManualAddress(e.target.value)
-                      }
-                      placeholder="Add a Landmark (optional)"
-                      className="w-full p-4 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 outline-none border-none transition-all duration-300 bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441]"
-                    />
-
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-
-                    {!isOffline ? (
-                      <div className="rounded-2xl overflow-hidden h-48 shadow-[inset_6px_6px_12px_#cbd5e1,inset_-6px_-6px_12px_#f8fafc] dark:shadow-[inset_6px_6px_12px_#070a13,inset_-6px_-6px_12px_#172441] border border-gray-300/50 dark:border-white/5 relative z-0">
-
-                        <MapContainer
-                          center={
-                            location
-                              ? [location.lat, location.lng]
-                              : defaultMapCenter
-                          }
-                          zoom={13}
-                          scrollWheelZoom={true}
-                          className="w-full h-full"
-                        >
-                          <TileLayer
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                          />
-
-                          <MapPinDropper
-                            position={pinnedLocation}
-                            setPosition={setPinnedLocation}
-                          />
-                        </MapContainer>
-
-                        {!pinnedLocation && (
-                          <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-3 py-1.5 rounded-full z-[400] backdrop-blur-sm pointer-events-none">
-                            Tap map to drop pin
-                          </div>
-                        )}
-
-                      </div>
-                    ) : (
-                      <div className="rounded-2xl h-32 flex flex-col items-center justify-center text-center p-4 shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441] bg-[#e2e8f0] dark:bg-[#0f172a]">
-
-                        <span className="text-3xl mb-2 grayscale opacity-50">
-                          🗺️
-                        </span>
-
-                        <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                          Map offline
-                        </p>
-
-                        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 font-medium">
-                          Please provide a descriptive landmark below.
-                        </p>
-
-                      </div>
-                    )}
-
-                    <input
-                      type="text"
-                      value={manualAddress}
-                      onChange={(e) =>
-                        setManualAddress(e.target.value)
-                      }
-                      placeholder="Add a Landmark (optional)"
-                      className="w-full p-4 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 outline-none border-none transition-all duration-300 bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441]"
-                    />
-
-                  </div>
-                )}
+                </div>
+                <div className="space-y-4 p-5">
+                  <p className={`text-[11px] leading-4 font-medium ${progressState.text}`}>{progressState.message}</p>
+                  <button type="submit" disabled={isSubmitting || isOffline || !reportReady} className={`group relative w-full overflow-hidden rounded-xl disabled:cursor-not-allowed disabled:opacity-50 ${progressState.bar}`}>
+                    <span className="absolute inset-0 bg-black/10 transition-opacity duration-300 group-hover:opacity-0" />
+                    <span className="relative flex min-h-14 items-center justify-center gap-2 rounded-xl border border-white/20 px-4 py-3 text-base font-extrabold text-white shadow-[0_12px_28px_rgba(0,0,0,0.14)] transition-all duration-300 group-hover:-translate-y-0.5">
+                      {isSubmitting ? 'Transmitting rescue case…' : isOffline ? 'Waiting for connection…' : 'Transmit rescue case'}
+                    </span>
+                  </button>
+                  <p className="text-center text-[11px] leading-5 text-stone-400 dark:text-stone-500">
+                    {reportReady ? (landmarkReady ? 'Your report is ready for the rescue workflow.' : 'Your report is ready. Adding a landmark is optional.') : 'Complete the required report details before transmitting the case.'}
+                  </p>
+                </div>
               </div>
             </div>
-
-            {/* DESCRIPTION */}
-            <div className="space-y-2">
-              <label className="block text-xs uppercase tracking-wider font-bold text-gray-500 dark:text-gray-400 ml-2">
-                Description (optional)
-              </label>
-
-              <textarea
-                value={description}
-                onChange={(e) =>
-                  setDescription(e.target.value)
-                }
-                placeholder="Describe the animal's condition, injury, or situation..."
-                className="w-full p-4 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 outline-none border-none transition-all duration-300 bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[inset_4px_4px_8px_#cbd5e1,inset_-4px_-4px_8px_#f8fafc] dark:shadow-[inset_4px_4px_8px_#070a13,inset_-4px_-4px_8px_#172441] h-24 resize-none"
-              />
-
-              <p className="text-[11px] text-gray-400 dark:text-gray-500 ml-2">
-                Example: "Dog has an injured back leg and is unable to walk."
-              </p>
-            </div>
-
-            {/* SUBMIT */}
-            <button
-              type="submit"
-              disabled={
-                isSubmitting ||
-                isOffline ||
-                !imageFile ||
-                (locationMode === 'auto' && !location) ||
-                (
-                  locationMode === 'custom' &&
-                  !pinnedLocation &&
-                  !manualAddress.trim()
-                )
-              }
-              className="w-full relative group mt-6 disabled:opacity-50"
-            >
-              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3/4 h-5 bg-rose-500 blur-lg rounded-full transition-all duration-300 group-hover:bg-rose-400"></div>
-
-              <div className="relative z-10 w-full bg-[#1a1f2e] dark:bg-black text-white p-4 rounded-xl font-bold text-lg transition-all border-t border-white/20 shadow-[0_8px_20px_rgba(0,0,0,0.4)] flex justify-center items-center gap-2">
-                {isSubmitting
-                  ? 'Processing...'
-                  : isOffline
-                    ? 'Waiting for Internet'
-                    : 'Transmit Rescue Alert'}
-              </div>
-            </button>
-
           </form>
         )}
       </div>
-    </div>
+    </div >
   );
 }

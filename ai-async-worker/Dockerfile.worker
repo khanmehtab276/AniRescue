@@ -1,61 +1,100 @@
-# --- Stage 1: Build & Dependency Isolation Stage ---
+# --- Stage 1: Build the isolated runtime environment ---
 FROM python:3.10-slim AS builder
 
 WORKDIR /build
 
-# Create an isolated virtual environment 
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+ENV PATH="/opt/venv/bin:$PATH" \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DEFAULT_TIMEOUT=600 \
+    PYTHONDONTWRITEBYTECODE=1
 
-# Install necessary compilation utilities
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends \
-    gcc python3-dev \
+# Install Git because CLIP is installed from its GitHub repository below.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
     && rm -rf /var/lib/apt/lists/*
 
-# 1. Install CPU-only PyTorch wheels explicitly
-RUN pip install --no-cache-dir torch torchvision \
-    --extra-index-url https://download.pytorch.org/whl/cpu
+# Keep the Python environment isolated so only the final venv is copied
+# into the small runtime image.
+RUN python -m venv /opt/venv
 
-# 2. Install Ultralytics WITHOUT heavy CUDA dependencies
-RUN pip install --no-cache-dir --no-deps ultralytics==8.4.90
+# Install PyTorch's runtime dependencies from normal PyPI.
+# The PyTorch index has inconsistent package metadata for some dependencies,
+# so it must not be used as the dependency resolver's primary index.
+RUN pip install --index-url https://pypi.org/simple \
+    filelock \
+    fsspec \
+    jinja2 \
+    networkx \
+    sympy \
+    typing-extensions
 
-# 3. Install core microservice requirements & DB drivers
-RUN pip install --no-cache-dir \
-    pika==1.3.2 \
-    psycopg2-binary==2.9.9 \
-    requests==2.31.0 \
-    opencv-python-headless \
-    matplotlib \
-    scipy \
-    tqdm \
-    pandas \
-    psutil \
-    pyyaml
+# Install CPU-only PyTorch wheels without resolving their dependencies
+# through the PyTorch index. Keep pip's progress bar enabled so the Docker
+# build shows the download percentage, transferred size, speed, and ETA.
+RUN pip install --no-deps \
+    --progress-bar on \
+    --timeout 600 \
+    --index-url https://download.pytorch.org/whl/cpu \
+    torch torchvision
 
-# --- Stage 2: Final Lean Runtime Stage ---
+# Install the pinned Ultralytics package without letting it replace the
+# CPU-only PyTorch stack.
+RUN pip install --no-deps ultralytics==8.4.90
+
+# CLIP is used only during the image build to bake the fixed AniRescue
+# vocabulary into YOLO-World. It is not needed for runtime inference.
+RUN pip install --no-deps git+https://github.com/ultralytics/CLIP.git \
+    && pip install --index-url https://pypi.org/simple ftfy regex tqdm
+
+# Install the remaining application + Ultralytics runtime dependencies.
+COPY requirements.txt ./requirements.txt
+RUN grep -v '^ultralytics==' requirements.txt > /tmp/requirements-runtime.txt \
+    && pip install --index-url https://pypi.org/simple -r /tmp/requirements-runtime.txt \
+    && rm -f /tmp/requirements-runtime.txt
+
+# Build the fixed-vocabulary OpenVINO model once at image-build time.
+# This keeps CLIP/text-prompt setup out of the production startup path.
+COPY build_yolo_world_model.py ./build_yolo_world_model.py
+RUN YOLO_WORLD_IMGSZ=512 python build_yolo_world_model.py
+
+# --- Stage 2: Minimal production runtime ---
 FROM python:3.10-slim AS runtime
 
 WORKDIR /app
 
-# Install GLib (for OpenCV) AND libgomp1 (critical for PyTorch CPU math execution)
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends \
-    libglib2.0-0 \
-    libgomp1 \
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    YOLO_CONFIG_DIR=/tmp/Ultralytics \
+    MPLCONFIGDIR=/tmp/matplotlib \
+    OMP_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1 \
+    OPENBLAS_NUM_THREADS=1 \
+    VECLIB_MAXIMUM_THREADS=1 \
+    NUMEXPR_NUM_THREADS=1
+
+# OpenCV and PyTorch CPU runtime libraries.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libglib2.0-0 \
+        libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy isolated virtual environment
+# Copy only the prepared Python environment from the builder.
 COPY --from=builder /opt/venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy application source code
-COPY . .
+# Copy the prebuilt OpenVINO model into the runtime image.
+COPY --from=builder /opt/yolo-world /opt/yolo-world
 
-# Thread constraints to avoid RAM/CPU inflation
-ENV OMP_NUM_THREADS=1
-ENV MKL_NUM_THREADS=1
-ENV OPENBLAS_NUM_THREADS=1
-ENV VECLIB_MAXIMUM_THREADS=1
-ENV NUMEXPR_NUM_THREADS=1
-ENV PYTHONUNBUFFERED=1
+# Create the non-root runtime user before copying application files.
+RUN addgroup --system --gid 65532 appgroup \
+    && adduser --system --uid 65532 --ingroup appgroup appuser \
+    && mkdir -p /tmp/Ultralytics /tmp/matplotlib \
+    && chown -R 65532:65532 /tmp/Ultralytics /tmp/matplotlib
+
+COPY --chown=65532:65532 . .
+
+USER 65532:65532
 
 CMD ["python", "worker.py"]

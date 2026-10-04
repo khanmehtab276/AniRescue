@@ -2,12 +2,22 @@ const express = require("express");
 const router = express.Router();
 
 const { verifyToken, authorizeRoles } = require("../middleware/auth");
+const { reportLimiter } = require("../middleware/rateLimiter");
 const ctrl = require("../controllers/cases.controller");
+
+router.post(
+  "/upload-signature",
+  verifyToken,
+  authorizeRoles("USER", "VOLUNTEER", "NGO", "ADMIN"),
+  reportLimiter,
+  ctrl.getUploadSignature,
+);
 
 router.post(
   "/report",
   verifyToken,
   authorizeRoles("USER", "VOLUNTEER", "NGO", "ADMIN"),
+  reportLimiter,
   ctrl.reportCase,
 );
 
@@ -16,6 +26,13 @@ router.get(
   verifyToken,
   authorizeRoles("NGO", "ADMIN"),
   ctrl.getJunkQueue,
+);
+
+router.put(
+  "/:id/retry-ai",
+  verifyToken,
+  authorizeRoles("ADMIN"),
+  ctrl.retryRejectedCase,
 );
 
 router.put(
@@ -46,13 +63,25 @@ router.get(
   ctrl.getMyCases,
 );
 
-// NGO removed: per the RBAC spec, NGO dispatches/coordinates but does
-// not personally claim a case through the volunteer claim endpoint.
 router.put(
   "/:id/claim",
   verifyToken,
-  authorizeRoles("VOLUNTEER", "ADMIN"),
+  authorizeRoles("VOLUNTEER", "NGO", "ADMIN"),
   ctrl.claimCase,
+);
+
+router.put(
+  "/:id/assign",
+  verifyToken,
+  authorizeRoles("NGO", "ADMIN"),
+  ctrl.assignCase,
+);
+
+router.put(
+  "/:id/release",
+  verifyToken,
+  authorizeRoles("VOLUNTEER"),
+  ctrl.releaseCase,
 );
 
 // Replaces the old catch-all /:id/status (which accepted any enum
@@ -62,14 +91,14 @@ router.put(
 router.put(
   "/:id/cancel",
   verifyToken,
-  authorizeRoles("VOLUNTEER", "ADMIN"),
+  authorizeRoles("ADMIN"),
   ctrl.cancelCase,
 );
 
 router.put(
   "/:id/complete",
   verifyToken,
-  authorizeRoles("VOLUNTEER", "ADMIN"),
+  authorizeRoles("VOLUNTEER", "NGO", "ADMIN"),
   ctrl.submitRescueEvidence,
 );
 
@@ -94,8 +123,13 @@ router.get(
   ctrl.getVerificationQueue,
 );
 
-// Public — no auth, matches original, minimal fields only.
-router.get("/map", ctrl.getMapData);
+// Authenticated map — exact rescue-case coordinates are not public.
+router.get(
+  "/map",
+  verifyToken,
+  authorizeRoles("USER", "VOLUNTEER", "NGO", "ADMIN"),
+  ctrl.getMapData,
+);
 
 router.get(
   "/",

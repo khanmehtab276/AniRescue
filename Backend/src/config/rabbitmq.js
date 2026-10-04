@@ -1,6 +1,7 @@
 const amqp = require("amqplib");
 
 const QUEUE_NAME = "yolo_processing_queue";
+const CASE_NOTIFICATION_QUEUE = "case_notification_queue";
 
 let rabbitChannel = null;
 let rabbitConnection = null;
@@ -26,9 +27,10 @@ const connectRabbitMQ = async () => {
 
       rabbitConnection = await amqp.connect(rabbitUrl);
 
-      rabbitChannel = await rabbitConnection.createChannel();
+      rabbitChannel = await rabbitConnection.createConfirmChannel();
 
       await rabbitChannel.assertQueue(QUEUE_NAME, { durable: true });
+      await rabbitChannel.assertQueue(CASE_NOTIFICATION_QUEUE, { durable: true });
 
       console.log(`✅ Connected to RabbitMQ Queue: ${QUEUE_NAME}`);
 
@@ -72,4 +74,4 @@ const closeRabbitMQ = async () => {
   if (rabbitConnection) await rabbitConnection.close();
 };
 
-module.exports = { connectRabbitMQ, getChannel, closeRabbitMQ, QUEUE_NAME };
+module.exports = { connectRabbitMQ, getChannel, closeRabbitMQ, QUEUE_NAME, CASE_NOTIFICATION_QUEUE };

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { registerSW } from 'virtual:pwa-register';
 
 export default function PWAUpdatePrompt() {
@@ -24,16 +25,16 @@ export default function PWAUpdatePrompt() {
 
   return (
     <div className="fixed bottom-5 left-1/2 z-[9999] w-[calc(100%-2rem)] max-w-md -translate-x-1/2">
-      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.2)] dark:border-gray-700 dark:bg-[#0f172a]">
+      <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.2)] dark:border-stone-700 dark:bg-stone-900">
         <div className="flex items-start gap-3">
-          <div className="text-xl">🔄</div>
+          <div className="mt-0.5 text-emerald-600 dark:text-emerald-400"><RefreshCw size={19} aria-hidden="true" /></div>
 
           <div className="flex-1">
-            <p className="font-bold text-sm text-gray-800 dark:text-gray-100">
+            <p className="font-bold text-sm text-stone-800 dark:text-stone-100">
               New update available
             </p>
 
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
               Refresh AniRescue to get the latest version.
             </p>
 
@@ -41,7 +42,7 @@ export default function PWAUpdatePrompt() {
               <button
                 type="button"
                 onClick={() => updateSW?.(true)}
-                className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+                className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
               >
                 Update
               </button>
@@ -49,7 +50,7 @@ export default function PWAUpdatePrompt() {
               <button
                 type="button"
                 onClick={() => setUpdateAvailable(false)}
-                className="rounded-xl px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                className="rounded-xl px-4 py-2 text-sm font-semibold text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
               >
                 Later
               </button>

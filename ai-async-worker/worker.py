@@ -11,6 +11,9 @@ import psycopg2
 import requests
 from PIL import Image
 from pathlib import Path
+from urllib.parse import urlparse
+
+Image.MAX_IMAGE_PIXELS = 20_000_000
 
 # --------------------------------------------------
 # WORKER PATH CONFIGURATION
@@ -22,6 +25,7 @@ if str(WORKER_DIR) not in sys.path:
     sys.path.insert(0, str(WORKER_DIR))
 
 from src.models.yolo_engine import YoloGatekeeper
+from src.models.gemini_analyzer import analyze_image_with_gemini
 
 
 # --------------------------------------------------
@@ -47,10 +51,52 @@ if not DATABASE_URL:
 # --------------------------------------------------
 
 QUEUE_NAME = "yolo_processing_queue"
+CASE_NOTIFICATION_QUEUE = "case_notification_queue"
 
 MAX_RETRIES = 3
 
+# AI assessment -> initial operational rescue priority.
+# The highest signal from severity/urgency is used so an urgent/critical
+# case is not accidentally placed in a low-priority rescue queue.
+def derive_initial_priority(gemini_analysis):
+    if not isinstance(gemini_analysis, dict):
+        return "STANDARD"
+
+    severity_priority = {
+        "LOW": 0,
+        "MODERATE": 1,
+        "HIGH": 2,
+        "CRITICAL": 3,
+        "UNKNOWN": 1,
+    }
+    urgency_priority = {
+        "ROUTINE": 0,
+        "SOON": 1,
+        "URGENT": 2,
+        "EMERGENCY": 3,
+        "UNKNOWN": 1,
+    }
+    priority_names = ["LOW", "STANDARD", "HIGH", "CRITICAL"]
+
+    severity_score = severity_priority.get(
+        str(gemini_analysis.get("severity", "UNKNOWN")).upper(), 1
+    )
+    urgency_score = urgency_priority.get(
+        str(gemini_analysis.get("urgency", "UNKNOWN")).upper(), 1
+    )
+
+    return priority_names[max(severity_score, urgency_score)]
+
+
 IMAGE_DOWNLOAD_TIMEOUT = 15
+
+CLOUDINARY_DELIVERY_HOST = "res.cloudinary.com"
+CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME")
+
+if not CLOUDINARY_CLOUD_NAME:
+    raise RuntimeError("CLOUDINARY_CLOUD_NAME is missing from environment variables.")
+
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
 # --------------------------------------------------
 # DATABASE CONNECTION
@@ -61,23 +107,82 @@ def get_db_connection(existing_conn):
     """
     Reuse an existing PostgreSQL connection if it is healthy.
     Otherwise create a new connection.
+
+    Neon pooled connections reject PostgreSQL startup parameters such
+    as statement_timeout. Keep connection-level timeouts in psycopg2,
+    then apply statement_timeout after the connection is established.
     """
 
     if existing_conn is not None and not existing_conn.closed:
         try:
             with existing_conn.cursor() as cur:
+                cur.execute("SET statement_timeout = 10000")
                 cur.execute("SELECT 1")
 
             return existing_conn
 
-        except Exception:
+        except Exception as err:
+            print(
+                f"⚠️ Existing PostgreSQL connection is stale/unusable: {err}"
+            )
+
             try:
                 existing_conn.close()
             except Exception:
                 pass
 
-    return psycopg2.connect(DATABASE_URL)
+    connection = psycopg2.connect(
+        DATABASE_URL,
+        connect_timeout=10,
+        keepalives=1,
+        keepalives_idle=30,
+        keepalives_interval=10,
+        keepalives_count=3,
+    )
 
+    with connection.cursor() as cur:
+        cur.execute("SET statement_timeout = 30000")
+
+    return connection
+
+
+# --------------------------------------------------
+# CASE NOTIFICATION
+# --------------------------------------------------
+
+
+def publish_case_notification(
+    channel,
+    report_id,
+    is_valid,
+    species=None
+):
+    payload = {
+        "reportId": report_id,
+        "validationPassed": is_valid,
+        "species": species,
+    }
+
+    channel.queue_declare(
+        queue=CASE_NOTIFICATION_QUEUE,
+        durable=True,
+    )
+
+    channel.basic_publish(
+        exchange="",
+        routing_key=CASE_NOTIFICATION_QUEUE,
+        body=json.dumps(payload).encode(),
+        properties=pika.BasicProperties(
+            delivery_mode=2,
+            content_type="application/json",
+        ),
+        mandatory=True,
+    )
+
+    print(
+        f"📢 Case {report_id} notification event published: "
+        f"{'PASSED' if is_valid else 'REJECTED'}"
+    )
 
 # --------------------------------------------------
 # IMAGE DOWNLOAD
@@ -102,11 +207,32 @@ def resolve_image_input(image_source):
             "Image source must be a string URL."
         )
 
-    if not image_source.startswith(
-        ("http://", "https://")
-    ):
+    try:
+        parsed_url = urlparse(image_source)
+    except ValueError:
         raise ValueError(
-            "Only HTTP/HTTPS image URLs are supported."
+            "Invalid image URL."
+        )
+
+    if parsed_url.scheme != "https":
+        raise ValueError(
+            "Only HTTPS Cloudinary image URLs are supported."
+        )
+
+    if parsed_url.hostname != CLOUDINARY_DELIVERY_HOST:
+        raise ValueError(
+            "Image URL must use the approved Cloudinary delivery host."
+        )
+
+    expected_prefix = f"/{CLOUDINARY_CLOUD_NAME}/"
+    if not parsed_url.path.startswith(expected_prefix):
+        raise ValueError(
+            "Image URL does not belong to the approved Cloudinary cloud."
+        )
+
+    if parsed_url.username or parsed_url.password:
+        raise ValueError(
+            "Image URL credentials are not allowed."
         )
 
     temp_path = None
@@ -119,10 +245,165 @@ def resolve_image_input(image_source):
         response = requests.get(
             image_source,
             headers=headers,
-            timeout=IMAGE_DOWNLOAD_TIMEOUT
+            timeout=IMAGE_DOWNLOAD_TIMEOUT,
+            allow_redirects=False,
         )
 
         response.raise_for_status()
+
+        content_length = response.headers.get("Content-Length")
+        if content_length and int(content_length) > MAX_IMAGE_BYTES:
+            raise ValueError("Downloaded image exceeds the 10 MB processing limit.")
+
+        if len(response.content) > MAX_IMAGE_BYTES:
+            raise ValueError("Downloaded image exceeds the 10 MB processing limit.")
+
+        # Convert downloaded image to RGB JPEG.
+        # This also normalizes formats such as PNG/WebP.
+        img = Image.open(
+            io.BytesIO(response.content)
+        ).convert("RGB")
+
+        temp_file = tempfile.NamedTemporaryFile(
+            suffix=".jpg",
+            delete=False
+        )
+
+        temp_path = temp_file.name
+        temp_file.close()
+
+        img.save(
+            temp_path,
+            format="JPEG"
+        )
+
+        return temp_path
+
+    except Exception as err:
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
+
+        print(
+            f"⚠️ Image processing/download failed: {err}"
+        )
+
+        raise
+
+
+# --------------------------------------------------
+# CASE NOTIFICATION
+# --------------------------------------------------
+
+
+def publish_case_notification(
+    channel,
+    report_id,
+    is_valid,
+    species=None
+):
+    payload = {
+        "reportId": report_id,
+        "validationPassed": is_valid,
+        "species": species,
+    }
+
+    channel.queue_declare(
+        queue=CASE_NOTIFICATION_QUEUE,
+        durable=True,
+    )
+
+    channel.basic_publish(
+        exchange="",
+        routing_key=CASE_NOTIFICATION_QUEUE,
+        body=json.dumps(payload).encode(),
+        properties=pika.BasicProperties(
+            delivery_mode=2,
+            content_type="application/json",
+        ),
+        mandatory=True,
+    )
+
+    print(
+        f"📢 Case {report_id} notification event published: "
+        f"{'PASSED' if is_valid else 'REJECTED'}"
+    )
+
+# --------------------------------------------------
+# IMAGE DOWNLOAD
+# --------------------------------------------------
+
+
+def resolve_image_input(image_source):
+    """
+    Download a Cloudinary image URL and save it
+    temporarily for YOLO processing.
+
+    Only HTTP/HTTPS URLs are supported.
+    """
+
+    if not image_source:
+        raise ValueError(
+            "Image source is missing."
+        )
+
+    if not isinstance(image_source, str):
+        raise ValueError(
+            "Image source must be a string URL."
+        )
+
+    try:
+        parsed_url = urlparse(image_source)
+    except ValueError:
+        raise ValueError(
+            "Invalid image URL."
+        )
+
+    if parsed_url.scheme != "https":
+        raise ValueError(
+            "Only HTTPS Cloudinary image URLs are supported."
+        )
+
+    if parsed_url.hostname != CLOUDINARY_DELIVERY_HOST:
+        raise ValueError(
+            "Image URL must use the approved Cloudinary delivery host."
+        )
+
+    expected_prefix = f"/{CLOUDINARY_CLOUD_NAME}/"
+    if not parsed_url.path.startswith(expected_prefix):
+        raise ValueError(
+            "Image URL does not belong to the approved Cloudinary cloud."
+        )
+
+    if parsed_url.username or parsed_url.password:
+        raise ValueError(
+            "Image URL credentials are not allowed."
+        )
+
+    temp_path = None
+
+    try:
+        headers = {
+            "User-Agent": "AniRescueWorker/1.0"
+        }
+
+        response = requests.get(
+            image_source,
+            headers=headers,
+            timeout=IMAGE_DOWNLOAD_TIMEOUT,
+            allow_redirects=False,
+        )
+
+        response.raise_for_status()
+
+        content_length = response.headers.get("Content-Length")
+        if content_length and int(content_length) > MAX_IMAGE_BYTES:
+            raise ValueError("Downloaded image exceeds the 10 MB processing limit.")
+
+        if len(response.content) > MAX_IMAGE_BYTES:
+            raise ValueError("Downloaded image exceeds the 10 MB processing limit.")
 
         # Convert downloaded image to RGB JPEG.
         # This also normalizes formats such as PNG/WebP.
@@ -232,6 +513,7 @@ def main():
             )
 
             channel = connection.channel()
+            channel.confirm_delivery()
 
             channel.queue_declare(
                 queue=QUEUE_NAME,
@@ -323,14 +605,45 @@ def main():
 
                     # ------------------------------------------
                     # STEP 1:
-                    # PROCESSING_ANALYSIS
+                    # LOAD CASE + MAKE PROCESSING IDEMPOTENT
                     # ------------------------------------------
+
+                    cursor.execute(
+                        """
+                        SELECT status, ai_validated_at, issue_description
+                        FROM rescue_cases
+                        WHERE id = %s
+                        """,
+                        (report_id,)
+                    )
+
+                    case_row = cursor.fetchone()
+
+                    if not case_row:
+                        raise ValueError(f"Case {report_id} no longer exists.")
+
+                    if case_row[1] is not None:
+                        print(
+                            f"ℹ️ Case {report_id} was already AI-validated; "
+                            "acknowledging duplicate delivery."
+                        )
+                        ch.basic_ack(delivery_tag=method.delivery_tag)
+                        return
+
+                    if case_row[0] not in ("PENDING_VALIDATION", "PROCESSING_ANALYSIS"):
+                        print(
+                            f"ℹ️ Case {report_id} is already in state {case_row[0]}; "
+                            "acknowledging stale delivery."
+                        )
+                        ch.basic_ack(delivery_tag=method.delivery_tag)
+                        return
 
                     cursor.execute(
                         """
                         UPDATE rescue_cases
                         SET status = 'PROCESSING_ANALYSIS'
                         WHERE id = %s
+                          AND ai_validated_at IS NULL
                         """,
                         (report_id,)
                     )
@@ -360,16 +673,72 @@ def main():
 
                     if is_valid:
 
+                        # Gemini is deliberately optional. YOLO remains the
+                        # gatekeeper, so a Gemini quota/API failure never
+                        # rejects a valid rescue report.
+                        print(
+                            f"🧠 Running Gemini preliminary assessment for "
+                            f"Case {report_id}..."
+                        )
+
+                        gemini_result = analyze_image_with_gemini(
+                            image_path=image_input,
+                            yolo_species=species,
+                            yolo_confidence=confidence,
+                            issue_description=case_row[2],
+                        )
+
+                        gemini_status = gemini_result["status"]
+                        gemini_analysis = gemini_result["analysis"]
+
+                        initial_priority = derive_initial_priority(gemini_analysis)
+
+                        if gemini_status == "COMPLETED":
+                            print(
+                                f"🎯 Initial rescue priority derived from AI: "
+                                f"{initial_priority}"
+                            )
+                            print(
+                                f"🧠 Gemini assessment completed for "
+                                f"Case {report_id}: "
+                                f"severity={gemini_analysis.get('severity')}, "
+                                f"urgency={gemini_analysis.get('urgency')}"
+                            )
+                        else:
+                            print(
+                                f"ℹ️ Gemini assessment unavailable for "
+                                f"Case {report_id}: {gemini_status}"
+                            )
+
                         cursor.execute(
                             """
                             UPDATE rescue_cases
                             SET
                                 status = 'VALIDATION_PASSED',
-                                species = %s
+                                species = %s,
+                                priority = %s,
+                                ai_confidence = %s,
+                                ai_validated_at = CURRENT_TIMESTAMP,
+                                gemini_status = %s,
+                                gemini_analysis = %s::jsonb,
+                                gemini_analyzed_at =
+                                    CASE
+                                        WHEN %s = 'COMPLETED'
+                                        THEN CURRENT_TIMESTAMP
+                                        ELSE NULL
+                                    END
                             WHERE id = %s
+                              AND ai_validated_at IS NULL
                             """,
                             (
                                 species,
+                                initial_priority,
+                                confidence,
+                                gemini_status,
+                                json.dumps(gemini_analysis)
+                                if gemini_analysis is not None
+                                else None,
+                                gemini_status,
                                 report_id
                             )
                         )
@@ -393,10 +762,15 @@ def main():
                         cursor.execute(
                             """
                             UPDATE rescue_cases
-                            SET status = 'REJECTED_JUNK'
+                            SET
+                                status = 'REJECTED_JUNK',
+                                ai_confidence = %s,
+                                ai_validated_at = CURRENT_TIMESTAMP,
+                                gemini_status = 'NOT_APPLICABLE'
                             WHERE id = %s
+                              AND ai_validated_at IS NULL
                             """,
-                            (report_id,)
+                            (confidence, report_id)
                         )
 
                         print(
@@ -405,6 +779,19 @@ def main():
                         )
 
                     db_conn.commit()
+
+                    try:
+                        publish_case_notification(
+                            channel=ch,
+                            report_id=report_id,
+                            is_valid=is_valid,
+                            species=species if is_valid else None,
+                        )
+                    except Exception as notify_err:
+                        print(
+                            f"⚠️ Notification failed for Case {report_id}: "
+                            f"{notify_err}"
+                        )
 
                     # ------------------------------------------
                     # SUCCESSFUL MESSAGE
@@ -457,6 +844,7 @@ def main():
                                     SET status =
                                         'PENDING_VALIDATION'
                                     WHERE id = %s
+                                      AND ai_validated_at IS NULL
                                     """,
                                     (report_id,)
                                 )
@@ -507,22 +895,49 @@ def main():
                             "x-retry-count"
                         ] = retry_count + 1
 
-                        ch.basic_publish(
-                            exchange="",
-                            routing_key=QUEUE_NAME,
-                            body=body,
-                            properties=pika.BasicProperties(
-                                delivery_mode=2,
-                                headers=new_headers
+                        try:
+                            published = ch.basic_publish(
+                                exchange="",
+                                routing_key=QUEUE_NAME,
+                                body=body,
+                                properties=pika.BasicProperties(
+                                    delivery_mode=2,
+                                    headers=new_headers
+                                )
                             )
-                        )
 
-                        print(
-                            f"🔄 Retrying Case "
-                            f"{report_id} "
-                            f"({retry_count + 1}/"
-                            f"{MAX_RETRIES})"
-                        )
+                            if published is False:
+                                raise RuntimeError(
+                                    "RabbitMQ did not confirm retry publication."
+                                )
+
+                            print(
+                                f"🔄 Retrying Case "
+                                f"{report_id} "
+                                f"({retry_count + 1}/"
+                                f"{MAX_RETRIES})"
+                            )
+
+                            # The replacement message is safely published,
+                            # so the failed original can now be acknowledged.
+                            ch.basic_ack(
+                                delivery_tag=
+                                method.delivery_tag
+                            )
+
+                        except Exception as retry_err:
+                            print(
+                                f"⚠️ Retry publication failed for Case "
+                                f"{report_id}: {retry_err}"
+                            )
+
+                            # Do not lose the original message if RabbitMQ
+                            # could not accept the replacement. RabbitMQ will
+                            # redeliver it after the consumer recovers.
+                            ch.basic_nack(
+                                delivery_tag=method.delivery_tag,
+                                requeue=True
+                            )
 
                     else:
 
@@ -531,14 +946,12 @@ def main():
                             f"exceeded maximum retries."
                         )
 
-                    # ------------------------------------------
-                    # ACK ORIGINAL MESSAGE
-                    # ------------------------------------------
-
-                    ch.basic_ack(
-                        delivery_tag=
-                        method.delivery_tag
-                    )
+                        # The bounded retry limit has been reached. Ack the
+                        # failed message so it does not loop forever.
+                        ch.basic_ack(
+                            delivery_tag=
+                            method.delivery_tag
+                        )
 
                 finally:
 

@@ -1,272 +1,83 @@
-import { Suspense, lazy } from 'react';
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route
-} from 'react-router-dom';
+import { Suspense, lazy } from "react";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import Navbar from "./components/Navbar.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import { AuthProvider } from "./contexts/AuthContext.jsx";
+import { ThemeProvider } from "./contexts/ThemeContext.jsx";
+import { ToastProvider } from "./contexts/ToastContext.jsx";
+import PushBridge from "./components/PushBridge.jsx";
 
-import Navbar from './components/Navbar.jsx';
-import ProtectedRoute from './components/ProtectedRoute.jsx';
-import { AuthProvider } from './contexts/AuthContext.jsx';
-import { ThemeProvider } from './contexts/ThemeContext.jsx';
-import { ToastProvider } from './contexts/ToastContext.jsx';
+const Home = lazy(() => import("./pages/Landing.jsx"));
+const Login = lazy(() => import("./pages/Login.jsx"));
+const ReportCase = lazy(() => import("./pages/ReportCase.jsx"));
+const UserDashboard = lazy(() => import("./pages/UserDashboard.jsx"));
+const UserCases = lazy(() => import("./pages/UserCases.jsx"));
+const MapView = lazy(() => import("./pages/MapView.jsx"));
+const VolunteerWorkspace = lazy(() => import("./pages/VolunteerWorkspace.jsx"));
+const NGOWorkspace = lazy(() => import("./pages/NGOWorkspace.jsx"));
+const AdminWorkspace = lazy(() => import("./pages/AdminWorkspace.jsx"));
+const Profile = lazy(() => import("./pages/Profile.jsx"));
+const CaseDetail = lazy(() => import("./pages/CaseDetail.jsx"));
+const VerificationQueue = lazy(() => import("./pages/VerificationQueue.jsx"));
+const Notifications = lazy(() => import("./pages/Notifications.jsx"));
+const Feedback = lazy(() => import("./pages/Feedback.jsx"));
 
+function RouteTransition({ children }) {
+  const location = useLocation();
+  return <div id="main-content" tabIndex={-1} key={location.pathname} className="relative min-h-[calc(100vh-4rem)] animate-rescue-fade-up outline-none anirescue-animal-wash">{children}</div>;
+}
 
-/* =========================================================
-   LAZY-LOADED PAGES
-   ========================================================= */
-
-const Home = lazy(
-  () => import('./pages/Landing.jsx')
-);
-
-const Login = lazy(
-  () => import('./pages/Login.jsx')
-);
-
-const ReportCase = lazy(
-  () => import('./pages/ReportCase.jsx')
-);
-
-const UserDashboard = lazy(
-  () => import('./pages/UserDashboard.jsx')
-);
-
-const MapView = lazy(
-  () => import('./pages/MapView.jsx')
-);
-
-const VolunteerDashboard = lazy(
-  () => import('./pages/VolunteerDashboard.jsx')
-);
-
-const AdminDashboard = lazy(
-  () => import('./pages/AdminDashboard.jsx')
-);
-
-const NGODashboard = lazy(
-  () => import('./pages/NGODashboard.jsx')
-);
-
-const Profile = lazy(
-  () => import('./pages/Profile.jsx')
-);
-
-/* =========================================================
-   APP
-   ========================================================= */
+const ALL = ["user", "volunteer", "ngo", "admin"];
 
 export default function App() {
-  return (
-    <ThemeProvider>
-      <ToastProvider>
-        <AuthProvider>
+  return <ThemeProvider><ToastProvider><AuthProvider><Router>
+    <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-emerald-600 focus:text-white focus:font-bold">Skip to content</a>
+    <Navbar /><PushBridge />
+    <Suspense fallback={<div role="status" className="min-h-[60vh] flex items-center justify-center"><div className="w-10 h-10 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin" aria-hidden="true"/><span className="sr-only">Loading</span></div>}>
+      <RouteTransition><Routes>
+        <Route path="/" element={<Home/>}/>
+        <Route path="/login" element={<Login/>}/>
 
-          <Router>
+        <Route element={<ProtectedRoute allowedRoles={ALL}/>}>
+          <Route path="/report" element={<ReportCase/>}/>
+          <Route path="/profile" element={<Profile/>}/>
+          <Route path="/notifications" element={<Notifications/>}/>
+          <Route path="/feedback" element={<Feedback/>}/>
+          <Route path="/my-reports" element={<UserCases/>}/>
+          <Route path="/map" element={<MapView/>}/>
+          <Route path="/cases/:id" element={<CaseDetail/>}/>
+        </Route>
 
-            <Navbar />
+        <Route element={<ProtectedRoute allowedRoles={["user"]}/>}>
+          <Route path="/dashboard" element={<UserDashboard/>}/>
+          <Route path="/dashboard/cases" element={<UserCases/>}/>
+        </Route>
 
-            <Suspense
-              fallback={
-                <div className="min-h-[75vh] flex items-center justify-center bg-[#e2e8f0] dark:bg-[#0f172a]">
+        <Route element={<ProtectedRoute allowedRoles={["volunteer"]}/>}>
+          <Route path="/volunteer" element={<VolunteerWorkspace/>}/>
+          <Route path="/volunteer/cases" element={<VolunteerWorkspace/>}/>
+          <Route path="/volunteer/active" element={<VolunteerWorkspace/>}/>
+          <Route path="/volunteer/history" element={<VolunteerWorkspace/>}/>
+        </Route>
 
-                  <div
-                    className="w-12 h-12 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin"
-                    aria-label="Loading"
-                  />
+        <Route element={<ProtectedRoute allowedRoles={["ngo"]}/>}>
+          <Route path="/ngo" element={<NGOWorkspace/>}/>
+          <Route path="/ngo/cases" element={<NGOWorkspace/>}/>
+          <Route path="/ngo/volunteers" element={<NGOWorkspace/>}/>
+        </Route>
 
-                </div>
-              }
-            >
+        <Route element={<ProtectedRoute allowedRoles={["ngo","admin"]}/>}>
+          <Route path="/verification" element={<VerificationQueue/>}/>
+        </Route>
 
-              <Routes>
+        <Route element={<ProtectedRoute allowedRoles={["admin"]}/>}>
+          <Route path="/admin" element={<AdminWorkspace/>}/>
+          <Route path="/admin/cases" element={<AdminWorkspace/>}/>
+          <Route path="/admin/ai-validation" element={<AdminWorkspace/>}/>
+        </Route>
 
-                {/* =================================================
-                    PUBLIC ROUTES
-                    ================================================= */}
-
-                <Route
-                  path="/"
-                  element={<Home />}
-                />
-
-                <Route
-                  path="/login"
-                  element={<Login />}
-                />
-
-                <Route
-                  path="/map"
-                  element={<MapView />}
-                />
-
-
-                {/* =================================================
-                    AUTHENTICATED RESCUE REPORTING
-                    
-                    All authenticated roles can submit a rescue case.
-                    Backend authorization remains the final security
-                    layer.
-                    ================================================= */}
-
-                <Route
-                  element={
-                    <ProtectedRoute
-                      allowedRoles={[
-                        'user',
-                        'volunteer',
-                        'admin',
-                        'ngo'
-                      ]}
-                    />
-                  }
-                >
-
-                  <Route
-                    path="/report"
-                    element={<ReportCase />}
-                  />
-
-                </Route>
-
-                {/* =================================================
-                    USER PERSONAL DASHBOARD
-
-                    Reporting users get their own feed of
-                    reported cases and status tracking.
-                    ================================================= */}
-
-                <Route
-                  element={
-                    <ProtectedRoute
-                      allowedRoles={['user']}
-                    />
-                  }
-                >
-
-                  <Route
-                    path="/dashboard"
-                    element={<UserDashboard />}
-                  />
-
-                </Route>
-
-                {/* =================================================
-                    PROFILE
-
-                    Every authenticated account can access its
-                    own profile. Role-specific content is handled
-                    inside Profile.jsx.
-                    ================================================= */}
-
-                <Route
-                  element={
-                    <ProtectedRoute
-                      allowedRoles={[
-                        'user',
-                        'volunteer',
-                        'ngo',
-                        'admin'
-                      ]}
-                    />
-                  }
-                >
-
-                  <Route
-                    path="/profile"
-                    element={<Profile />}
-                  />
-
-                </Route>
-
-                {/* =================================================
-                    VOLUNTEER AREA
-                    
-                    Admin is also allowed because admin has broader
-                    operational access.
-                    ================================================= */}
-
-                <Route
-                  element={
-                    <ProtectedRoute
-                      allowedRoles={[
-                        'volunteer',
-                        'admin'
-                      ]}
-                    />
-                  }
-                >
-
-                  <Route
-                    path="/volunteer"
-                    element={<VolunteerDashboard />}
-                  />
-
-                </Route>
-
-
-                {/* =================================================
-                    ADMIN AREA
-                    
-                    STRICTLY ADMIN ONLY
-                    ================================================= */}
-
-                <Route
-                  element={
-                    <ProtectedRoute
-                      allowedRoles={['admin']}
-                    />
-                  }
-                >
-
-                  <Route
-                    path="/admin"
-                    element={<AdminDashboard />}
-                  />
-
-                </Route>
-
-
-                {/* =================================================
-                    NGO AREA
-                    
-                    NGO functionality will be verified against the
-                    current backend implementation separately.
-                    ================================================= */}
-
-                <Route
-                  element={
-                    <ProtectedRoute
-                      allowedRoles={['ngo']}
-                    />
-                  }
-                >
-
-                  <Route
-                    path="/ngo"
-                    element={<NGODashboard />}
-                  />
-
-                </Route>
-
-
-                {/* =================================================
-                    FALLBACK
-                    ================================================= */}
-
-                <Route
-                  path="*"
-                  element={<Home />}
-                />
-
-              </Routes>
-
-            </Suspense>
-
-          </Router>
-
-        </AuthProvider>
-      </ToastProvider>
-    </ThemeProvider>
-  );
+        <Route path="*" element={<Home/>}/>
+      </Routes></RouteTransition>
+    </Suspense>
+  </Router></AuthProvider></ToastProvider></ThemeProvider>;
 }

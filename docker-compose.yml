@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ---------------------------------------------------------------------------
   # Message Broker
@@ -9,8 +7,8 @@ services:
     container_name: anirescue_rabbitmq
     restart: unless-stopped
     ports:
-      - "5672:5672"   # AMQP Protocol
-      - "15672:15672" # Management UI
+      - "127.0.0.1:5672:5672"   # Local AMQP access only
+      - "127.0.0.1:15672:15672" # Local management UI only
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
@@ -44,9 +42,22 @@ services:
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - FIREBASE_SERVICE_ACCOUNT_JSON=${FIREBASE_SERVICE_ACCOUNT_JSON:-}
+      - LOCATION_FRESHNESS_MINUTES=${LOCATION_FRESHNESS_MINUTES}
+      - NOTIFICATION_RADIUS_KM=${NOTIFICATION_RADIUS_KM}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+    # Run every migration that is missing from schema_migrations, then start the API.
+    # Already-applied migrations are safely skipped by Backend/scripts/migrate.js.
+    command: ["sh", "-c", "npm run db:migrate && npm start"]
     depends_on:
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
     networks:
       - anirescue_net
 
@@ -62,9 +73,19 @@ services:
     environment:
       - RABBITMQ_URL=${RABBITMQ_URL}
       - DATABASE_URL=${DATABASE_URL}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.8-flash}
+      - GEMINI_THINKING_LEVEL=${GEMINI_THINKING_LEVEL:-low}
+      - GEMINI_TIMEOUT_MS=${GEMINI_TIMEOUT_MS:-120000}
       - OMP_NUM_THREADS=1
       - MKL_NUM_THREADS=1
       - OPENBLAS_NUM_THREADS=1
+      - YOLO_WORLD_OPENVINO_MODEL=/opt/yolo-world/openvino
+      - YOLO_WORLD_IMGSZ=512
+      - YOLO_WORLD_CONF=0.20
+      - YOLO_WORLD_MAX_DET=1
+      - YOLO_WORLD_OPENVINO_THREADS=1
     deploy:
       resources:
         limits:
@@ -74,6 +95,8 @@ services:
           memory: 512M
     depends_on:
       rabbitmq:
+        condition: service_healthy
+      backend:
         condition: service_healthy
     networks:
       - anirescue_net

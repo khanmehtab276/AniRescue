@@ -1,7 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import {
+  ClipboardList,
+  Bot,
+  Siren,
+  Ambulance,
+  CheckCircle2,
+  Ban,
+  PawPrint,
+  Shield,
+  Map as MapIcon,
+  Loader2,
+  RotateCcw,
+} from 'lucide-react';
 import API from '../utils/api';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext.jsx';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -73,8 +86,15 @@ export default function AdminDashboard() {
   const statistics = useMemo(() => {
     const total = cases.length;
 
-    const pending = cases.filter(
-      (item) => item.status === 'PENDING_VALIDATION'
+    // "In AI Queue" is informational (PENDING_VALIDATION / still
+    // being checked, nothing for an admin to do yet). The "AI Review"
+    // stat is deliberately sourced from junkCases, not this — it needs
+    // to match the count the admin actually sees after clicking
+    // through to the Review tab, which lists REJECTED_JUNK cases only.
+    const inAiQueue = cases.filter(
+      (item) =>
+        item.status === 'PENDING_VALIDATION' ||
+        item.status === 'PROCESSING_ANALYSIS'
     ).length;
 
     const available = cases.filter(
@@ -97,7 +117,7 @@ export default function AdminDashboard() {
 
     return {
       total,
-      pending,
+      inAiQueue,
       available,
       active,
       resolved,
@@ -110,32 +130,9 @@ export default function AdminDashboard() {
     [cases]
   );
 
-  const handleStatusChange = async (caseId, status) => {
-    setProcessingId(caseId);
-    setError('');
-
-    try {
-      await API.put(
-        `/cases/${caseId}/status`,
-        { status }
-      );
-
-      await loadDashboard();
-    } catch (err) {
-      console.error(
-        'Case status update error:',
-        err
-      );
-
-      setError(
-        err.response?.data?.error ||
-        'Unable to update case status.'
-      );
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
+  // /verify-junk is the human override for a case the AI already
+  // rejected (REJECTED_JUNK) — the backend refuses it for any other
+  // status. It is only wired to the AI Review tab below.
   const handleVerifyJunk = async (caseId, approved) => {
     setProcessingId(caseId);
     setError('');
@@ -162,36 +159,60 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleRetryAI = async (caseId) => {
+    setProcessingId(caseId);
+    setError('');
+
+    try {
+      await API.put(`/cases/${caseId}/retry-ai`);
+      await loadDashboard();
+    } catch (err) {
+      console.error('AI retry error:', err);
+
+      setError(
+        err.response?.data?.error ||
+        'Unable to retry AI validation for this case.'
+      );
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const stats = [
     {
       label: 'Total Cases',
       value: statistics.total,
-      icon: '📋'
+      Icon: ClipboardList
     },
     {
       label: 'AI Review',
-      value: statistics.pending,
-      icon: '🤖'
+      value: junkCases.length,
+      Icon: Bot
+    },
+    {
+      label: 'In AI Queue',
+      value: statistics.inAiQueue,
+      Icon: Loader2
     },
     {
       label: 'Available',
       value: statistics.available,
-      icon: '🆘'
+      Icon: Siren
     },
     {
       label: 'Active',
       value: statistics.active,
-      icon: '🚑'
+      Icon: Ambulance
     },
     {
       label: 'Resolved',
       value: statistics.resolved,
-      icon: '✅'
+      Icon: CheckCircle2
     },
     {
       label: 'Rejected',
       value: statistics.rejected,
-      icon: '🚫'
+      Icon: Ban
     }
   ];
 
@@ -204,21 +225,30 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between gap-3">
 
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+              <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                 Administration
               </p>
 
-              <h1 className="text-2xl font-extrabold text-gray-800 dark:text-gray-100">
+              <h1 className="text-2xl font-extrabold text-stone-800 dark:text-stone-100">
                 Rescue Control Center
               </h1>
 
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
                 Welcome, {user?.name || 'Administrator'}
               </p>
             </div>
 
-            <div className="w-14 h-14 shrink-0 rounded-2xl flex items-center justify-center text-2xl bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441]">
-              🛡️
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate('/verification')}
+                className="h-11 px-3 shrink-0 rounded-2xl flex items-center justify-center gap-1.5 text-xs font-bold bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-800 shadow-sm"
+              >
+                <ClipboardList size={14} strokeWidth={2.5} /> Verify
+              </button>
+
+              <div className="w-14 h-14 shrink-0 rounded-2xl flex items-center justify-center bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm text-emerald-600 dark:text-emerald-400">
+                <Shield size={24} strokeWidth={2} />
+              </div>
             </div>
 
           </div>
@@ -242,11 +272,10 @@ export default function AdminDashboard() {
             <button
               key={value}
               onClick={() => setActiveTab(value)}
-              className={`shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                activeTab === value
-                  ? 'bg-purple-600 text-white shadow-lg'
-                  : 'bg-[#e2e8f0] dark:bg-[#0f172a] text-gray-600 dark:text-gray-300 shadow-[4px_4px_8px_#cbd5e1,_-4px_-4px_8px_#f8fafc] dark:shadow-[4px_4px_8px_#070a13,_-4px_-4px_8px_#172441]'
-              }`}
+              className={`shrink-0 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === value
+                  ? 'bg-stone-900 dark:bg-stone-100 dark:text-stone-900 text-white shadow-lg'
+                  : 'bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-800 shadow-sm'
+                }`}
             >
               {label}
             </button>
@@ -256,11 +285,9 @@ export default function AdminDashboard() {
 
         {isLoading ? (
           <div className="py-20 text-center">
-            <div className="text-4xl mb-3 animate-pulse">
-              🐾
-            </div>
+            <PawPrint size={36} className="mx-auto mb-3 text-emerald-600 dark:text-emerald-400 animate-pulse" strokeWidth={2} />
 
-            <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+            <p className="text-sm font-semibold text-stone-500 dark:text-stone-400">
               Loading rescue operations...
             </p>
           </div>
@@ -270,23 +297,21 @@ export default function AdminDashboard() {
             {activeTab === 'overview' && (
               <div className="space-y-6">
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {stats.map((stat) => (
                     <div
                       key={stat.label}
-                      className="p-4 rounded-2xl bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441]"
+                      className="p-4 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm"
                     >
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-xl">
-                          {stat.icon}
-                        </span>
+                        <stat.Icon size={18} className="text-emerald-600 dark:text-emerald-400" strokeWidth={2.2} />
 
-                        <span className="text-2xl font-extrabold text-gray-800 dark:text-gray-100">
+                        <span className="text-2xl font-extrabold text-stone-800 dark:text-stone-100">
                           {stat.value}
                         </span>
                       </div>
 
-                      <p className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                      <p className="text-xs font-bold text-stone-500 dark:text-stone-400">
                         {stat.label}
                       </p>
                     </div>
@@ -295,7 +320,7 @@ export default function AdminDashboard() {
 
                 {/* Quick Actions */}
                 <section>
-                  <h2 className="mb-3 text-lg font-extrabold text-gray-800 dark:text-gray-100">
+                  <h2 className="mb-3 text-lg font-extrabold text-stone-800 dark:text-stone-100">
                     Quick Actions
                   </h2>
 
@@ -303,53 +328,47 @@ export default function AdminDashboard() {
 
                     <button
                       onClick={() => setActiveTab('cases')}
-                      className="p-4 rounded-2xl text-left bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441] hover:-translate-y-0.5 transition-all"
+                      className="p-4 rounded-2xl text-left bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors"
                     >
-                      <div className="text-2xl mb-2">
-                        📋
-                      </div>
+                      <ClipboardList size={22} className="mb-2 text-emerald-600 dark:text-emerald-400" strokeWidth={2} />
 
-                      <p className="font-bold text-gray-800 dark:text-gray-100">
+                      <p className="font-bold text-stone-800 dark:text-stone-100">
                         Manage Cases
                       </p>
 
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
                         View and update rescue cases
                       </p>
                     </button>
 
                     <button
                       onClick={() => setActiveTab('review')}
-                      className="p-4 rounded-2xl text-left bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441] hover:-translate-y-0.5 transition-all"
+                      className="p-4 rounded-2xl text-left bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm hover:-translate-y-0.5 transition-all"
                     >
-                      <div className="text-2xl mb-2">
-                        🤖
-                      </div>
+                      <Bot size={22} className="mb-2 text-emerald-600 dark:text-emerald-400" strokeWidth={2} />
 
-                      <p className="font-bold text-gray-800 dark:text-gray-100">
+                      <p className="font-bold text-stone-800 dark:text-stone-100">
                         AI Review Queue
                       </p>
 
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
                         Review cases flagged as junk
                       </p>
                     </button>
 
                     <button
                       onClick={() => navigate('/map')}
-                      className="col-span-2 p-4 rounded-2xl text-left bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441] hover:-translate-y-0.5 transition-all"
+                      className="col-span-2 p-4 rounded-2xl text-left bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm hover:-translate-y-0.5 transition-all"
                     >
                       <div className="flex items-center gap-3">
-                        <span className="text-2xl">
-                          🗺️
-                        </span>
+                        <MapIcon size={22} className="text-emerald-600 dark:text-emerald-400" strokeWidth={2} />
 
                         <div>
-                          <p className="font-bold text-gray-800 dark:text-gray-100">
+                          <p className="font-bold text-stone-800 dark:text-stone-100">
                             Live Rescue Map
                           </p>
 
-                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
                             View active rescue locations
                           </p>
                         </div>
@@ -362,13 +381,13 @@ export default function AdminDashboard() {
                 {/* Recent Cases */}
                 <section>
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-lg font-extrabold text-gray-800 dark:text-gray-100">
+                    <h2 className="text-lg font-extrabold text-stone-800 dark:text-stone-100">
                       Recent Cases
                     </h2>
 
                     <button
                       onClick={() => setActiveTab('cases')}
-                      className="text-xs font-bold text-purple-600 dark:text-purple-400"
+                      className="text-xs font-bold text-blue-600 dark:text-blue-400"
                     >
                       View all
                     </button>
@@ -386,8 +405,6 @@ export default function AdminDashboard() {
                         <AdminCaseCard
                           key={item.id}
                           caseData={item}
-                          processingId={processingId}
-                          onStatusChange={handleStatusChange}
                         />
                       ))}
                     </div>
@@ -401,11 +418,11 @@ export default function AdminDashboard() {
             {activeTab === 'cases' && (
               <section>
                 <div className="mb-4">
-                  <h2 className="text-xl font-extrabold text-gray-800 dark:text-gray-100">
+                  <h2 className="text-xl font-extrabold text-stone-800 dark:text-stone-100">
                     Rescue Cases
                   </h2>
 
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
                     Monitor and manage reported rescue operations.
                   </p>
                 </div>
@@ -417,13 +434,11 @@ export default function AdminDashboard() {
                     message="There are currently no rescue cases."
                   />
                 ) : (
-                  <div className="space-y-4">
+                  <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900">
                     {cases.map((item) => (
                       <AdminCaseCard
                         key={item.id}
                         caseData={item}
-                        processingId={processingId}
-                        onStatusChange={handleStatusChange}
                       />
                     ))}
                   </div>
@@ -435,11 +450,11 @@ export default function AdminDashboard() {
             {activeTab === 'review' && (
               <section>
                 <div className="mb-4">
-                  <h2 className="text-xl font-extrabold text-gray-800 dark:text-gray-100">
+                  <h2 className="text-xl font-extrabold text-stone-800 dark:text-stone-100">
                     AI Review Queue
                   </h2>
 
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
                     Cases currently marked as rejected by validation.
                   </p>
                 </div>
@@ -451,7 +466,7 @@ export default function AdminDashboard() {
                     message="There are no rejected cases waiting for review."
                   />
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-4 rescue-stagger">
                     {junkCases.map((item) => (
                       <JunkReviewCard
                         key={item.id}
@@ -462,6 +477,9 @@ export default function AdminDashboard() {
                         }
                         onReleaseCase={() =>
                           handleVerifyJunk(item.id, true)
+                        }
+                        onRetryAI={() =>
+                          handleRetryAI(item.id)
                         }
                       />
                     ))}
@@ -483,9 +501,7 @@ export default function AdminDashboard() {
 ========================================================= */
 
 function AdminCaseCard({
-  caseData,
-  processingId,
-  onStatusChange
+  caseData
 }) {
   const {
     id,
@@ -501,21 +517,19 @@ function AdminCaseCard({
     image_payload
   } = caseData;
 
-  const isProcessing = processingId === id;
-
   const formattedDate = created_at
     ? new Date(created_at).toLocaleString()
     : 'Unknown time';
 
   return (
-    <div className="rounded-2xl p-4 bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441]">
+    <div className="rounded-2xl p-4 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm">
 
       {image_payload && (
         <div className="mb-4 overflow-hidden rounded-xl">
           <img
             src={image_payload}
             alt="Reported animal"
-            className="w-full max-h-64 object-cover"
+            className="w-full h-auto object-contain"
             loading="lazy"
           />
         </div>
@@ -524,11 +538,11 @@ function AdminCaseCard({
       <div className="flex items-start justify-between gap-3">
 
         <div className="min-w-0">
-          <h3 className="font-extrabold text-gray-800 dark:text-gray-100 truncate">
+          <h3 className="font-extrabold text-stone-800 dark:text-stone-100 truncate">
             {species || 'Animal Rescue Case'}
           </h3>
 
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
             Case #{id}
           </p>
         </div>
@@ -537,12 +551,12 @@ function AdminCaseCard({
       </div>
 
       {issue_description && (
-        <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+        <p className="mt-3 text-sm text-stone-600 dark:text-stone-300">
           {issue_description}
         </p>
       )}
 
-      <div className="mt-4 space-y-2 text-xs text-gray-500 dark:text-gray-400">
+      <div className="mt-4 space-y-2 text-xs text-stone-500 dark:text-stone-400">
 
         {priority && (
           <div>
@@ -595,22 +609,29 @@ function AdminCaseCard({
 
       <div className="mt-4">
 
-        {status === 'PENDING_VALIDATION' && (
-          <button
-            disabled={isProcessing}
-            onClick={() =>
-              onStatusChange(
-                id,
-                'VALIDATION_PASSED'
-              )
-            }
-            className="w-full rounded-xl px-4 py-3 text-sm font-bold bg-emerald-600 text-white disabled:opacity-50 transition-all"
-          >
-            {isProcessing
-              ? 'Processing...'
-              : 'Approve Case'}
-          </button>
-        )}
+        {/*
+         * AI validation runs in the background and moves a case to
+         * VALIDATION_PASSED or REJECTED_JUNK on its own. There is no
+         * manual approve for a case that hasn't finished analysis, so
+         * this is deliberately not an action.
+         */}
+        {(status === 'PENDING_VALIDATION' ||
+          status === 'PROCESSING_ANALYSIS') && (
+            <div
+              role="status"
+              className="flex items-center justify-center gap-2 rounded-xl bg-blue-100 dark:bg-blue-900/20 px-4 py-3 text-center text-sm font-bold text-blue-700 dark:text-blue-400"
+            >
+              <Loader2
+                size={16}
+                strokeWidth={2.5}
+                className="animate-spin"
+                aria-hidden="true"
+              />
+              {status === 'PROCESSING_ANALYSIS'
+                ? 'AI analysis in progress'
+                : 'Waiting for AI validation'}
+            </div>
+          )}
 
         {status === 'VALIDATION_PASSED' && (
           <div className="rounded-xl bg-amber-100 dark:bg-amber-900/20 px-4 py-3 text-center text-sm font-bold text-amber-700 dark:text-amber-400">
@@ -618,21 +639,29 @@ function AdminCaseCard({
           </div>
         )}
 
+        {/*
+         * Resolving a case now requires the volunteer's photo evidence
+         * plus a separate verification step (RESCUE_COMPLETED ->
+         * RESOLVED) — there is no longer a one-click "mark resolved"
+         * from IN_PROGRESS. Both the evidence form and the cancel
+         * action live on the case detail page.
+         */}
         {status === 'IN_PROGRESS' && (
-          <button
-            disabled={isProcessing}
-            onClick={() =>
-              onStatusChange(
-                id,
-                'RESOLVED'
-              )
-            }
-            className="w-full rounded-xl px-4 py-3 text-sm font-bold bg-emerald-600 text-white disabled:opacity-50 transition-all"
+          <Link
+            to={`/cases/${id}`}
+            className="block w-full rounded-xl px-4 py-3 text-center text-sm font-bold bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-200 border border-stone-200 dark:border-stone-700"
           >
-            {isProcessing
-              ? 'Updating...'
-              : 'Mark Resolved'}
-          </button>
+            Rescue in progress — View Case
+          </Link>
+        )}
+
+        {status === 'RESCUE_COMPLETED' && (
+          <Link
+            to="/verification"
+            className="block w-full rounded-xl px-4 py-3 text-center text-sm font-bold bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400"
+          >
+            Awaiting Verification — Review
+          </Link>
         )}
 
         {status === 'RESOLVED' && (
@@ -648,10 +677,17 @@ function AdminCaseCard({
         )}
 
         {status === 'CANCELLED' && (
-          <div className="rounded-xl bg-gray-200 dark:bg-gray-800 px-4 py-3 text-center text-sm font-bold text-gray-600 dark:text-gray-400">
+          <div className="rounded-xl bg-stone-200 dark:bg-stone-800 px-4 py-3 text-center text-sm font-bold text-stone-600 dark:text-stone-400">
             Cancelled
           </div>
         )}
+
+        <Link
+          to={`/cases/${id}`}
+          className="mt-2 block text-center text-xs font-bold text-stone-400 dark:text-stone-500 hover:text-emerald-600 dark:hover:text-emerald-400"
+        >
+          View full case detail →
+        </Link>
 
       </div>
     </div>
@@ -667,7 +703,8 @@ function JunkReviewCard({
   caseData,
   processingId,
   onConfirmJunk,
-  onReleaseCase
+  onReleaseCase,
+  onRetryAI
 }) {
   const {
     id,
@@ -682,14 +719,14 @@ function JunkReviewCard({
   const isProcessing = processingId === id;
 
   return (
-    <div className="rounded-2xl p-4 bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441]">
+    <div className="rounded-2xl p-4 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm">
 
       {image_payload && (
         <div className="mb-4 overflow-hidden rounded-xl">
           <img
             src={image_payload}
             alt="Reported animal"
-            className="w-full max-h-64 object-cover"
+            className="w-full h-auto object-contain"
             loading="lazy"
           />
         </div>
@@ -698,11 +735,11 @@ function JunkReviewCard({
       <div className="flex items-start justify-between gap-3">
 
         <div>
-          <h3 className="font-extrabold text-gray-800 dark:text-gray-100">
+          <h3 className="font-extrabold text-stone-800 dark:text-stone-100">
             {species || 'Animal Case'}
           </h3>
 
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
             Case #{id}
           </p>
         </div>
@@ -711,12 +748,12 @@ function JunkReviewCard({
       </div>
 
       {issue_description && (
-        <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+        <p className="mt-3 text-sm text-stone-600 dark:text-stone-300">
           {issue_description}
         </p>
       )}
 
-      <div className="mt-3 space-y-1 text-xs text-gray-500 dark:text-gray-400">
+      <div className="mt-3 space-y-1 text-xs text-stone-500 dark:text-stone-400">
 
         {priority && (
           <p>
@@ -747,7 +784,7 @@ function JunkReviewCard({
 
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mt-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
 
         <button
           disabled={isProcessing}
@@ -767,6 +804,21 @@ function JunkReviewCard({
           {isProcessing
             ? 'Processing...'
             : 'Release Case'}
+        </button>
+
+        <button
+          disabled={isProcessing}
+          onClick={onRetryAI}
+          className="rounded-xl px-3 py-3 text-sm font-bold bg-blue-600 text-white disabled:opacity-50 transition-all"
+        >
+          {isProcessing ? (
+            'Processing...'
+          ) : (
+            <span className="inline-flex items-center justify-center gap-2">
+              <RotateCcw size={16} strokeWidth={2.5} />
+              Retry AI
+            </span>
+          )}
         </button>
 
       </div>
@@ -814,7 +866,7 @@ function StatusBadge({ status }) {
     CANCELLED: {
       label: 'Cancelled',
       className:
-        'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+        'bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400'
     }
   };
 
@@ -822,7 +874,7 @@ function StatusBadge({ status }) {
     config[status] || {
       label: status || 'Unknown',
       className:
-        'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+        'bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400'
     };
 
   return (
@@ -845,17 +897,17 @@ function EmptyState({
   message
 }) {
   return (
-    <div className="rounded-2xl p-8 text-center bg-[#e2e8f0] dark:bg-[#0f172a] shadow-[6px_6px_12px_#cbd5e1,_-6px_-6px_12px_#f8fafc] dark:shadow-[6px_6px_12px_#070a13,_-6px_-6px_12px_#172441]">
+    <div className="rounded-2xl p-8 text-center bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm">
 
       <div className="text-4xl mb-3">
         {icon}
       </div>
 
-      <h3 className="font-extrabold text-gray-800 dark:text-gray-100">
+      <h3 className="font-extrabold text-stone-800 dark:text-stone-100">
         {title}
       </h3>
 
-      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+      <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
         {message}
       </p>
 

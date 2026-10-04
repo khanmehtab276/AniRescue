@@ -38,3 +38,14 @@ Thumbs.db
 *.log
 logs/
 .firebase/
+
+# Firebase service account keys
+*-firebase-adminsdk-*.json
+
+# Local test credentials
+token.txt
+users_creation.sql
+
+# Benchmark models
+ai-async-worker/benchmark/models/
+
