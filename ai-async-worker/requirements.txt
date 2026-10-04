@@ -20,3 +20,6 @@ psutil>=5.8.0
 polars>=0.20.0
 nvidia-ml-py>=12.0.0
 ultralytics-thop>=2.0.18
+
+# OpenVINO CPU inference backend for the production YOLO-World gatekeeper.
+openvino>=2024.0.0
