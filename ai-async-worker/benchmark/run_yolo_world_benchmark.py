@@ -18,7 +18,7 @@ from src.models.yolo_engine import YoloGatekeeper
 ROOT = BENCHMARK_DIR
 DATASET_DIR = ROOT / "dataset"
 MANIFEST = DATASET_DIR / "manifest.csv"
-DEFAULT_OUTPUT = ROOT / "results" / "yolo-world-openvino-current.json"
+DEFAULT_OUTPUT = ROOT / "results" / "yolo-world-openvino-1.5cpu.json"
 
 
 def read_cgroup_memory_bytes():
