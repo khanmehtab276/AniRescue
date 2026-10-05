@@ -55,12 +55,15 @@ test("RBAC: only assigned handlers/admin can submit rescue evidence", () => {
   );
 });
 
-test("case lifecycle: cancellation is restricted by role and status", () => {
-  assert.equal(canCancel("VOLUNTEER", "VALIDATION_PASSED"), true);
-  assert.equal(canCancel("VOLUNTEER", "IN_PROGRESS"), true);
-  assert.equal(canCancel("NGO", "IN_PROGRESS"), true);
-  assert.equal(canCancel("USER", "IN_PROGRESS"), false);
+test("case lifecycle: permanent cancellation is ADMIN-only", () => {
+  assert.equal(canCancel("ADMIN", "VALIDATION_PASSED"), true);
+  assert.equal(canCancel("ADMIN", "IN_PROGRESS"), true);
+  assert.equal(canCancel("ADMIN", "PROCESSING_ANALYSIS"), true);
   assert.equal(canCancel("ADMIN", "RESOLVED"), false);
+  assert.equal(canCancel("ADMIN", "CANCELLED"), false);
+  assert.equal(canCancel("VOLUNTEER", "IN_PROGRESS"), false);
+  assert.equal(canCancel("NGO", "IN_PROGRESS"), false);
+  assert.equal(canCancel("USER", "IN_PROGRESS"), false);
 });
 
 test("completion verification: NGO requires jurisdiction while ADMIN does not", () => {
