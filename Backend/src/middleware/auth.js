@@ -38,9 +38,6 @@ function cookieOptions({ httpOnly = false, maxAge, partitioned = isProduction } 
     "Path=/",
     isProduction ? "Secure" : "",
     isProduction ? "SameSite=None" : "SameSite=Lax",
-    // The frontend (Firebase Hosting) and API (Render) are different sites.
-    // Partition the production cookies by the top-level AniRescue site so
-    // browser privacy protections do not discard the authenticated session.
     partitioned ? "Partitioned" : "",
   ];
 
@@ -68,10 +65,8 @@ function setAuthCookies(res, token) {
 
 function clearAuthCookies(res) {
   res.setHeader("Set-Cookie", [
-    // Clear the current partitioned cookies.
     `${SESSION_COOKIE}=; ${cookieOptions({ httpOnly: true, maxAge: 0 })}`,
     `${CSRF_COOKIE}=; ${cookieOptions({ maxAge: 0 })}`,
-    // Also remove the pre-v2 unpartitioned cookies from existing sessions.
     `${LEGACY_SESSION_COOKIE}=; ${cookieOptions({ httpOnly: true, maxAge: 0, partitioned: false })}`,
     `${LEGACY_CSRF_COOKIE}=; ${cookieOptions({ maxAge: 0, partitioned: false })}`,
   ]);
@@ -131,8 +126,6 @@ function requireCsrf(req, res, next) {
     return next();
   }
 
-  // Legacy bearer-token clients are not using cookie authentication, so
-  // CSRF protection is only required when the browser session cookie exists.
   if (!getSessionToken(req)) {
     return next();
   }
@@ -202,16 +195,17 @@ const authorizeRoles = (...allowedRoles) => {
 
   return async (req, res, next) => {
     try {
-      const userRole = (req.user?.role || "").toUpperCase();
-
-      if (!req.user || !normalizedAllowed.includes(userRole)) {
-        return res.status(403).json({
-          error: "Access denied.",
+      if (!req.user?.id) {
+        return res.status(401).json({
+          error: "Authentication required.",
         });
       }
 
+      // Never trust a role embedded in a long-lived JWT for authorization.
+      // The database is authoritative if an account is promoted, demoted,
+      // or otherwise has its role changed while the token remains valid.
       const result = await pool.query(
-        `SELECT account_status
+        `SELECT role, account_status
          FROM users
          WHERE id = $1`,
         [req.user.id],
@@ -223,13 +217,24 @@ const authorizeRoles = (...allowedRoles) => {
         });
       }
 
-      if (result.rows[0].account_status !== "ACTIVE") {
+      const currentRole = (result.rows[0].role || "").toUpperCase();
+      const accountStatus = result.rows[0].account_status;
+
+      if (accountStatus !== "ACTIVE") {
         return res.status(403).json({
           error: "Your account is not active.",
-          account_status: result.rows[0].account_status,
+          account_status: accountStatus,
         });
       }
 
+      if (!normalizedAllowed.includes(currentRole)) {
+        return res.status(403).json({
+          error: "Access denied.",
+        });
+      }
+
+      // Downstream controllers/history logging use the authoritative role.
+      req.user.role = currentRole;
       next();
     } catch (err) {
       console.error("Authorization error:", err);
