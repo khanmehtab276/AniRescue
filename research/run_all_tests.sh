@@ -36,12 +36,15 @@ run_step "AI Worker — R1/R2 benchmark artifact validation"   python3 ai-async-
 
 # R3: Gemini contract tests run inside the real Docker worker environment.
 if docker image inspect anirescue-ai-worker:latest >/dev/null 2>&1; then
-  run_step "AI Worker — R3 Gemini structured-output/error contract tests"     docker run --rm --network none -v "$ROOT_DIR/ai-async-worker:/app:ro" -w /app anirescue-ai-worker:latest python -m unittest discover -s /app/test -p 'test_*.py'
+  run_step "AI Worker — R3/R4/R5 Gemini and async-worker research tests"     docker run --rm --network none -v "$ROOT_DIR/ai-async-worker:/app:ro" -w /app anirescue-ai-worker:latest python -m unittest discover -s /app/test -p 'test_*.py'
 else
   SKIP=$((SKIP + 1))
   echo
   echo "RESULT: SKIP — R3 Docker worker image anirescue-ai-worker:latest is not available"
 fi
+
+# R9/R10 deterministic backend notification + feedback coverage.
+run_step "Backend — R9/R10 notification and feedback research tests"   bash -c 'cd Backend && node --test test/researchNotificationsFeedback.test.js'
 
 # Frontend build/lint are implementation integrity checks, not ML metrics.
 run_step "Frontend — lint"   bash -c 'cd Frontend && npm run lint'
@@ -57,11 +60,19 @@ echo "FAIL: $FAIL"
 echo "SKIP: $SKIP"
 
 echo
-echo "Live integration groups R4/R5/R9/R10 are intentionally not executed"
-echo "against deployed production services by this command."
-echo "They require an isolated test environment and controlled test data."
-echo "This prevents the research runner from creating/modifying production"
-echo "rescue cases, notifications, feedback, or database records."
+if [ "${RESEARCH_LIVE:-0}" = "1" ]; then
+  run_step "LIVE — R3/R4/R5/R9/R10 controlled integration harness" bash research/live/run_live_tests.sh
+else
+  SKIP=$((SKIP + 1))
+  echo
+  echo "RESULT: SKIP — LIVE R3/R4/R5/R9/R10 harness disabled"
+  echo "Enable explicitly with RESEARCH_LIVE=1 and an isolated research API."
+fi
+
+echo
+echo "The normal runner never defaults to deployed production services."
+echo "R1-R10 component tests are safe to run locally; live R3/R4/R5/R9/R10"
+echo "require explicit RESEARCH_LIVE=1 and a supplied isolated API/image."
 
 if [ "$FAIL" -gt 0 ]; then
   exit 1
