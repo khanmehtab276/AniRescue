@@ -17,6 +17,7 @@ async function dispatchPendingJobs() {
       `SELECT id, case_id, image_url
        FROM case_processing_jobs
        WHERE published_at IS NULL
+         AND failed_at IS NULL
          AND (
            locked_at IS NULL
            OR locked_at < CURRENT_TIMESTAMP - INTERVAL '${LOCK_TIMEOUT_MINUTES} minutes'
@@ -37,6 +38,7 @@ async function dispatchPendingJobs() {
              attempts = attempts + 1
          WHERE id = $1
            AND published_at IS NULL
+           AND failed_at IS NULL
            AND (
              locked_at IS NULL
              OR locked_at < CURRENT_TIMESTAMP - INTERVAL '${LOCK_TIMEOUT_MINUTES} minutes'
@@ -72,7 +74,9 @@ async function dispatchPendingJobs() {
           `UPDATE case_processing_jobs
            SET published_at = CURRENT_TIMESTAMP,
                locked_at = NULL,
-               last_error = NULL
+               last_error = NULL,
+               failed_at = NULL,
+               failure_reason = NULL
            WHERE id = $1
              AND published_at IS NULL`,
           [lockedJob.id],
