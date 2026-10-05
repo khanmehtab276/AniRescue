@@ -19,33 +19,28 @@
  *   RESOLVED
  *
  *   RESCUE_COMPLETED --(verifyCompletion — reject, with reason)--> IN_PROGRESS
- *   IN_PROGRESS / VALIDATION_PASSED --(cancel)--> CANCELLED
+ *   IN_PROGRESS --(release, assigned handler)--> VALIDATION_PASSED
+ *   VALIDATION_PASSED / IN_PROGRESS --(admin cancel)--> CANCELLED
  *
- * This module governs ONLY the plain PUT /api/cases/:id/status endpoint,
- * which is now scoped to cancellation. Claiming, evidence submission and
- * verification each have their own dedicated endpoint/handler because
- * they carry extra requirements (atomicity, evidence payload, reviewer
- * role) that a generic status-setter can't safely express.
+ * This module governs the authorization rules used by the dedicated
+ * lifecycle endpoints. Permanent cancellation is intentionally ADMIN-only;
+ * assigned volunteers use the dedicated release endpoint when they cannot
+ * continue an IN_PROGRESS rescue.
  */
 
-const CANCELLABLE_FROM = ["VALIDATION_PASSED", "IN_PROGRESS"];
-
 /**
- * Can this role cancel a case currently in `fromStatus`?
- * ADMIN can cancel from any non-terminal state.
+ * Can this role permanently cancel a case currently in `fromStatus`?
+ *
+ * Permanent cancellation is an administrative operation. VOLUNTEER/NGO
+ * handlers must use the dedicated release flow instead of terminating a
+ * rescue case.
  */
 function canCancel(role, fromStatus) {
   const normalizedRole = (role || "").toUpperCase();
 
-  if (normalizedRole === "ADMIN") {
-    return !["RESOLVED", "CANCELLED"].includes(fromStatus);
-  }
+  if (normalizedRole !== "ADMIN") return false;
 
-  if (normalizedRole === "VOLUNTEER" || normalizedRole === "NGO") {
-    return CANCELLABLE_FROM.includes(fromStatus);
-  }
-
-  return false;
+  return !["RESOLVED", "CANCELLED"].includes(fromStatus);
 }
 
 /**
