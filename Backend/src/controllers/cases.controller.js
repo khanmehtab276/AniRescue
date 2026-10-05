@@ -315,7 +315,7 @@ const getJunkQueue = async (req, res) => {
   }
 };
 
-// 3. ADMIN AI RETRY FOR REJECTED CASES
+// 3. ADMIN AI RETRY FOR REJECTED OR TERMINALLY FAILED CASES
 const retryRejectedCase = async (req, res) => {
   const { id } = req.params;
   const adminId = req.user.id;
@@ -343,7 +343,7 @@ const retryRejectedCase = async (req, res) => {
 
     const currentCase = caseResult.rows[0];
 
-    const jobResult = await client.query(
+    const failedJobResult = await client.query(
       `SELECT id, failed_at
        FROM case_processing_jobs
        WHERE case_id = $1
@@ -351,7 +351,7 @@ const retryRejectedCase = async (req, res) => {
       [id],
     );
 
-    const failedJob = jobResult.rows[0] || null;
+    const failedJob = failedJobResult.rows[0] || null;
     const isTerminalProcessingFailure =
       currentCase.status === "PENDING_VALIDATION" &&
       failedJob?.failed_at !== null &&
