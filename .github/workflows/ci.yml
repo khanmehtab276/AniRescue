@@ -55,3 +55,5 @@ jobs:
         with:
           python-version: '3.10'
       - run: python -m compileall -q ai-async-worker
+      - name: Validate recorded research benchmark
+        run: python ai-async-worker/benchmark/validate_research_result.py ai-async-worker/benchmark/results/yolo-world-openvino.json
