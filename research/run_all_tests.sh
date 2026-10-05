@@ -47,23 +47,30 @@ fi
 run_step "Backend — R9/R10 notification and feedback research tests"   bash -c 'cd Backend && node --test test/researchNotificationsFeedback.test.js'
 
 # Frontend build/lint are implementation integrity checks, not ML metrics.
-run_step "Frontend — lint"   bash -c '\
-  cd Frontend\
-  lint_log="$(mktemp)"\
-  trap "rm -f \"$lint_log\"" EXIT\
-  if npm run lint >"$lint_log" 2>&1; then\
-    warning_count="$(grep -c "warning" "$lint_log" || true)"\
-    if [ "$warning_count" -gt 0 ]; then\
-      echo "ESLint completed successfully; $warning_count warning lines suppressed."\
-    else\
-      echo "ESLint completed successfully; no warnings."\
-    fi\
-  else\
-    cat "$lint_log"\
-    exit 1\
-  fi'
+run_frontend_lint() {
+  cd "$ROOT_DIR/Frontend"
+  local lint_log
+  lint_log="$(mktemp)"
+  if npm run lint >"$lint_log" 2>&1; then
+    local warning_count
+    warning_count="$(grep -c "warning" "$lint_log" || true)"
+    if [ "$warning_count" -gt 0 ]; then
+      echo "ESLint completed successfully; $warning_count warning lines suppressed."
+    else
+      echo "ESLint completed successfully; no warnings."
+    fi
+    rm -f "$lint_log"
+    return 0
+  fi
 
-run_step "Frontend — production build"   bash -c 'cd Frontend && npm run build'
+  cat "$lint_log"
+  rm -f "$lint_log"
+  return 1
+}
+
+run_step "Frontend — lint" run_frontend_lint
+
+run_step "Frontend — production build" bash -c 'cd Frontend && npm run build'
 
 echo
 echo "============================================================"
