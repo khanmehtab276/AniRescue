@@ -970,9 +970,45 @@ const submitRescueEvidence = async (req, res) => {
   const { evidenceImageUrl, notes } = req.body;
   const role = req.user.role;
 
-  if (!evidenceImageUrl) {
+  if (
+    typeof evidenceImageUrl !== "string" ||
+    evidenceImageUrl.length > 2048
+  ) {
     return res.status(400).json({
-      error: "Evidence image is required to mark a rescue complete.",
+      error: "A valid evidence image URL is required to mark a rescue complete.",
+    });
+  }
+
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  let parsedEvidenceUrl;
+
+  try {
+    parsedEvidenceUrl = new URL(evidenceImageUrl);
+  } catch {
+    return res.status(400).json({
+      error: "Evidence image URL is invalid.",
+    });
+  }
+
+  if (
+    parsedEvidenceUrl.protocol !== "https:" ||
+    parsedEvidenceUrl.hostname !== "res.cloudinary.com" ||
+    !cloudName ||
+    !parsedEvidenceUrl.pathname.startsWith(`/${cloudName}/`) ||
+    parsedEvidenceUrl.username ||
+    parsedEvidenceUrl.password
+  ) {
+    return res.status(400).json({
+      error: "Only approved Cloudinary HTTPS evidence image URLs are accepted.",
+    });
+  }
+
+  const evidenceNotes =
+    typeof notes === "string" ? notes.trim() : "";
+
+  if (evidenceNotes.length > 2000) {
+    return res.status(400).json({
+      error: "Evidence notes must be 2000 characters or fewer.",
     });
   }
 
@@ -1014,8 +1050,14 @@ const submitRescueEvidence = async (req, res) => {
            AND status = 'IN_PROGRESS'
            AND assigned_volunteer_id = $4
          RETURNING *`,
-      [evidenceImageUrl, notes || null, id, req.user.id],
+      [evidenceImageUrl, evidenceNotes || null, id, req.user.id],
     );
+
+    if (result.rows.length === 0) {
+      return res.status(409).json({
+        error: "Case was already changed or is no longer assigned to you.",
+      });
+    }
 
     // The assigned volunteer has finished the rescue.
     // Make them available for another case.
@@ -1038,7 +1080,7 @@ const submitRescueEvidence = async (req, res) => {
       action: "EVIDENCE_SUBMITTED",
       fromStatus: "IN_PROGRESS",
       toStatus: "RESCUE_COMPLETED",
-      notes: notes || null,
+      notes: evidenceNotes || null,
     });
 
     await notifyCaseRecipients({
