@@ -80,7 +80,7 @@ services:
       - OMP_NUM_THREADS=1
       - MKL_NUM_THREADS=1
       - OPENBLAS_NUM_THREADS=1
-      - YOLO_WORLD_OPENVINO_MODEL=/opt/yolo-world/openvino
+      - YOLO_WORLD_OPENVINO_MODEL=/opt/yolo-world/yolo-world-anirescue_openvino_model
       - YOLO_WORLD_IMGSZ=512
       - YOLO_WORLD_CONF=0.20
       - YOLO_WORLD_MAX_DET=1
