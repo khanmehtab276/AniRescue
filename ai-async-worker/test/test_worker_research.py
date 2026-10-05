@@ -18,7 +18,9 @@ def load_worker():
     fake_image = types.SimpleNamespace(MAX_IMAGE_PIXELS=0)
     fake_pil = types.ModuleType("PIL")
     fake_pil.Image = fake_image
+    fake_src = types.ModuleType("src")
     fake_models = types.ModuleType("src.models")
+    fake_src.models = fake_models
     fake_yolo = types.ModuleType("src.models.yolo_engine")
     fake_gemini = types.ModuleType("src.models.gemini_analyzer")
 
@@ -33,6 +35,7 @@ def load_worker():
     sys.modules.setdefault("requests", fake_requests)
     sys.modules.setdefault("PIL", fake_pil)
     sys.modules.setdefault("PIL.Image", fake_image)
+    sys.modules.setdefault("src", fake_src)
     sys.modules.setdefault("src.models", fake_models)
     sys.modules.setdefault("src.models.yolo_engine", fake_yolo)
     sys.modules.setdefault("src.models.gemini_analyzer", fake_gemini)
