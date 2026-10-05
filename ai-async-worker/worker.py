@@ -540,6 +540,14 @@ def main():
                         initial_priority = derive_initial_priority(gemini_analysis)
 
                         if gemini_status == "COMPLETED":
+                            model_used = gemini_result.get(
+                                "model_used",
+                                "unknown",
+                            )
+                            fallback_used = gemini_result.get(
+                                "fallback_used",
+                                False,
+                            )
                             print(
                                 f"🎯 Initial rescue priority derived from AI: "
                                 f"{initial_priority}"
@@ -548,7 +556,9 @@ def main():
                                 f"🧠 Gemini assessment completed for "
                                 f"Case {report_id}: "
                                 f"severity={gemini_analysis.get('severity')}, "
-                                f"urgency={gemini_analysis.get('urgency')}"
+                                f"urgency={gemini_analysis.get('urgency')}, "
+                                f"model={model_used}, "
+                                f"fallback={fallback_used}"
                             )
                         else:
                             print(
