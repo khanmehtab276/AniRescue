@@ -57,3 +57,15 @@ jobs:
       - run: python -m compileall -q ai-async-worker
       - name: Validate recorded research benchmark
         run: python ai-async-worker/benchmark/validate_research_result.py ai-async-worker/benchmark/results/yolo-world-openvino.json
+
+  research:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Run worker research tests
+        run: python -m unittest ai-async-worker/test/test_worker_research.py
+      - name: Check live research harness syntax
+        run: node --check research/live/run_live_tests.js
