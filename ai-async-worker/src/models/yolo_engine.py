@@ -74,14 +74,40 @@ class YoloGatekeeper:
             verbose=False,
         )
 
+        # Use the class metadata embedded in the exported model rather than
+        # assuming that class IDs will always remain in the build-script order.
+        # This prevents a future model export from silently mapping a valid
+        # detection to the wrong species.
+        model_names = getattr(self.model, "names", None)
+        if isinstance(model_names, dict):
+            normalized_names = {
+                int(index): str(name).strip().lower()
+                for index, name in model_names.items()
+            }
+        elif isinstance(model_names, (list, tuple)):
+            normalized_names = {
+                index: str(name).strip().lower()
+                for index, name in enumerate(model_names)
+            }
+        else:
+            normalized_names = {}
+
+        allowed_names = set(self.ANIMAL_CLASSES)
         self.class_names = {
             index: name
-            for index, name in enumerate(self.ANIMAL_CLASSES)
+            for index, name in normalized_names.items()
+            if name in allowed_names
         }
+
+        if not self.class_names:
+            raise RuntimeError(
+                "YOLO-World model does not expose usable animal class metadata. "
+                "Refusing to run with an implicit class-ID mapping."
+            )
 
         print(
             "YOLO-World production gatekeeper ready:",
-            f"classes={len(self.ANIMAL_CLASSES)}",
+            f"classes={len(self.class_names)}",
             f"imgsz={self.IMAGE_SIZE}",
             f"conf={self.confidence_threshold}",
             f"max_det={self.MAX_DETECTIONS}",
@@ -89,7 +115,7 @@ class YoloGatekeeper:
 
     def validate_image(self, image_path):
         """
-        Detect the highest-confidence animal in a local image.
+        Detect the highest-confidence allowed animal in a local image.
 
         Returns:
             (True, animal_name, confidence)
@@ -127,11 +153,12 @@ class YoloGatekeeper:
                     class_id = int(box.cls[0])
                     confidence = float(box.conf[0])
 
-                    if class_id not in self.class_names:
+                    animal_name = self.class_names.get(class_id)
+                    if animal_name is None:
                         continue
 
                     if confidence > best_confidence:
-                        best_animal = self.class_names[class_id]
+                        best_animal = animal_name
                         best_confidence = confidence
 
             if best_animal:
