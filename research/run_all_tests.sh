@@ -48,6 +48,7 @@ run_step "Backend — R9/R10 notification and feedback research tests"   bash -c
 
 # Frontend build/lint are implementation integrity checks, not ML metrics.
 run_frontend_lint() {
+  local original_dir="$PWD"
   cd "$ROOT_DIR/Frontend"
   local lint_log
   lint_log="$(mktemp)"
@@ -60,11 +61,13 @@ run_frontend_lint() {
       echo "ESLint completed successfully; no warnings."
     fi
     rm -f "$lint_log"
+    cd "$original_dir"
     return 0
   fi
 
   cat "$lint_log"
   rm -f "$lint_log"
+  cd "$original_dir"
   return 1
 }
 
@@ -73,22 +76,22 @@ run_step "Frontend — lint" run_frontend_lint
 run_step "Frontend — production build" bash -c 'cd "$1/Frontend" && npm run build' _ "$ROOT_DIR"
 
 echo
-echo "============================================================"
-echo "RESEARCH TEST SUMMARY"
-echo "============================================================"
-echo "PASS: $PASS"
-echo "FAIL: $FAIL"
-echo "SKIP: $SKIP"
-
-echo
 if [ "${RESEARCH_LIVE:-0}" = "1" ]; then
-  run_step "LIVE — R3/R4/R5/R9/R10 controlled integration harness" bash research/live/run_live_tests.sh
+  run_step "LIVE — R3/R4/R5/R9/R10 controlled integration harness" bash "$ROOT_DIR/research/live/run_live_tests.sh"
 else
   SKIP=$((SKIP + 1))
   echo
   echo "RESULT: SKIP — LIVE R3/R4/R5/R9/R10 harness disabled"
   echo "Enable explicitly with RESEARCH_LIVE=1 and an isolated research API."
 fi
+
+echo
+echo "============================================================"
+echo "RESEARCH TEST SUMMARY"
+echo "============================================================"
+echo "PASS: $PASS"
+echo "FAIL: $FAIL"
+echo "SKIP: $SKIP"
 
 echo
 echo "The normal runner never defaults to deployed production services."
