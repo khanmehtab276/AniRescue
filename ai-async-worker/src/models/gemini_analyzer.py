@@ -330,3 +330,13 @@ Important safety rules:
                 "fallback_used": False,
             }
 
+    except Exception as error:
+        error_code = _classify_error(error)
+        print(f"⚠️ Gemini setup/image error ({error_code}): {error}")
+        return {
+            "status": error_code,
+            "analysis": None,
+            "error_code": error_code,
+            "model_used": None,
+            "fallback_used": False,
+        }
