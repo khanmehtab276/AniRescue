@@ -1,0 +1,29 @@
+{
+  "test": "R1",
+  "name": "YOLO-World Gatekeeper",
+  "status": "MEASURED",
+  "configuration": {
+    "cpu": 1.5,
+    "threads": 1,
+    "memory_gb": 2,
+    "model": "YOLO-World OpenVINO FP32",
+    "imgsz": 512,
+    "confidence_threshold": 0.2,
+    "max_detections": 1
+  },
+  "dataset_images": 100,
+  "results": {
+    "correct": 54,
+    "accuracy_percent": 54,
+    "false_positives": 0,
+    "false_negatives": 46,
+    "wrong_class_on_positive": 13,
+    "mean_inference_ms": 1241.72,
+    "median_inference_ms": 1209.6,
+    "p95_inference_ms": 1304.33,
+    "peak_process_rss_mb": 523.41,
+    "peak_cgroup_memory_mb": 390.57
+  },
+  "interpretation": "Image-level gatekeeper correctness on the 100-image research manifest. This is not a formal mAP, IoU, precision/recall, or clinical-accuracy evaluation.",
+  "raw_source": "ai-async-worker/benchmark/results/yolo-world-openvino-1.5cpu.json"
+}
