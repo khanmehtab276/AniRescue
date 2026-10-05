@@ -35,7 +35,9 @@ def main():
     )
 
     exported_path = Path(exported_path)
-    final_dir = OUTPUT_DIR / "openvino"
+    # Keep Ultralytics' required *_openvino_model directory naming convention.
+    # Ultralytics uses this suffix to recognize the exported OpenVINO format.
+    final_dir = OUTPUT_DIR / "yolo-world-anirescue_openvino_model"
     if exported_path.resolve() != final_dir.resolve():
         if final_dir.exists():
             import shutil
