@@ -7,11 +7,15 @@ const {
   canVerifyCompletion,
 } = require("../src/utils/statusTransitions");
 
-test("volunteers and NGOs can cancel active rescue states", () => {
-  assert.equal(canCancel("VOLUNTEER", "VALIDATION_PASSED"), true);
-  assert.equal(canCancel("NGO", "IN_PROGRESS"), true);
-  assert.equal(canCancel("USER", "IN_PROGRESS"), false);
+test("permanent cancellation is restricted to admins", () => {
+  assert.equal(canCancel("ADMIN", "VALIDATION_PASSED"), true);
+  assert.equal(canCancel("ADMIN", "IN_PROGRESS"), true);
+  assert.equal(canCancel("ADMIN", "PROCESSING_ANALYSIS"), true);
   assert.equal(canCancel("ADMIN", "RESOLVED"), false);
+  assert.equal(canCancel("ADMIN", "CANCELLED"), false);
+  assert.equal(canCancel("VOLUNTEER", "IN_PROGRESS"), false);
+  assert.equal(canCancel("NGO", "IN_PROGRESS"), false);
+  assert.equal(canCancel("USER", "IN_PROGRESS"), false);
 });
 
 test("evidence submission requires an assigned handler or admin", () => {
@@ -31,6 +35,15 @@ test("evidence submission requires an assigned handler or admin", () => {
       fromStatus: "IN_PROGRESS",
     }),
     false,
+  );
+
+  assert.equal(
+    canSubmitEvidence({
+      role: "NGO",
+      isAssignedToCaller: true,
+      fromStatus: "IN_PROGRESS",
+    }),
+    true,
   );
 
   assert.equal(
