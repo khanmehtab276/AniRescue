@@ -36,7 +36,7 @@ run_step "AI Worker — R1/R2 benchmark artifact validation"   python3 ai-async-
 
 # R3: Gemini contract tests run inside the real Docker worker environment.
 if docker image inspect anirescue-ai-worker:latest >/dev/null 2>&1; then
-  run_step "AI Worker — R3 Gemini structured-output/error contract tests"     docker run --rm --network none     -w /app     anirescue-ai-worker:latest     python -m unittest discover -s /app/test -p 'test_*.py'
+  run_step "AI Worker — R3 Gemini structured-output/error contract tests"     docker run --rm --network none -v "$ROOT_DIR/ai-async-worker:/app:ro" -w /app anirescue-ai-worker:latest python -m unittest discover -s /app/test -p 'test_*.py'
 else
   SKIP=$((SKIP + 1))
   echo
