@@ -343,10 +343,26 @@ const retryRejectedCase = async (req, res) => {
 
     const currentCase = caseResult.rows[0];
 
-    if (currentCase.status !== "REJECTED_JUNK") {
+    const jobResult = await client.query(
+      `SELECT id, failed_at
+       FROM case_processing_jobs
+       WHERE case_id = $1
+       FOR UPDATE`,
+      [id],
+    );
+
+    const failedJob = jobResult.rows[0] || null;
+    const isTerminalProcessingFailure =
+      currentCase.status === "PENDING_VALIDATION" &&
+      failedJob?.failed_at !== null &&
+      failedJob?.failed_at !== undefined;
+
+    const isRejectedJunkRetry = currentCase.status === "REJECTED_JUNK";
+
+    if (!isRejectedJunkRetry && !isTerminalProcessingFailure) {
       await client.query("ROLLBACK");
       return res.status(409).json({
-        error: `Case cannot be retried because its current status is ${currentCase.status}.`,
+        error: `Case cannot be retried because its current state is ${currentCase.status}.`,
       });
     }
 
@@ -362,7 +378,7 @@ const retryRejectedCase = async (req, res) => {
          gemini_analysis = NULL,
          gemini_analyzed_at = NULL
        WHERE id = $1
-         AND status = 'REJECTED_JUNK'
+         AND status IN ('REJECTED_JUNK', 'PENDING_VALIDATION')
        RETURNING id, status, species, ai_confidence, ai_validated_at`,
       [id],
     );
@@ -384,6 +400,8 @@ const retryRejectedCase = async (req, res) => {
          locked_at = NULL,
          attempts = 0,
          last_error = NULL,
+         failed_at = NULL,
+         failure_reason = NULL,
          image_url = $2
        WHERE case_id = $1
        RETURNING id`,
@@ -408,7 +426,7 @@ const retryRejectedCase = async (req, res) => {
       actorId: adminId,
       actorRole: req.user.role,
       action: "AI_VALIDATION_RETRY_REQUESTED",
-      fromStatus: "REJECTED_JUNK",
+      fromStatus: isRejectedJunkRetry ? "REJECTED_JUNK" : "PENDING_VALIDATION",
       toStatus: "PENDING_VALIDATION",
     });
 
