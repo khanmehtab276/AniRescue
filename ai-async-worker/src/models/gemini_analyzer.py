@@ -10,6 +10,8 @@ GEMINI_THINKING_LEVEL = os.getenv("GEMINI_THINKING_LEVEL", "low").lower()
 GEMINI_TIMEOUT_MS = int(os.getenv("GEMINI_TIMEOUT_MS", "120000"))
 
 ALLOWED_THINKING_LEVELS = {"low", "medium", "high"}
+ALLOWED_SEVERITIES = {"LOW", "MODERATE", "HIGH", "CRITICAL", "UNKNOWN"}
+ALLOWED_URGENCIES = {"ROUTINE", "SOON", "URGENT", "EMERGENCY", "UNKNOWN"}
 
 GEMINI_RESPONSE_SCHEMA = {
     "type": "object",
@@ -118,6 +120,42 @@ def _classify_error(error):
     return "API_ERROR"
 
 
+def _validate_analysis(analysis):
+    """Validate structured Gemini output before it reaches PostgreSQL/UI."""
+    if not isinstance(analysis, dict):
+        raise ValueError("Gemini response was not a JSON object.")
+
+    required_strings = (
+        "species_observed",
+        "condition_summary",
+        "recommended_action",
+        "uncertainty",
+    )
+
+    for field in required_strings:
+        if not isinstance(analysis.get(field), str):
+            raise ValueError(f"Gemini field {field!r} must be a string.")
+
+    if not isinstance(analysis.get("species_consistent_with_yolo"), bool):
+        raise ValueError("Gemini field 'species_consistent_with_yolo' must be boolean.")
+
+    severity = analysis.get("severity")
+    urgency = analysis.get("urgency")
+
+    if severity not in ALLOWED_SEVERITIES:
+        raise ValueError(f"Invalid Gemini severity: {severity!r}")
+
+    if urgency not in ALLOWED_URGENCIES:
+        raise ValueError(f"Invalid Gemini urgency: {urgency!r}")
+
+    for field in ("visible_signs", "first_aid", "cautions"):
+        value = analysis.get(field)
+        if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+            raise ValueError(f"Gemini field {field!r} must be an array of strings.")
+
+    return analysis
+
+
 def analyze_image_with_gemini(
     image_path,
     yolo_species,
@@ -221,9 +259,7 @@ Important safety rules:
             raise ValueError("Gemini returned an empty response.")
 
         analysis = json.loads(raw_text)
-
-        if not isinstance(analysis, dict):
-            raise ValueError("Gemini response was not a JSON object.")
+        analysis = _validate_analysis(analysis)
 
         return {
             "status": "COMPLETED",
