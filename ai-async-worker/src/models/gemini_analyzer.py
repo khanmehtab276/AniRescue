@@ -6,6 +6,7 @@ from google.genai import types
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+GEMINI_FALLBACK_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.5-flash-lite")
 GEMINI_THINKING_LEVEL = os.getenv("GEMINI_THINKING_LEVEL", "low").lower()
 GEMINI_TIMEOUT_MS = int(os.getenv("GEMINI_TIMEOUT_MS", "120000"))
 
@@ -120,6 +121,22 @@ def _classify_error(error):
     return "API_ERROR"
 
 
+def _is_fallback_worthy_error(error_code, error):
+    """Return True for transient/model-capacity failures where a stable
+    fallback model can reasonably handle the same multimodal request.
+    """
+    text = str(error).lower()
+    return error_code in {"QUOTA_EXHAUSTED", "TIMEOUT", "API_ERROR"} and any(
+        marker in text
+        for marker in (
+            "503", "unavailable", "service unavailable", "high demand",
+            "overloaded", "500", "internal", "timeout", "deadline",
+            "429", "resource_exhausted", "quota", "rate limit",
+            "too many requests", "model_not_found", "not found",
+        )
+    )
+
+
 def _validate_analysis(analysis):
     """Validate structured Gemini output before it reaches PostgreSQL/UI."""
     if not isinstance(analysis, dict):
@@ -229,19 +246,9 @@ Important safety rules:
 - Return ONLY the requested JSON structure.
 """
 
-    try:
-        client = _get_client()
-
-        with open(image_path, "rb") as image_file:
-            image_bytes = image_file.read()
-
-        image_part = types.Part.from_bytes(
-            data=image_bytes,
-            mime_type="image/jpeg",
-        )
-
+    def _run_model(client, model_name, image_part):
         response = client.models.generate_content(
-            model=GEMINI_MODEL,
+            model=model_name,
             contents=[image_part, prompt],
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -252,30 +259,74 @@ Important safety rules:
                 ),
             ),
         )
-
         raw_text = (response.text or "").strip()
-
         if not raw_text:
             raise ValueError("Gemini returned an empty response.")
+        return _validate_analysis(json.loads(raw_text))
 
-        analysis = json.loads(raw_text)
-        analysis = _validate_analysis(analysis)
+    try:
+        client = _get_client()
+        with open(image_path, "rb") as image_file:
+            image_bytes = image_file.read()
+        image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
 
-        return {
-            "status": "COMPLETED",
-            "analysis": analysis,
-            "error_code": None,
-        }
+        try:
+            analysis = _run_model(client, GEMINI_MODEL, image_part)
+            analysis["_model_used"] = GEMINI_MODEL
+            return {
+                "status": "COMPLETED",
+                "analysis": analysis,
+                "error_code": None,
+                "model_used": GEMINI_MODEL,
+                "fallback_used": False,
+            }
+        except Exception as primary_error:
+            primary_error_code = _classify_error(primary_error)
+            if (
+                GEMINI_FALLBACK_MODEL
+                and GEMINI_FALLBACK_MODEL != GEMINI_MODEL
+                and _is_fallback_worthy_error(primary_error_code, primary_error)
+            ):
+                print(
+                    f"🔁 Gemini primary model {GEMINI_MODEL} unavailable "
+                    f"({primary_error_code}); trying fallback "
+                    f"{GEMINI_FALLBACK_MODEL}..."
+                )
+                try:
+                    analysis = _run_model(client, GEMINI_FALLBACK_MODEL, image_part)
+                    analysis["_model_used"] = GEMINI_FALLBACK_MODEL
+                    analysis["_fallback_from"] = GEMINI_MODEL
+                    print(f"✅ Gemini fallback succeeded with {GEMINI_FALLBACK_MODEL}")
+                    return {
+                        "status": "COMPLETED",
+                        "analysis": analysis,
+                        "error_code": None,
+                        "model_used": GEMINI_FALLBACK_MODEL,
+                        "fallback_used": True,
+                    }
+                except Exception as fallback_error:
+                    fallback_error_code = _classify_error(fallback_error)
+                    print(
+                        f"⚠️ Gemini fallback failed "
+                        f"({fallback_error_code}): {fallback_error}"
+                    )
+                    return {
+                        "status": fallback_error_code,
+                        "analysis": None,
+                        "error_code": fallback_error_code,
+                        "model_used": GEMINI_FALLBACK_MODEL,
+                        "fallback_used": True,
+                    }
 
-    except Exception as error:
-        error_code = _classify_error(error)
+            print(
+                f"⚠️ Gemini analysis failed ({primary_error_code}): "
+                f"{primary_error}"
+            )
+            return {
+                "status": primary_error_code,
+                "analysis": None,
+                "error_code": primary_error_code,
+                "model_used": GEMINI_MODEL,
+                "fallback_used": False,
+            }
 
-        print(
-            f"⚠️ Gemini analysis failed ({error_code}): {error}"
-        )
-
-        return {
-            "status": error_code,
-            "analysis": None,
-            "error_code": error_code,
-        }
