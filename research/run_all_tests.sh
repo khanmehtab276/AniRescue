@@ -70,7 +70,7 @@ run_frontend_lint() {
 
 run_step "Frontend — lint" run_frontend_lint
 
-run_step "Frontend — production build" bash -c 'cd Frontend && npm run build'
+run_step "Frontend — production build" bash -c 'cd "$1/Frontend" && npm run build' _ "$ROOT_DIR"
 
 echo
 echo "============================================================"
