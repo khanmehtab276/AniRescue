@@ -7,14 +7,14 @@ set -euo pipefail
 # Run these exports in the shell before starting the live test:
 #
 # export RESEARCH_LIVE=1
-# export RESEARCH_API_BASE_URL="https://anirescue-backend.onrender.com"
-# export RESEARCH_USER_EMAIL="testuser@gmail.com"
-# export RESEARCH_USER_PASSWORD="12345678"
+# export RESEARCH_API_BASE_URL="PASTE_YOUR_RESEARCH_API_URL_HERE"
+# export RESEARCH_USER_EMAIL="PASTE_YOUR_RESEARCH_USER_EMAIL_HERE"
+# export RESEARCH_USER_PASSWORD="PASTE_YOUR_RESEARCH_USER_PASSWORD_HERE"
 # export RESEARCH_IMAGE_URL="PASTE_YOUR_CLOUDINARY_IMAGE_URL_HERE"
 #
 # Optional:
 # export RESEARCH_TIMEOUT_MS=180000
-# export RESEARCH_FCM_TOKEN="YOUR_FCM_DEVICE_TOKEN"
+# export RESEARCH_FCM_TOKEN="PASTE_YOUR_FCM_DEVICE_TOKEN_HERE"
 #
 # Then run:
 # bash research/live/run_live_tests.sh
