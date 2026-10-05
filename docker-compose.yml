@@ -32,7 +32,7 @@ services:
     container_name: anirescue_backend
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       - PORT=3000
       - NODE_ENV=production
@@ -46,8 +46,6 @@ services:
       - LOCATION_FRESHNESS_MINUTES=${LOCATION_FRESHNESS_MINUTES}
       - NOTIFICATION_RADIUS_KM=${NOTIFICATION_RADIUS_KM}
       - CORS_ORIGIN=${CORS_ORIGIN}
-    # Run every migration that is missing from schema_migrations, then start the API.
-    # Already-applied migrations are safely skipped by Backend/scripts/migrate.js.
     command: ["sh", "-c", "npm run db:migrate && npm start"]
     depends_on:
       rabbitmq:
