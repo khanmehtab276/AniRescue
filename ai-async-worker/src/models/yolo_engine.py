@@ -23,7 +23,7 @@ class YoloGatekeeper:
     MODEL_PATH = Path(
         os.getenv(
             "YOLO_WORLD_OPENVINO_MODEL",
-            "/opt/yolo-world/openvino",
+            "/opt/yolo-world/yolo-world-anirescue_openvino_model",
         )
     )
 
@@ -40,16 +40,14 @@ class YoloGatekeeper:
                 f"YOLO-World OpenVINO model not found: {self.MODEL_PATH}"
             )
 
-        # Ultralytics expects the exported OpenVINO model directory, not the
-        # individual .xml file. Keep the directory path so Ultralytics can
-        # discover the XML/BIN pair and metadata.yaml together.
+        # Ultralytics recognizes exported OpenVINO models by the
+        # *_openvino_model directory naming convention.
         if not self.MODEL_PATH.is_dir():
             raise FileNotFoundError(
                 f"YOLO-World OpenVINO model directory not found: {self.MODEL_PATH}"
             )
 
         print(f"Loading YOLO-World OpenVINO model from: {self.MODEL_PATH}")
-
 
         # Ultralytics handles OpenVINO loading, compilation, device selection,
         # and inference configuration internally.
