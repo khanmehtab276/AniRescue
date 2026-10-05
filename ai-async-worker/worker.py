@@ -293,160 +293,6 @@ def resolve_image_input(image_source):
         raise
 
 
-# --------------------------------------------------
-# CASE NOTIFICATION
-# --------------------------------------------------
-
-
-def publish_case_notification(
-    channel,
-    report_id,
-    is_valid,
-    species=None
-):
-    payload = {
-        "reportId": report_id,
-        "validationPassed": is_valid,
-        "species": species,
-    }
-
-    channel.queue_declare(
-        queue=CASE_NOTIFICATION_QUEUE,
-        durable=True,
-    )
-
-    channel.basic_publish(
-        exchange="",
-        routing_key=CASE_NOTIFICATION_QUEUE,
-        body=json.dumps(payload).encode(),
-        properties=pika.BasicProperties(
-            delivery_mode=2,
-            content_type="application/json",
-        ),
-        mandatory=True,
-    )
-
-    print(
-        f"📢 Case {report_id} notification event published: "
-        f"{'PASSED' if is_valid else 'REJECTED'}"
-    )
-
-# --------------------------------------------------
-# IMAGE DOWNLOAD
-# --------------------------------------------------
-
-
-def resolve_image_input(image_source):
-    """
-    Download a Cloudinary image URL and save it
-    temporarily for YOLO processing.
-
-    Only HTTP/HTTPS URLs are supported.
-    """
-
-    if not image_source:
-        raise ValueError(
-            "Image source is missing."
-        )
-
-    if not isinstance(image_source, str):
-        raise ValueError(
-            "Image source must be a string URL."
-        )
-
-    try:
-        parsed_url = urlparse(image_source)
-    except ValueError:
-        raise ValueError(
-            "Invalid image URL."
-        )
-
-    if parsed_url.scheme != "https":
-        raise ValueError(
-            "Only HTTPS Cloudinary image URLs are supported."
-        )
-
-    if parsed_url.hostname != CLOUDINARY_DELIVERY_HOST:
-        raise ValueError(
-            "Image URL must use the approved Cloudinary delivery host."
-        )
-
-    expected_prefix = f"/{CLOUDINARY_CLOUD_NAME}/"
-    if not parsed_url.path.startswith(expected_prefix):
-        raise ValueError(
-            "Image URL does not belong to the approved Cloudinary cloud."
-        )
-
-    if parsed_url.username or parsed_url.password:
-        raise ValueError(
-            "Image URL credentials are not allowed."
-        )
-
-    temp_path = None
-
-    try:
-        headers = {
-            "User-Agent": "AniRescueWorker/1.0"
-        }
-
-        response = requests.get(
-            image_source,
-            headers=headers,
-            timeout=IMAGE_DOWNLOAD_TIMEOUT,
-            allow_redirects=False,
-        )
-
-        response.raise_for_status()
-
-        content_length = response.headers.get("Content-Length")
-        if content_length and int(content_length) > MAX_IMAGE_BYTES:
-            raise ValueError("Downloaded image exceeds the 10 MB processing limit.")
-
-        if len(response.content) > MAX_IMAGE_BYTES:
-            raise ValueError("Downloaded image exceeds the 10 MB processing limit.")
-
-        # Convert downloaded image to RGB JPEG.
-        # This also normalizes formats such as PNG/WebP.
-        img = Image.open(
-            io.BytesIO(response.content)
-        ).convert("RGB")
-
-        temp_file = tempfile.NamedTemporaryFile(
-            suffix=".jpg",
-            delete=False
-        )
-
-        temp_path = temp_file.name
-        temp_file.close()
-
-        img.save(
-            temp_path,
-            format="JPEG"
-        )
-
-        return temp_path
-
-    except Exception as err:
-        if temp_path and os.path.exists(temp_path):
-            try:
-                os.remove(temp_path)
-            except OSError:
-                pass
-
-        print(
-            f"⚠️ Failed downloading image: {err}"
-        )
-
-        raise ValueError(
-            f"Unable to fetch image URL: {err}"
-        )
-
-
-# --------------------------------------------------
-# MAIN WORKER
-# --------------------------------------------------
-
-
 def main():
 
     print(
@@ -946,8 +792,42 @@ def main():
                             f"exceeded maximum retries."
                         )
 
-                        # The bounded retry limit has been reached. Ack the
-                        # failed message so it does not loop forever.
+                        # Persist a terminal processing failure so the case
+                        # remains recoverable without being misclassified as
+                        # REJECTED_JUNK.
+                        if db_conn and report_id:
+                            try:
+                                with db_conn.cursor() as failure_cursor:
+                                    failure_cursor.execute(
+                                        """
+                                        UPDATE case_processing_jobs
+                                        SET
+                                            failed_at = CURRENT_TIMESTAMP,
+                                            failure_reason = LEFT(%s, 2000),
+                                            last_error = LEFT(%s, 1000),
+                                            locked_at = NULL
+                                        WHERE case_id = %s
+                                        """,
+                                        (
+                                            str(e),
+                                            str(e),
+                                            report_id,
+                                        ),
+                                    )
+                                    db_conn.commit()
+                            except Exception as failure_db_err:
+                                print(
+                                    f"⚠️ Failed to persist terminal AI failure "
+                                    f"for Case {report_id}: {failure_db_err}"
+                                )
+                                try:
+                                    db_conn.rollback()
+                                except Exception:
+                                    pass
+
+                        # Acknowledge the message so it cannot loop forever.
+                        # The durable job failure is the recovery signal for
+                        # the ADMIN retry endpoint.
                         ch.basic_ack(
                             delivery_tag=
                             method.delivery_tag
