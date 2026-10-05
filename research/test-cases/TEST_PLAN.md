@@ -6,6 +6,19 @@ This branch contains the experimental test plan used to produce the measurable r
 
 The results must be generated from actual executions. No accuracy, latency, notification-delivery, or end-to-end numbers should be manually entered.
 
+## Implementation status
+
+All R1-R10 now have executable coverage on this research branch:
+
+- R1/R2: benchmark artifact validation and recorded resource metrics.
+- R3: Gemini contract tests plus a guarded live case/Gemini observation path.
+- R4/R5: worker pipeline contract tests plus a guarded live API-to-AI timing harness.
+- R6/R7/R8: deterministic backend lifecycle, RBAC, and geospatial tests.
+- R9: notification recipient/persistence tests plus guarded live notification/FCM-token path.
+- R10: feedback validation/persistence tests plus guarded live USER submission.
+
+The guarded live harness requires an explicitly supplied isolated research API and test image. It never defaults to the deployed production URLs.
+
 ## Test groups
 
 | ID | Test group | What is measured | Evidence |
@@ -72,7 +85,7 @@ Calculate API response latency separately from background AI processing latency.
 
 ## R6-R10: functional evaluation
 
-The automated backend suite verifies deterministic rules that do not require production services. Live-service tests should be run separately against an isolated test environment and must never mutate production data.
+The automated backend suite verifies deterministic rules without production services. Live-service tests are implemented separately and must be run against an isolated test environment. The normal root runner does not enable them automatically.
 
 The paper should report both:
 
