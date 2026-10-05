@@ -2,15 +2,20 @@ import csv
 import json
 import os
 import statistics
+import sys
 import time
 from pathlib import Path
+
+BENCHMARK_DIR = Path(__file__).resolve().parent
+WORKER_ROOT = BENCHMARK_DIR.parent
+sys.path.insert(0, str(WORKER_ROOT))
 
 import psutil
 
 from src.models.yolo_engine import YoloGatekeeper
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = BENCHMARK_DIR
 DATASET_DIR = ROOT / "dataset"
 MANIFEST = DATASET_DIR / "manifest.csv"
 DEFAULT_OUTPUT = ROOT / "results" / "yolo-world-openvino-current.json"
@@ -116,7 +121,7 @@ def main():
     output = {
         "benchmark_type": "image_level_gatekeeper",
         "dataset": {
-            "manifest": str(MANIFEST.relative_to(ROOT.parent.parent)),
+            "manifest": str(MANIFEST.relative_to(WORKER_ROOT)),
             "images": total,
         },
         "model": {
