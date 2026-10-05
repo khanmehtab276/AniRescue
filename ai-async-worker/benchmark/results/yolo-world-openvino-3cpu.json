@@ -1,0 +1,954 @@
+{
+  "benchmark_type": "image_level_gatekeeper",
+  "dataset": {
+    "manifest": "benchmark/dataset/manifest.csv",
+    "images": 100
+  },
+  "model": {
+    "path": "/opt/yolo-world/yolo-world-anirescue_openvino_model",
+    "classes": [
+      "bear",
+      "bird",
+      "cat",
+      "cow",
+      "deer",
+      "dog",
+      "elephant",
+      "fox",
+      "giraffe",
+      "goat",
+      "horse",
+      "lion",
+      "monkey",
+      "sheep",
+      "snake",
+      "squirrel",
+      "tiger",
+      "zebra"
+    ],
+    "class_count": 18,
+    "imgsz": 512,
+    "confidence_threshold": 0.2,
+    "max_detections": 1
+  },
+  "metrics": {
+    "correct": 54,
+    "accuracy_percent": 54.0,
+    "false_positives": 0,
+    "false_negatives": 46,
+    "wrong_class_on_positive": 13,
+    "mean_inference_ms": 631.2739212101951,
+    "median_inference_ms": 609.5374840006116,
+    "p95_inference_ms": 700.403839550745,
+    "peak_process_rss_mb": 519.67578125,
+    "peak_cgroup_memory_mb": 501.88671875,
+    "mean_process_cpu_percent": 298.099
+  },
+  "notes": [
+    "Model loading is excluded from per-image inference timing.",
+    "Accuracy is exact image-level gatekeeper correctness: expected animal must be accepted with the expected class; expected none must be rejected.",
+    "This is not an mAP, IoU, precision/recall, or formal object-detection benchmark."
+  ],
+  "results": [
+    {
+      "image": "bear_030f58514b.jpg",
+      "expected": "bear",
+      "predicted": "bear",
+      "accepted": true,
+      "confidence": 0.9008052945137024,
+      "inference_ms": 609.2451240001537,
+      "cpu_percent": 329.7
+    },
+    {
+      "image": "bear_45162d5cc5.jpg",
+      "expected": "bear",
+      "predicted": "bear",
+      "accepted": true,
+      "confidence": 0.4937613904476166,
+      "inference_ms": 595.9666159978951,
+      "cpu_percent": 295.2
+    },
+    {
+      "image": "bear_96df23f620.jpg",
+      "expected": "bear",
+      "predicted": "bear",
+      "accepted": true,
+      "confidence": 0.8200995922088623,
+      "inference_ms": 593.4188650026044,
+      "cpu_percent": 289.8
+    },
+    {
+      "image": "bear_a2133dbf44.jpg",
+      "expected": "bear",
+      "predicted": "bear",
+      "accepted": true,
+      "confidence": 0.38108348846435547,
+      "inference_ms": 610.0881490019674,
+      "cpu_percent": 303.1
+    },
+    {
+      "image": "bear_f30be9d5f9.jpg",
+      "expected": "bear",
+      "predicted": "bear",
+      "accepted": true,
+      "confidence": 0.8243216872215271,
+      "inference_ms": 583.6987639995641,
+      "cpu_percent": 292.9
+    },
+    {
+      "image": "bird_2988674cab.jpg",
+      "expected": "bird",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 594.3612500013842,
+      "cpu_percent": 291.0
+    },
+    {
+      "image": "bird_566b688a5b.jpg",
+      "expected": "bird",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 601.8376430001808,
+      "cpu_percent": 305.6
+    },
+    {
+      "image": "bird_6408dd051a.jpg",
+      "expected": "bird",
+      "predicted": "bird",
+      "accepted": true,
+      "confidence": 0.7238633632659912,
+      "inference_ms": 600.7290360030311,
+      "cpu_percent": 297.9
+    },
+    {
+      "image": "bird_777b791de5.jpg",
+      "expected": "bird",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 594.140076002077,
+      "cpu_percent": 294.5
+    },
+    {
+      "image": "bird_7c84772a82.jpg",
+      "expected": "bird",
+      "predicted": "bird",
+      "accepted": true,
+      "confidence": 0.5459151268005371,
+      "inference_ms": 613.7697329977527,
+      "cpu_percent": 307.8
+    },
+    {
+      "image": "cat_0a95ad19ec.jpg",
+      "expected": "cat",
+      "predicted": "cat",
+      "accepted": true,
+      "confidence": 0.7717800140380859,
+      "inference_ms": 700.2239030007331,
+      "cpu_percent": 301.2
+    },
+    {
+      "image": "cat_36c3fec75c.jpg",
+      "expected": "cat",
+      "predicted": "cat",
+      "accepted": true,
+      "confidence": 0.8380892276763916,
+      "inference_ms": 691.9102920001023,
+      "cpu_percent": 296.2
+    },
+    {
+      "image": "cat_419d99a1d7.jpg",
+      "expected": "cat",
+      "predicted": "cat",
+      "accepted": true,
+      "confidence": 0.7353124618530273,
+      "inference_ms": 693.1980389999808,
+      "cpu_percent": 292.8
+    },
+    {
+      "image": "cat_6792b2b4ed.jpg",
+      "expected": "cat",
+      "predicted": "cat",
+      "accepted": true,
+      "confidence": 0.8553776741027832,
+      "inference_ms": 611.2161470009596,
+      "cpu_percent": 309.1
+    },
+    {
+      "image": "cat_7daa411e2c.jpg",
+      "expected": "cat",
+      "predicted": "cat",
+      "accepted": true,
+      "confidence": 0.866641640663147,
+      "inference_ms": 601.5311279988964,
+      "cpu_percent": 304.1
+    },
+    {
+      "image": "cow_2b0b7fb7a5.jpg",
+      "expected": "cow",
+      "predicted": "cow",
+      "accepted": true,
+      "confidence": 0.9304161667823792,
+      "inference_ms": 599.0244189997611,
+      "cpu_percent": 298.7
+    },
+    {
+      "image": "cow_6e6064ac6d.jpg",
+      "expected": "cow",
+      "predicted": "cow",
+      "accepted": true,
+      "confidence": 0.8846538066864014,
+      "inference_ms": 695.4303749989776,
+      "cpu_percent": 294.7
+    },
+    {
+      "image": "cow_bf05c59f70.jpg",
+      "expected": "cow",
+      "predicted": "cow",
+      "accepted": true,
+      "confidence": 0.7109725475311279,
+      "inference_ms": 692.4094069981948,
+      "cpu_percent": 296.0
+    },
+    {
+      "image": "cow_d01ad66be9.jpg",
+      "expected": "cow",
+      "predicted": "cow",
+      "accepted": true,
+      "confidence": 0.9033554196357727,
+      "inference_ms": 625.3503320003801,
+      "cpu_percent": 311.7
+    },
+    {
+      "image": "cow_f8fe89ff85.jpg",
+      "expected": "cow",
+      "predicted": "horse",
+      "accepted": true,
+      "confidence": 0.6908997297286987,
+      "inference_ms": 590.7747169985669,
+      "cpu_percent": 299.5
+    },
+    {
+      "image": "deer_381295d975.jpg",
+      "expected": "deer",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 590.674900002341,
+      "cpu_percent": 297.9
+    },
+    {
+      "image": "deer_5fc8854162.jpg",
+      "expected": "deer",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 689.0322879989981,
+      "cpu_percent": 288.7
+    },
+    {
+      "image": "deer_821c36a27d.jpg",
+      "expected": "deer",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 718.1965259987919,
+      "cpu_percent": 309.0
+    },
+    {
+      "image": "deer_8979adf9d0.jpg",
+      "expected": "deer",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 678.0863700005284,
+      "cpu_percent": 286.0
+    },
+    {
+      "image": "deer_b184c5fcee.jpg",
+      "expected": "deer",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 625.0167859980138,
+      "cpu_percent": 294.3
+    },
+    {
+      "image": "dog_5608c334d5.jpg",
+      "expected": "dog",
+      "predicted": "dog",
+      "accepted": true,
+      "confidence": 0.9318228960037231,
+      "inference_ms": 674.618028999248,
+      "cpu_percent": 284.5
+    },
+    {
+      "image": "dog_6406367daa.jpg",
+      "expected": "dog",
+      "predicted": "dog",
+      "accepted": true,
+      "confidence": 0.8375670313835144,
+      "inference_ms": 612.5806769996416,
+      "cpu_percent": 311.7
+    },
+    {
+      "image": "dog_95574e2d30.jpg",
+      "expected": "dog",
+      "predicted": "dog",
+      "accepted": true,
+      "confidence": 0.8790052533149719,
+      "inference_ms": 688.3322780013259,
+      "cpu_percent": 290.5
+    },
+    {
+      "image": "dog_bacc7a3b57.jpg",
+      "expected": "dog",
+      "predicted": "dog",
+      "accepted": true,
+      "confidence": 0.7797120809555054,
+      "inference_ms": 705.1750690006884,
+      "cpu_percent": 304.8
+    },
+    {
+      "image": "dog_fdbbbdc923.jpg",
+      "expected": "dog",
+      "predicted": "dog",
+      "accepted": true,
+      "confidence": 0.6459075212478638,
+      "inference_ms": 611.6784410005494,
+      "cpu_percent": 305.6
+    },
+    {
+      "image": "elephant_0bd8f91705.jpg",
+      "expected": "elephant",
+      "predicted": "elephant",
+      "accepted": true,
+      "confidence": 0.888681948184967,
+      "inference_ms": 677.1289089992933,
+      "cpu_percent": 282.0
+    },
+    {
+      "image": "elephant_a1a7f0751d.jpg",
+      "expected": "elephant",
+      "predicted": "elephant",
+      "accepted": true,
+      "confidence": 0.9481412172317505,
+      "inference_ms": 620.3197700015153,
+      "cpu_percent": 319.1
+    },
+    {
+      "image": "elephant_c81d95f1d5.jpg",
+      "expected": "elephant",
+      "predicted": "elephant",
+      "accepted": true,
+      "confidence": 0.9482547640800476,
+      "inference_ms": 676.9658770026581,
+      "cpu_percent": 285.0
+    },
+    {
+      "image": "elephant_e67ba7337e.jpg",
+      "expected": "elephant",
+      "predicted": "elephant",
+      "accepted": true,
+      "confidence": 0.7555512189865112,
+      "inference_ms": 622.0477250026306,
+      "cpu_percent": 315.0
+    },
+    {
+      "image": "elephant_f7ff0e22d6.jpg",
+      "expected": "elephant",
+      "predicted": "elephant",
+      "accepted": true,
+      "confidence": 0.7161697745323181,
+      "inference_ms": 684.3967719978536,
+      "cpu_percent": 292.1
+    },
+    {
+      "image": "fox_3b3cc92df0.jpg",
+      "expected": "fox",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 618.4104919993842,
+      "cpu_percent": 308.8
+    },
+    {
+      "image": "fox_6d356007cc.jpg",
+      "expected": "fox",
+      "predicted": "bear",
+      "accepted": true,
+      "confidence": 0.683819055557251,
+      "inference_ms": 678.6653480012319,
+      "cpu_percent": 287.2
+    },
+    {
+      "image": "fox_989334fc78.jpg",
+      "expected": "fox",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 608.7115760019515,
+      "cpu_percent": 310.4
+    },
+    {
+      "image": "fox_ae6537114b.jpg",
+      "expected": "fox",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 681.373702998826,
+      "cpu_percent": 284.6
+    },
+    {
+      "image": "fox_d3c91b1650.jpg",
+      "expected": "fox",
+      "predicted": "giraffe",
+      "accepted": true,
+      "confidence": 0.44229772686958313,
+      "inference_ms": 616.5232910025225,
+      "cpu_percent": 312.9
+    },
+    {
+      "image": "giraffe_00c272d5b8.jpg",
+      "expected": "giraffe",
+      "predicted": "giraffe",
+      "accepted": true,
+      "confidence": 0.8733769059181213,
+      "inference_ms": 608.8450880015444,
+      "cpu_percent": 303.8
+    },
+    {
+      "image": "giraffe_2a83399a8b.jpg",
+      "expected": "giraffe",
+      "predicted": "giraffe",
+      "accepted": true,
+      "confidence": 0.9361446499824524,
+      "inference_ms": 596.0516100021778,
+      "cpu_percent": 296.8
+    },
+    {
+      "image": "giraffe_3acec8b242.jpg",
+      "expected": "giraffe",
+      "predicted": "giraffe",
+      "accepted": true,
+      "confidence": 0.9550906419754028,
+      "inference_ms": 603.1294370004616,
+      "cpu_percent": 300.0
+    },
+    {
+      "image": "giraffe_3d9bd2b143.jpg",
+      "expected": "giraffe",
+      "predicted": "giraffe",
+      "accepted": true,
+      "confidence": 0.8955854177474976,
+      "inference_ms": 668.6769009975251,
+      "cpu_percent": 279.6
+    },
+    {
+      "image": "giraffe_be8a68edc7.jpg",
+      "expected": "giraffe",
+      "predicted": "giraffe",
+      "accepted": true,
+      "confidence": 0.9645795226097107,
+      "inference_ms": 616.707895998843,
+      "cpu_percent": 312.8
+    },
+    {
+      "image": "goat_543f22e034.jpg",
+      "expected": "goat",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 610.6277609978861,
+      "cpu_percent": 304.5
+    },
+    {
+      "image": "goat_7a1d30eb9d.jpg",
+      "expected": "goat",
+      "predicted": "horse",
+      "accepted": true,
+      "confidence": 0.5423586964607239,
+      "inference_ms": 695.968765001453,
+      "cpu_percent": 297.3
+    },
+    {
+      "image": "goat_8198d70b65.jpg",
+      "expected": "goat",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 672.3002569997334,
+      "cpu_percent": 281.0
+    },
+    {
+      "image": "goat_8af3b1b8c0.jpg",
+      "expected": "goat",
+      "predicted": "horse",
+      "accepted": true,
+      "confidence": 0.8025591373443604,
+      "inference_ms": 607.3190700008126,
+      "cpu_percent": 307.8
+    },
+    {
+      "image": "goat_ab6e71369c.jpg",
+      "expected": "goat",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 711.6480120021151,
+      "cpu_percent": 264.1
+    },
+    {
+      "image": "horse_6efafe68a0.jpg",
+      "expected": "horse",
+      "predicted": "horse",
+      "accepted": true,
+      "confidence": 0.8527226448059082,
+      "inference_ms": 597.3477770021418,
+      "cpu_percent": 304.6
+    },
+    {
+      "image": "horse_7776c3dd75.jpg",
+      "expected": "horse",
+      "predicted": "horse",
+      "accepted": true,
+      "confidence": 0.8944309949874878,
+      "inference_ms": 597.6461580030445,
+      "cpu_percent": 296.1
+    },
+    {
+      "image": "horse_810ac85f01.jpg",
+      "expected": "horse",
+      "predicted": "horse",
+      "accepted": true,
+      "confidence": 0.6196916103363037,
+      "inference_ms": 609.9468159991375,
+      "cpu_percent": 306.5
+    },
+    {
+      "image": "horse_a807ff3771.jpg",
+      "expected": "horse",
+      "predicted": "horse",
+      "accepted": true,
+      "confidence": 0.8467921018600464,
+      "inference_ms": 597.7075869996042,
+      "cpu_percent": 299.3
+    },
+    {
+      "image": "horse_aafee3819b.jpg",
+      "expected": "horse",
+      "predicted": "horse",
+      "accepted": true,
+      "confidence": 0.9205574989318848,
+      "inference_ms": 676.1485030001495,
+      "cpu_percent": 282.4
+    },
+    {
+      "image": "lion_013e2bbeec.jpg",
+      "expected": "lion",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 604.6660190004332,
+      "cpu_percent": 304.2
+    },
+    {
+      "image": "lion_2454c7e46c.jpg",
+      "expected": "lion",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 614.9028789986914,
+      "cpu_percent": 312.2
+    },
+    {
+      "image": "lion_93456c20b3.jpg",
+      "expected": "lion",
+      "predicted": "dog",
+      "accepted": true,
+      "confidence": 0.47701236605644226,
+      "inference_ms": 601.8518679993576,
+      "cpu_percent": 305.6
+    },
+    {
+      "image": "lion_9ad1591cca.jpg",
+      "expected": "lion",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 703.8226340009714,
+      "cpu_percent": 268.5
+    },
+    {
+      "image": "lion_b82537e20f.jpg",
+      "expected": "lion",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 609.612277999986,
+      "cpu_percent": 301.7
+    },
+    {
+      "image": "monkey_3b5e5ce89e.jpg",
+      "expected": "monkey",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 658.5140970018983,
+      "cpu_percent": 274.8
+    },
+    {
+      "image": "monkey_3d42bd2773.jpg",
+      "expected": "monkey",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 609.4626900012372,
+      "cpu_percent": 301.8
+    },
+    {
+      "image": "monkey_3d7076a6f8.jpg",
+      "expected": "monkey",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 617.977129000792,
+      "cpu_percent": 317.0
+    },
+    {
+      "image": "monkey_c7aed832d9.jpg",
+      "expected": "monkey",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 676.59856300088,
+      "cpu_percent": 285.2
+    },
+    {
+      "image": "monkey_ffe524404f.jpg",
+      "expected": "monkey",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 593.5085479977715,
+      "cpu_percent": 294.8
+    },
+    {
+      "image": "none_072742d4eb.jpg",
+      "expected": "none",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 600.0879140010511,
+      "cpu_percent": 298.2
+    },
+    {
+      "image": "none_1a39535917.jpg",
+      "expected": "none",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 526.9523700007994,
+      "cpu_percent": 330.1
+    },
+    {
+      "image": "none_4b1077b46a.jpg",
+      "expected": "none",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 669.3711119987711,
+      "cpu_percent": 274.8
+    },
+    {
+      "image": "none_6f335a84b4.jpg",
+      "expected": "none",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 599.2665869998746,
+      "cpu_percent": 298.6
+    },
+    {
+      "image": "none_8235995f44.jpg",
+      "expected": "none",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 608.3045350023895,
+      "cpu_percent": 307.3
+    },
+    {
+      "image": "none_93a3293972.jpg",
+      "expected": "none",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 617.3561329997028,
+      "cpu_percent": 317.4
+    },
+    {
+      "image": "none_b1c9bc000b.jpg",
+      "expected": "none",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 677.719586998137,
+      "cpu_percent": 286.2
+    },
+    {
+      "image": "none_b3cf675885.jpg",
+      "expected": "none",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 604.7612360016501,
+      "cpu_percent": 299.2
+    },
+    {
+      "image": "none_d5adbb7dae.jpg",
+      "expected": "none",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 599.8306469991803,
+      "cpu_percent": 300.0
+    },
+    {
+      "image": "none_f9270841fd.jpg",
+      "expected": "none",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 611.6844730022422,
+      "cpu_percent": 308.9
+    },
+    {
+      "image": "sheep_0b5aba58d0.jpg",
+      "expected": "sheep",
+      "predicted": "dog",
+      "accepted": true,
+      "confidence": 0.8219712972640991,
+      "inference_ms": 599.878439999884,
+      "cpu_percent": 301.6
+    },
+    {
+      "image": "sheep_4df1ee41b9.jpg",
+      "expected": "sheep",
+      "predicted": "sheep",
+      "accepted": true,
+      "confidence": 0.9239810109138489,
+      "inference_ms": 599.0278889985348,
+      "cpu_percent": 302.1
+    },
+    {
+      "image": "sheep_5d3624ca2a.jpg",
+      "expected": "sheep",
+      "predicted": "sheep",
+      "accepted": true,
+      "confidence": 0.8993129730224609,
+      "inference_ms": 689.1677530002198,
+      "cpu_percent": 285.8
+    },
+    {
+      "image": "sheep_cf26cb3f64.jpg",
+      "expected": "sheep",
+      "predicted": "sheep",
+      "accepted": true,
+      "confidence": 0.5274831652641296,
+      "inference_ms": 604.9329679990478,
+      "cpu_percent": 305.7
+    },
+    {
+      "image": "sheep_f1191ced08.jpg",
+      "expected": "sheep",
+      "predicted": "sheep",
+      "accepted": true,
+      "confidence": 0.8247539401054382,
+      "inference_ms": 599.4043479986431,
+      "cpu_percent": 300.2
+    },
+    {
+      "image": "snake_10eac14e91.jpg",
+      "expected": "snake",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 608.405347000371,
+      "cpu_percent": 304.0
+    },
+    {
+      "image": "snake_3ec4ab902d.jpg",
+      "expected": "snake",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 966.8574819988862,
+      "cpu_percent": 221.3
+    },
+    {
+      "image": "snake_7b0f3b71fe.jpg",
+      "expected": "snake",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 605.5337270008749,
+      "cpu_percent": 303.8
+    },
+    {
+      "image": "snake_9995fa78e7.jpg",
+      "expected": "snake",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 628.1028379999043,
+      "cpu_percent": 292.9
+    },
+    {
+      "image": "snake_a30a389801.jpg",
+      "expected": "snake",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 672.5332210007764,
+      "cpu_percent": 282.4
+    },
+    {
+      "image": "squirrel_1b84f70287.jpg",
+      "expected": "squirrel",
+      "predicted": "cat",
+      "accepted": true,
+      "confidence": 0.4973891079425812,
+      "inference_ms": 600.4418279990205,
+      "cpu_percent": 301.4
+    },
+    {
+      "image": "squirrel_60cd806f1f.jpg",
+      "expected": "squirrel",
+      "predicted": "bear",
+      "accepted": true,
+      "confidence": 0.5995226502418518,
+      "inference_ms": 604.3797429992992,
+      "cpu_percent": 304.4
+    },
+    {
+      "image": "squirrel_96a6b63fd7.jpg",
+      "expected": "squirrel",
+      "predicted": "cat",
+      "accepted": true,
+      "confidence": 0.8661766052246094,
+      "inference_ms": 594.3161819996021,
+      "cpu_percent": 291.0
+    },
+    {
+      "image": "squirrel_afb5b8b1f9.jpg",
+      "expected": "squirrel",
+      "predicted": "cat",
+      "accepted": true,
+      "confidence": 0.34305816888809204,
+      "inference_ms": 600.2377340009843,
+      "cpu_percent": 301.5
+    },
+    {
+      "image": "squirrel_dfb203a10c.jpg",
+      "expected": "squirrel",
+      "predicted": "bear",
+      "accepted": true,
+      "confidence": 0.7046021819114685,
+      "inference_ms": 603.3702269996866,
+      "cpu_percent": 304.8
+    },
+    {
+      "image": "tiger_12431a4aaf.jpg",
+      "expected": "tiger",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 603.1625390023692,
+      "cpu_percent": 303.3
+    },
+    {
+      "image": "tiger_73bd0c2abd.jpg",
+      "expected": "tiger",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 600.9958710019419,
+      "cpu_percent": 304.4
+    },
+    {
+      "image": "tiger_9748c7f385.jpg",
+      "expected": "tiger",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 602.3264960022061,
+      "cpu_percent": 302.1
+    },
+    {
+      "image": "tiger_9af4b39bc7.jpg",
+      "expected": "tiger",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 604.290528997808,
+      "cpu_percent": 301.1
+    },
+    {
+      "image": "tiger_a80632e78d.jpg",
+      "expected": "tiger",
+      "predicted": "cat",
+      "accepted": true,
+      "confidence": 0.31972429156303406,
+      "inference_ms": 676.4848249986244,
+      "cpu_percent": 280.8
+    },
+    {
+      "image": "zebra_0d33886916.jpg",
+      "expected": "zebra",
+      "predicted": "zebra",
+      "accepted": true,
+      "confidence": 0.934180736541748,
+      "inference_ms": 607.7402269984304,
+      "cpu_percent": 307.6
+    },
+    {
+      "image": "zebra_39dc19cb22.jpg",
+      "expected": "zebra",
+      "predicted": "zebra",
+      "accepted": true,
+      "confidence": 0.5250504016876221,
+      "inference_ms": 605.1521400004276,
+      "cpu_percent": 302.3
+    },
+    {
+      "image": "zebra_4449cff9bb.jpg",
+      "expected": "zebra",
+      "predicted": "zebra",
+      "accepted": true,
+      "confidence": 0.9265388250350952,
+      "inference_ms": 601.001136998093,
+      "cpu_percent": 304.4
+    },
+    {
+      "image": "zebra_5bca3129fd.jpg",
+      "expected": "zebra",
+      "predicted": null,
+      "accepted": false,
+      "confidence": 0.0,
+      "inference_ms": 598.8209469978756,
+      "cpu_percent": 297.2
+    },
+    {
+      "image": "zebra_cbef5c17de.jpg",
+      "expected": "zebra",
+      "predicted": "zebra",
+      "accepted": true,
+      "confidence": 0.9278726577758789,
+      "inference_ms": 598.2459040023969,
+      "cpu_percent": 299.1
+    }
+  ]
+}
