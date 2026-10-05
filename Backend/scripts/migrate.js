@@ -59,7 +59,9 @@ async function main() {
 
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    // Match the production DB client configuration. TLS certificate
+    // verification must remain enabled for migration connections too.
+    ssl: { rejectUnauthorized: true },
   });
 
   const client = await pool.connect();
