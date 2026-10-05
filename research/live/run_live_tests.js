@@ -1,4 +1,5 @@
 const { performance } = require("node:perf_hooks");
+const { randomUUID } = require("node:crypto");
 
 const base = process.env.RESEARCH_API_BASE_URL.replace(/\/$/, "");
 const email = process.env.RESEARCH_USER_EMAIL;
@@ -62,6 +63,23 @@ async function run() {
   const auth = await login();
   console.log("Authenticated research user:", auth.user.email);
 
+  if (process.env.RESEARCH_FCM_TOKEN) {
+    const tokenResponse = await request("/api/auth/device-token", {
+      method: "POST",
+      headers: {
+        Cookie: auth.cookie,
+        "X-CSRF-Token": auth.csrfCookie || "",
+      },
+      body: JSON.stringify({
+        token: process.env.RESEARCH_FCM_TOKEN,
+        platform: "research",
+      }),
+    });
+    const tokenBody = await tokenResponse.json();
+    assert(tokenResponse.ok, "R9 FCM token registration failed: " + JSON.stringify(tokenBody));
+    console.log("R9 FCM token registered before case notification.");
+  }
+
   const reportStart = performance.now();
   const report = await request("/api/cases/report", {
     method: "POST",
@@ -70,7 +88,7 @@ async function run() {
       "X-CSRF-Token": auth.csrfCookie || "",
     },
     body: JSON.stringify({
-      clientRequestId: crypto.randomUUID(),
+      clientRequestId: randomUUID(),
       imageUrl,
       description: "Research evaluation animal rescue case.",
       location: {
@@ -137,37 +155,36 @@ async function run() {
     "R4 did not reach a final AI validation state: " + latest.status,
   );
 
-  // R9: reporter notification is persisted by the case notification path.
-  const notifications = await request("/api/notifications", {
-    headers: { Cookie: auth.cookie },
-  });
-  assert(notifications.ok, "R9 notification endpoint failed.");
+  // R9: notification creation is asynchronous/non-blocking, so poll the
+  // authenticated notification feed rather than assuming immediate visibility.
+  const notificationDeadline = performance.now() + Math.min(timeoutMs, 30000);
+  let notificationPersisted = false;
 
-  const notificationBody = await notifications.json();
-  const list = notificationBody.notifications || notificationBody || [];
-  assert(
-    Array.isArray(list) && list.some((n) => Number(n.case_id) === Number(caseId)),
-    "R9 did not observe the reporter notification for the research case.",
-  );
-  console.log(JSON.stringify({ test: "R9", caseId, notification_persisted: true }));
-
-  // Optional FCM path: register a real token. Actual device receipt remains
-  // a client-side observation and is not claimed by this server-side harness.
-  if (process.env.RESEARCH_FCM_TOKEN) {
-    const tokenResponse = await request("/api/auth/device-token", {
-      method: "POST",
-      headers: {
-        Cookie: auth.cookie,
-        "X-CSRF-Token": auth.csrfCookie || "",
-      },
-      body: JSON.stringify({
-        token: process.env.RESEARCH_FCM_TOKEN,
-        platform: "research",
-      }),
+  while (performance.now() < notificationDeadline) {
+    const notifications = await request("/api/notifications?limit=100", {
+      headers: { Cookie: auth.cookie },
     });
-    const tokenBody = await tokenResponse.json();
-    assert(tokenResponse.ok, "R9 FCM token registration failed: " + JSON.stringify(tokenBody));
-    console.log("R9 FCM token registered; push send is exercised by the next notification event.");
+    assert(notifications.ok, "R9 notification endpoint failed.");
+
+    const notificationBody = await notifications.json();
+    const list = notificationBody.notifications || [];
+    if (Array.isArray(list) && list.some((n) => Number(n.case_id) === Number(caseId))) {
+      notificationPersisted = true;
+      break;
+    }
+    await sleep(1000);
+  }
+
+  assert(notificationPersisted, "R9 did not observe the reporter notification for the research case.");
+  console.log(JSON.stringify({
+    test: "R9",
+    caseId,
+    notification_persisted: true,
+    fcm_send_path_exercised: Boolean(process.env.RESEARCH_FCM_TOKEN),
+  }));
+
+  if (process.env.RESEARCH_FCM_TOKEN) {
+    console.log("R9 actual device receipt is not claimed; observe the registered client/device separately.");
   }
 
   // R10: feedback persistence for the authenticated USER.
