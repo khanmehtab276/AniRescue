@@ -15,10 +15,27 @@ def load_worker():
     )
     fake_psycopg2 = types.SimpleNamespace(connect=lambda *args, **kwargs: None)
     fake_requests = types.SimpleNamespace(get=lambda *args, **kwargs: None)
+    fake_image = types.SimpleNamespace(MAX_IMAGE_PIXELS=0)
+    fake_pil = types.ModuleType("PIL")
+    fake_pil.Image = fake_image
+    fake_models = types.ModuleType("src.models")
+    fake_yolo = types.ModuleType("src.models.yolo_engine")
+    fake_gemini = types.ModuleType("src.models.gemini_analyzer")
+
+    class FakeGatekeeper:
+        pass
+
+    fake_yolo.YoloGatekeeper = FakeGatekeeper
+    fake_gemini.analyze_image_with_gemini = lambda **kwargs: None
 
     sys.modules.setdefault("pika", fake_pika)
     sys.modules.setdefault("psycopg2", fake_psycopg2)
     sys.modules.setdefault("requests", fake_requests)
+    sys.modules.setdefault("PIL", fake_pil)
+    sys.modules.setdefault("PIL.Image", fake_image)
+    sys.modules.setdefault("src.models", fake_models)
+    sys.modules.setdefault("src.models.yolo_engine", fake_yolo)
+    sys.modules.setdefault("src.models.gemini_analyzer", fake_gemini)
 
     os.environ.setdefault("RABBITMQ_URL", "amqp://research")
     os.environ.setdefault("DATABASE_URL", "postgresql://research")
