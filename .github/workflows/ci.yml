@@ -3,6 +3,9 @@ name: AniRescue CI
 on:
   push:
     branches:
+      - main
+      - feat/yolo-world-production
+      - research/experimental-results
       - production-hardening-v2
   pull_request:
 
