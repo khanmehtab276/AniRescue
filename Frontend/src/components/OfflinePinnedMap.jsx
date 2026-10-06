@@ -9,6 +9,8 @@ const MAPLIBRE_URL =
   "https://unpkg.com/maplibre-gl@6.12.0/dist/maplibre-gl.mjs";
 const PMTILES_URL =
   "https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/+esm";
+const MAPLIBRE_CSS_URL =
+  "https://unpkg.com/maplibre-gl@6.12.0/dist/maplibre-gl.css";
 
 const ZONE_BOUNDS = {
   "western-india": [68, 8, 78, 29],
@@ -111,6 +113,7 @@ function buildOfflineStyle(pmtilesUrl, attribution) {
 export default function OfflinePinnedMap({
   position,
   setPosition,
+  onUnavailable,
   className = "h-full w-full",
 }) {
   const containerRef = useRef(null);
@@ -138,6 +141,18 @@ export default function OfflinePinnedMap({
           throw new Error(
             "No large offline map covering this location is downloaded.",
           );
+        }
+
+        const cssAlreadyLoaded = document.querySelector(
+          'link[data-anirescue-maplibre="true"]',
+        );
+
+        if (!cssAlreadyLoaded) {
+          const link = document.createElement("link");
+          link.rel = "stylesheet";
+          link.href = MAPLIBRE_CSS_URL;
+          link.dataset.anirescueMaplibre = "true";
+          document.head.appendChild(link);
         }
 
         const [{ default: maplibre }, pmtiles] = await Promise.all([
@@ -203,12 +218,16 @@ export default function OfflinePinnedMap({
         mapRef.current = map;
       } catch (error) {
         if (!cancelled) {
+          const message =
+            error?.message ||
+            "Offline map could not be opened on this device.";
+
+          onUnavailable?.(message);
+
           setState({
             loading: false,
             map: null,
-            error:
-              error?.message ||
-              "Offline map could not be opened on this device.",
+            error: message,
           });
         }
       }
@@ -245,8 +264,8 @@ export default function OfflinePinnedMap({
 
     if (markerRef.current) {
       markerRef.current.setLngLat([position.lng, position.lat]);
-    } else if (window.maplibregl) {
-      markerRef.current = new window.maplibregl.Marker({ color: "#dc143c" })
+    } else if (maplibreRef.current) {
+      markerRef.current = new maplibreRef.current.Marker({ color: "#dc143c" })
         .setLngLat([position.lng, position.lat])
         .addTo(map);
     }
