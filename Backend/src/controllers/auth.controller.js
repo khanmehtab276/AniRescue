@@ -12,6 +12,7 @@ const {
   createSession,
 } = require("../services/authSessions");
 const { normalizeEnum } = require("../utils/helpers");
+const { logAudit } = require("../utils/auditLog");
 const {
   notifyVolunteerAboutNearbyCases,
 } = require("../utils/caseNotifications");
@@ -261,6 +262,13 @@ const login = async (req, res) => {
     ]);
 
     if (result.rows.length === 0) {
+      await logAudit({
+        action: "LOGIN_FAILED",
+        targetType: "EMAIL",
+        targetId: normalizedEmail,
+        metadata: { reason: "UNKNOWN_ACCOUNT" },
+        req,
+      });
       return res.status(401).json({
         error: "Invalid email or password.",
       });
@@ -271,12 +279,28 @@ const login = async (req, res) => {
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
     if (!isValidPassword) {
+      await logAudit({
+        actorId: user.id,
+        action: "LOGIN_FAILED",
+        targetType: "USER",
+        targetId: user.id,
+        metadata: { reason: "INVALID_PASSWORD" },
+        req,
+      });
       return res.status(401).json({
         error: "Invalid email or password.",
       });
     }
 
     if (user.account_status !== "ACTIVE") {
+      await logAudit({
+        actorId: user.id,
+        action: "LOGIN_BLOCKED",
+        targetType: "USER",
+        targetId: user.id,
+        metadata: { accountStatus: user.account_status },
+        req,
+      });
       return res.status(403).json({
         error: "Your account is not active.",
         account_status: user.account_status,
@@ -297,6 +321,15 @@ const login = async (req, res) => {
       session.refreshToken,
     );
 
+    await logAudit({
+      actorId: user.id,
+      action: "LOGIN_SUCCESS",
+      targetType: "USER",
+      targetId: user.id,
+      metadata: { role: user.role },
+      req,
+    });
+
     res.set("Cache-Control", "no-store");
     res.json({ authenticated: true, csrfToken, user });
   } catch (err) {
@@ -311,6 +344,13 @@ const login = async (req, res) => {
 const logout = async (req, res) => {
   try {
     await revokeSession(getRefreshToken(req));
+    await logAudit({
+      actorId: req.user?.id || null,
+      action: "LOGOUT",
+      targetType: "USER",
+      targetId: req.user?.id || null,
+      req,
+    });
   } catch (error) {
     console.error("Logout session revoke error:", error?.message || error);
   }
