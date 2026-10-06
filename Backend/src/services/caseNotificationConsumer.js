@@ -31,7 +31,12 @@ const startCaseNotificationConsumer = async () => {
 
       try {
         const payload = JSON.parse(message.content.toString());
-        const { reportId, validationPassed, species } = payload;
+        const {
+          reportId,
+          validationPassed,
+          species,
+          processingFailed = false,
+        } = payload;
 
         if (!reportId || typeof validationPassed !== "boolean") {
           console.warn("⚠️ Invalid case notification event:", payload);
@@ -63,7 +68,21 @@ const startCaseNotificationConsumer = async () => {
         const detectedSpecies =
           species || rescueCase.species || "animal";
 
-        if (validationPassed) {
+        if (processingFailed) {
+          const result = await notifyCaseRecipients({
+            caseId: reportId,
+            notificationType: "AI_PROCESSING_FAILED",
+            title: "AI validation needs attention",
+            message:
+              "We could not complete the automated image check. An administrator can retry this report.",
+            includeReporter: true,
+            includeAdmins: true,
+          });
+
+          console.log(
+            `📨 Case #${reportId} AI-failure notifications sent to ${result.notified} recipient(s).`,
+          );
+        } else if (validationPassed) {
           const result = await notifyCaseRecipients({
             caseId: reportId,
             notificationType: "VALIDATION_PASSED",
