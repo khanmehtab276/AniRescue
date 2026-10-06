@@ -90,7 +90,7 @@ export async function saveOfflineReport(report) {
 export async function migrateLegacyOfflineQueue() {
   const legacyKey = 'anirescue_offline_queue';
 
-  let legacyQueue = null;
+  let legacyQueue;
 
   try {
     const raw = localStorage.getItem(legacyKey);
