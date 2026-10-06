@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const { pool } = require("../config/db");
-const { rotateSession, revokeSession } = require("../services/authSessions");
+const { createSession, rotateSession, revokeSession } = require("../services/authSessions");
 
 const isProduction = process.env.NODE_ENV === "production";
 const SESSION_COOKIE = isProduction
@@ -144,7 +144,35 @@ async function verifyToken(req, res, next) {
 
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
-    req.authSessionId = req.user.sid || null;
+
+    // Seamlessly migrate the recently-issued legacy long-lived JWT into
+    // the new revocable server-side session model. This avoids forcing
+    // existing users to log in again after the security architecture change.
+    if (cookieToken && !req.user.sid && req.user.id) {
+      try {
+        const session = await createSession({ userId: req.user.id, req });
+        const accessToken = createAccessToken(req.user, session.id);
+
+        setAuthCookies(
+          res,
+          accessToken,
+          session.refreshToken,
+          getCsrfToken(req),
+        );
+
+        req.user = jwt.verify(accessToken, process.env.JWT_SECRET);
+        req.authSessionId = session.id;
+        res.set("Cache-Control", "no-store");
+      } catch (migrationError) {
+        console.error(
+          "Legacy session migration error:",
+          migrationError?.message || migrationError,
+        );
+      }
+    } else {
+      req.authSessionId = req.user.sid || null;
+    }
+
     return next();
   } catch {
     const refreshToken = getRefreshToken(req);
