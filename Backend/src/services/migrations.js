@@ -7,11 +7,11 @@ const LOCK_KEY = 918273645;
 
 function filesafeMigrationName(version) {
   const names = {
-    1: "001_phase2_rbac_and_evidence.sql",
+    1: "001_initial_schema.sql",
     2: "002_role_profiles_and_ngo_coverage.sql",
     3: "003_ngo_volunteers.sql",
     4: "004_notifications.sql",
-    5: "005_device_tokens.sql",
+    5: "005_notifications.sql",
   };
   return names[version] || `migration-${version}`;
 }
