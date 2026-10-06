@@ -1,0 +1,14 @@
+{
+  "test_group": "R9/R10",
+  "status": "PASS",
+  "case_id": 9,
+  "notification_persisted": true,
+  "fcm_send_path_exercised": false,
+  "feedback_created": true,
+  "feedback_id": 4,
+  "notes": [
+    "Reporter notification persistence was observed through the authenticated notification feed.",
+    "No FCM device token was supplied, so actual FCM send-path/device delivery was not exercised.",
+    "Feedback persistence was successfully created for the live research case."
+  ]
+}
