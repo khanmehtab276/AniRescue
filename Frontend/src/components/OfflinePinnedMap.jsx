@@ -47,7 +47,7 @@ function buildOfflineStyle(attribution) {
     sources: {
       anirescue: {
         type: "vector",
-        url: "pmtiles://anirescue-offline-source",
+        url: `pmtiles://anirescue-offline-${selected.id}`,
         attribution,
       },
     },
@@ -116,7 +116,7 @@ export default function OfflinePinnedMap({
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
-  const protocolRef = useRef(null);
+  const protocolRef = useRef(null);\n  const maplibreRef = useRef(null);
   const [state, setState] = useState({
     loading: true,
     map: null,
@@ -153,7 +153,7 @@ export default function OfflinePinnedMap({
         );
 
         protocol.add(archive);
-        maplibre.addProtocol("pmtiles", protocol.tile);
+        maplibre.addProtocol("pmtiles", protocol.tile);\n        maplibreRef.current = maplibre;
         protocolRef.current = protocol;
 
         const header = await archive.getHeader();
@@ -226,7 +226,7 @@ export default function OfflinePinnedMap({
         mapRef.current = null;
       }
 
-      if (protocolRef.current) {
+      maplibreRef.current = null;\n\n      if (protocolRef.current) {
         // MapLibre owns the protocol registration lifecycle; removing the
         // map is sufficient for this short-lived report-page instance.
         protocolRef.current = null;
