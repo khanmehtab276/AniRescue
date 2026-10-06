@@ -55,6 +55,22 @@ export default defineConfig({
             },
           },
           {
+            // MapLibre's stylesheet is also cached so the downloaded map
+            // remains usable without network after the first online load.
+            urlPattern: /^https:\/\/unpkg\.com\/maplibre-gl@6\.12\.0\/dist\/maplibre-gl\.css$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'anirescue-map-runtime',
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+              expiration: {
+                maxEntries: 4,
+                maxAgeSeconds: 30 * 24 * 60 * 60,
+              },
+            },
+          },
+          {
             // Cache OpenStreetMap tiles as they are viewed so the same map
             // area remains available when the device later loses network.
             // CacheFirst is intentional: tiles are static and an offline
