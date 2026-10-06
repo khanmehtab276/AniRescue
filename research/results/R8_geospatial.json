@@ -1,0 +1,14 @@
+{
+  "test": "R8",
+  "name": "Geospatial Coordination and NGO Jurisdiction",
+  "status": "PASS",
+  "evaluation_type": "deterministic functional test",
+  "coverage": [
+    "Identical coordinates produce zero Haversine distance.",
+    "Haversine distance is symmetric.",
+    "A nearby point is correctly closer than a distant point.",
+    "NGO completion verification is permitted within jurisdiction and rejected outside jurisdiction."
+  ],
+  "source_test": "Backend/test/researchEvaluation.test.js",
+  "notes": "These are deterministic rule checks using fixed coordinates; they do not measure real-world location accuracy."
+}
