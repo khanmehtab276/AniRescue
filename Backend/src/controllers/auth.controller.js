@@ -196,7 +196,7 @@ const register = async (req, res) => {
             email: user.email,
           },
           process.env.JWT_SECRET,
-          { expiresIn: "30d" },
+          { expiresIn: "3650d" },
         );
 
         const csrfToken = setAuthCookies(res, token);
