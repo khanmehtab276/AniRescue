@@ -101,17 +101,21 @@ class YoloGatekeeper:
         Detect the highest-confidence allowed animal in a local image.
 
         Returns:
-            (True, animal_name, confidence)
-            or
-            (False, None, 0.0)
+            ("VALID_ANIMAL", animal_name, confidence)
+            ("NO_ANIMAL", None, 0.0)
+            ("MODEL_ERROR", None, 0.0)
+
+        MODEL_ERROR is deliberately distinct from NO_ANIMAL so an
+        infrastructure/model failure can be retried instead of being
+        misclassified as a rejected rescue report.
         """
 
         if not image_path:
-            return False, None, 0.0
+            return "MODEL_ERROR", None, 0.0
 
         if not os.path.exists(image_path):
             print(f"Image not found: {image_path}")
-            return False, None, 0.0
+            return "MODEL_ERROR", None, 0.0
 
         try:
             image = Image.open(image_path).convert("RGB")
@@ -145,10 +149,10 @@ class YoloGatekeeper:
                         best_confidence = confidence
 
             if best_animal:
-                return True, best_animal, best_confidence
+                return "VALID_ANIMAL", best_animal, best_confidence
 
-            return False, None, 0.0
+            return "NO_ANIMAL", None, 0.0
 
         except Exception as error:
             print(f"YOLO-World inference error: {error}")
-            return False, None, 0.0
+            return "MODEL_ERROR", None, 0.0
