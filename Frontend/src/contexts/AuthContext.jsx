@@ -51,54 +51,30 @@ export function AuthProvider({ children }) {
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    const initAuth = async () => {
-      // Browser authentication is now maintained by the backend's
-      // HttpOnly session cookie. Never hydrate a new session from a JWT
-      // stored in localStorage.
-      clearLegacyCredentials();
+    /*
+     * The browser already has a persistent HttpOnly session cookie after
+     * the first successful login. Do not block every app launch on /auth/me.
+     * The cached identity lets the PWA open immediately, including offline.
+     *
+     * The server remains authoritative: every protected API request still
+     * validates the HttpOnly session cookie and current account/role state.
+     * refreshUser() is available when a page explicitly needs fresh data.
+     */
+    clearLegacyCredentials();
 
-      try {
-        const response = await API.get('/auth/me');
-        await refreshCsrfToken();
-        const normalizedUser = normalizeUser(
-          response.data?.user || response.data,
-        );
+    try {
+      const savedUser = localStorage.getItem('anirescue_user');
 
-        setUser(normalizedUser);
-        localStorage.setItem(
-          'anirescue_user',
-          JSON.stringify(normalizedUser),
-        );
-      } catch (error) {
-        const status = error.response?.status;
-
-        if (
-          status === 401 ||
-          status === 403 ||
-          (error.response && status === 404)
-        ) {
-          setUser(null);
-          localStorage.removeItem('anirescue_user');
-        } else if (!navigator.onLine || !error.response) {
-          // Preserve the cached identity for read-only/offline PWA UX.
-          // Any protected API action still requires a live server session.
-          const savedUser = localStorage.getItem('anirescue_user');
-          if (savedUser) {
-            try {
-              setUser(JSON.parse(savedUser));
-            } catch {
-              setUser(null);
-            }
-          }
-        } else {
-          console.error('Auth initialization error:', error);
-        }
-      } finally {
-        setIsInitializing(false);
+      if (savedUser) {
+        setUser(JSON.parse(savedUser));
       }
-    };
-
-    initAuth();
+    } catch (error) {
+      console.warn('Could not restore cached AniRescue identity:', error);
+      localStorage.removeItem('anirescue_user');
+      setUser(null);
+    } finally {
+      setIsInitializing(false);
+    }
   }, []);
 
   const login = (userData) => {
