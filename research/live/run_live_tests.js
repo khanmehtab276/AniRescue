@@ -4,6 +4,8 @@ const { randomUUID } = require("node:crypto");
 const base = process.env.RESEARCH_API_BASE_URL.replace(/\/$/, "");
 const email = process.env.RESEARCH_USER_EMAIL;
 const password = process.env.RESEARCH_USER_PASSWORD;
+const volunteerEmail = process.env.RESEARCH_VOLUNTEER_EMAIL;
+const volunteerPassword = process.env.RESEARCH_VOLUNTEER_PASSWORD;
 const imageUrl = process.env.RESEARCH_IMAGE_URL;
 const timeoutMs = Number(process.env.RESEARCH_TIMEOUT_MS || 180000);
 
@@ -38,10 +40,10 @@ async function request(path, options = {}) {
   }
 }
 
-async function login() {
+async function loginAs(loginEmail, loginPassword) {
   const response = await request("/api/auth/login", {
     method: "POST",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email: loginEmail, password: loginPassword }),
   });
 
   const body = await response.json();
@@ -54,6 +56,19 @@ async function login() {
   return { cookie, csrfCookie, user: body.user };
 }
 
+async function login() {
+  return loginAs(email, password);
+}
+
+async function getCurrentUser(auth) {
+  const response = await request("/api/auth/me", {
+    headers: { Cookie: auth.cookie },
+  });
+  const body = await response.json();
+  assert(response.ok, "R9 volunteer /auth/me failed: " + JSON.stringify(body));
+  return body.user;
+}
+
 async function run() {
   console.log("AniRescue LIVE research evaluation");
   console.log("API:", base);
@@ -62,6 +77,16 @@ async function run() {
   // The worker's Gemini contract tests remain the deterministic R3 safety net.
   const auth = await login();
   console.log("Authenticated research user:", auth.user.email);
+
+  assert(volunteerEmail && volunteerPassword, "RESEARCH_VOLUNTEER_EMAIL and RESEARCH_VOLUNTEER_PASSWORD are required for the controlled R9 volunteer test.");
+  const volunteerAuth = await loginAs(volunteerEmail, volunteerPassword);
+  const volunteer = await getCurrentUser(volunteerAuth);
+  console.log("Authenticated research volunteer:", volunteer.email);
+  assert(volunteer.role === "VOLUNTEER", "R9 recipient account is not a VOLUNTEER.");
+  assert(volunteer.account_status === "ACTIVE", "R9 volunteer account is not ACTIVE.");
+  assert(volunteer.availability_status === "AVAILABLE", "R9 volunteer must be AVAILABLE.");
+  assert(Number.isFinite(Number(volunteer.latitude)) && Number.isFinite(Number(volunteer.longitude)), "R9 volunteer must have a current latitude/longitude.");
+  assert(volunteer.location_updated_at, "R9 volunteer location_updated_at is missing.");
 
   if (process.env.RESEARCH_FCM_TOKEN) {
     const tokenResponse = await request("/api/auth/device-token", {
@@ -92,9 +117,9 @@ async function run() {
       imageUrl,
       description: "Research evaluation animal rescue case.",
       location: {
-        lat: 19.076,
-        lng: 72.877,
-        address: "Research evaluation location",
+        lat: Number(volunteer.latitude),
+        lng: Number(volunteer.longitude),
+        address: "Research evaluation location near volunteer",
         isCustom: true,
       },
     }),
@@ -155,37 +180,48 @@ async function run() {
     "R4 did not reach a final AI validation state: " + latest.status,
   );
 
-  // R9: notification creation is asynchronous/non-blocking, so poll the
-  // authenticated notification feed rather than assuming immediate visibility.
+  // R9: the USER creates the case, while the nearby AVAILABLE VOLUNTEER
+  // is the measured recipient. The volunteer location is reused for the case
+  // so the configured geospatial recipient rule is deterministic.
   const notificationDeadline = performance.now() + Math.min(timeoutMs, 30000);
-  let notificationPersisted = false;
+  let volunteerNotificationPersisted = false;
 
   while (performance.now() < notificationDeadline) {
     const notifications = await request("/api/notifications?limit=100", {
-      headers: { Cookie: auth.cookie },
+      headers: { Cookie: volunteerAuth.cookie },
     });
-    assert(notifications.ok, "R9 notification endpoint failed.");
+    assert(notifications.ok, "R9 volunteer notification endpoint failed.");
 
     const notificationBody = await notifications.json();
     const list = notificationBody.notifications || [];
     if (Array.isArray(list) && list.some((n) => Number(n.case_id) === Number(caseId))) {
-      notificationPersisted = true;
+      volunteerNotificationPersisted = true;
       break;
     }
     await sleep(1000);
   }
 
-  assert(notificationPersisted, "R9 did not observe the reporter notification for the research case.");
+  assert(
+    volunteerNotificationPersisted,
+    "R9 did not observe the rescue case notification in the volunteer account.",
+  );
+
   console.log(JSON.stringify({
     test: "R9",
     caseId,
-    notification_persisted: true,
-    fcm_send_path_exercised: Boolean(process.env.RESEARCH_FCM_TOKEN),
+    recipient_role: "VOLUNTEER",
+    recipient_email: volunteer.email,
+    volunteer_availability: volunteer.availability_status,
+    volunteer_location: {
+      latitude: Number(volunteer.latitude),
+      longitude: Number(volunteer.longitude),
+      location_updated_at: volunteer.location_updated_at,
+    },
+    notification_persisted_for_volunteer: true,
+    browser_fcm_delivery_observed_manually: false,
   }));
 
-  if (process.env.RESEARCH_FCM_TOKEN) {
-    console.log("R9 actual device receipt is not claimed; observe the registered client/device separately.");
-  }
+  console.log("R9 backend recipient path PASS. Confirm the Chrome notification on the volunteer browser before recording actual device delivery.");
 
   // R10: feedback persistence for the authenticated USER.
   const feedbackResponse = await request("/api/feedback", {
