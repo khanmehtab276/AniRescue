@@ -863,7 +863,15 @@ export default function ReportCase() {
                   ) : (
                     <div className="space-y-4">
 
-                      {!isOffline ? (
+                      <div className="space-y-2">
+                        {isOffline && (
+                          <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900/50 dark:bg-amber-950/20">
+                            <p className="text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                              Offline mode — your pin and report will stay on this device. Cached map areas remain available without internet.
+                            </p>
+                          </div>
+                        )}
+
                         <div className="rounded-2xl overflow-hidden h-56 sm:h-48 border border-stone-200 dark:border-stone-800 border border-stone-300/50 dark:border-white/5 relative z-0">
 
                           <MapContainer
@@ -894,28 +902,11 @@ export default function ReportCase() {
 
                           {!pinnedLocation && (
                             <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-3 py-1.5 rounded-full z-[400] backdrop-blur-sm pointer-events-none">
-                              Tap map to drop pin
+                              {isOffline ? 'Tap cached map to drop pin' : 'Tap map to drop pin'}
                             </div>
                           )}
 
                         </div>
-                      ) : (
-                        <div className="rounded-2xl h-32 flex flex-col items-center justify-center text-center p-4 border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900">
-
-                          <span className="text-3xl mb-2 grayscale opacity-50">
-                            <Map size={28} strokeWidth={2} aria-hidden="true" />
-                          </span>
-
-                          <p className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wide">
-                            Map offline
-                          </p>
-
-                          <p className="text-[10px] text-stone-400 dark:text-stone-500 mt-1 font-medium">
-                            Please provide a descriptive landmark below.
-                          </p>
-
-                        </div>
-                      )}
 
                       <div className="space-y-2">
                         <label className="block text-xs uppercase tracking-wider font-bold text-stone-500 dark:text-stone-400 ml-2">
