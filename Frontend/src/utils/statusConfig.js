@@ -8,6 +8,7 @@
 export const STATUS_ORDER = [
   'PENDING_VALIDATION',
   'PROCESSING_ANALYSIS',
+  'AI_PROCESSING_FAILED',
   'VALIDATION_PASSED',
   'IN_PROGRESS',
   'RESCUE_COMPLETED',
@@ -30,6 +31,14 @@ export const STATUS_CONFIG = {
     friendlyDetail: 'Confirming the photo shows an animal that needs help.',
     iconName: 'search',
     tone: 'info',
+  },
+  AI_PROCESSING_FAILED: {
+    label: 'AI Check Failed',
+    shortLabel: 'AI Failed',
+    friendlyLabel: 'AI Check Needs Attention',
+    friendlyDetail: 'The automated image check could not finish. An administrator can retry it.',
+    iconName: 'alert-triangle',
+    tone: 'danger',
   },
   VALIDATION_PASSED: {
     label: 'Verified — Awaiting Volunteer',
