@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import API, { setCsrfToken } from '../utils/api';
@@ -33,8 +33,66 @@ export default function Login() {
   const [notice, setNotice] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const { user, login, isInitializing } = useAuth();
+  const oauthStatus =
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('oauth')
+      : null;
+  const [isOAuthProcessing, setIsOAuthProcessing] = useState(
+    oauthStatus === 'success',
+  );
+
+  const { user, login, refreshUser, isInitializing } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!oauthStatus) return;
+
+    let cancelled = false;
+
+    const finishOAuth = async () => {
+      if (oauthStatus === 'success') {
+        setIsOAuthProcessing(true);
+
+        const restoredUser = await refreshUser();
+
+        if (!cancelled && !restoredUser) {
+          setIsOAuthProcessing(false);
+          setError('Social sign-in completed, but AniRescue could not restore your session. Please try again.');
+        }
+
+        return;
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const providerMessage = params.get('message');
+
+      if (!cancelled) {
+        setIsOAuthProcessing(false);
+
+        if (oauthStatus === 'blocked') {
+          setError('Your AniRescue account is not active yet. Please wait for administrator approval.');
+        } else {
+          setError(
+            providerMessage ||
+              'Social sign-in could not be completed. Please try again.',
+          );
+        }
+
+        window.history.replaceState({}, document.title, '/login');
+      }
+    };
+
+    void finishOAuth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [oauthStatus, refreshUser]);
+
+  const startOAuth = (provider) => {
+    const apiBase = String(API.defaults.baseURL || '/api').replace(/\/+$/, '');
+    window.location.assign(`${apiBase}/auth/oauth/${provider}`);
+  };
 
   const authenticatedDestination = (() => {
     const role = (user?.role || '').toLowerCase();
@@ -49,6 +107,25 @@ export default function Login() {
   // browser never paints the wrong screen during startup.
   if (!isInitializing && user) {
     return <Navigate to={authenticatedDestination} replace />;
+  }
+
+  if (isOAuthProcessing) {
+    return (
+      <div
+        role="status"
+        className="flex min-h-[75vh] items-center justify-center px-4"
+      >
+        <div className="w-full max-w-md rounded-2xl border border-stone-200 bg-white p-8 text-center shadow-sm dark:border-stone-800 dark:bg-stone-900">
+          <div className="mx-auto mb-5 h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+          <p className="text-sm font-extrabold text-stone-800 dark:text-stone-100">
+            Signing you into AniRescue…
+          </p>
+          <p className="mt-1 text-xs font-medium text-stone-500 dark:text-stone-400">
+            Restoring your secure session.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const handleInputChange = (e) => {
@@ -264,6 +341,47 @@ export default function Login() {
         {error && (
           <div role="alert" className="p-3 mb-6 text-sm font-bold text-center text-rose-500 bg-rose-100 dark:bg-rose-900/30 rounded-xl shadow-sm border border-rose-200 dark:border-rose-800/50">
             {error}
+          </div>
+        )}
+
+        {/* Social sign-in */}
+        {(!isRegistering || formData.role === 'USER') && (
+          <div className="mb-6 space-y-3">
+            <button
+              type="button"
+              onClick={() => startOAuth('google')}
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm font-bold text-stone-800 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+            >
+              <span className="grid h-6 w-6 place-items-center rounded-full border border-stone-200 text-xs font-black dark:border-stone-700">
+                G
+              </span>
+              Continue with Google
+            </button>
+
+            <button
+              type="button"
+              onClick={() => startOAuth('facebook')}
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm font-bold text-stone-800 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+            >
+              <span className="grid h-6 w-6 place-items-center rounded-full border border-stone-200 text-xs font-black dark:border-stone-700">
+                f
+              </span>
+              Continue with Facebook
+            </button>
+
+            <div className="flex items-center gap-3 py-1">
+              <div className="h-px flex-1 bg-stone-200 dark:bg-stone-800" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                or use email
+              </span>
+              <div className="h-px flex-1 bg-stone-200 dark:bg-stone-800" />
+            </div>
+          </div>
+        )}
+
+        {isRegistering && formData.role !== 'USER' && (
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-300">
+            Social sign-up currently creates Reporter accounts. Use the registration form for Volunteer or NGO accounts because they require additional approval and profile information.
           </div>
         )}
 
