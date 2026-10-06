@@ -38,7 +38,6 @@ function selectDownloadedZone(maps, position) {
 
   return (
     ready.find((map) => contains(ZONE_BOUNDS[map.id], position)) ||
-    ready[0] ||
     null
   );
 }
