@@ -23,6 +23,23 @@ export default defineConfig({
         navigateFallback: '/index.html',
         runtimeCaching: [
           {
+            // Keep the pinned MapLibre/PMTiles browser modules available after
+            // they have been loaded once. The map data itself is stored in
+            // IndexedDB by the offline-map manager.
+            urlPattern: /^https:\/\/(?:unpkg\.com|cdn\.jsdelivr\.net)\/.*$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'anirescue-map-runtime',
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: 30 * 24 * 60 * 60,
+              },
+            },
+          },
+          {
             // Cache OpenStreetMap tiles as they are viewed so the same map
             // area remains available when the device later loses network.
             // CacheFirst is intentional: tiles are static and an offline
