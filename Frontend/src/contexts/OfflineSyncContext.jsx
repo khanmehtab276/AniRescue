@@ -102,6 +102,7 @@ export function OfflineSyncProvider({ children }) {
       localId,
       status: 'PENDING',
       retryCount: 0,
+      nextRetryAt: 0,
       lastError: null,
     });
 
@@ -146,6 +147,14 @@ export function OfflineSyncProvider({ children }) {
       }
 
       for (const report of reports) {
+        const retryAt = Number(
+          report.nextRetryAt ? new Date(report.nextRetryAt).getTime() : 0,
+        );
+
+        if (retryAt > Date.now()) {
+          continue;
+        }
+
         try {
           await updateOfflineReport(report.localId, {
             status: 'UPLOADING',
@@ -190,11 +199,18 @@ export function OfflineSyncProvider({ children }) {
               status: 'PENDING',
               lastError: 'Authentication required.',
               retryCount: Number(report.retryCount || 0) + 1,
+              nextRetryAt: 0,
             });
             setAuthRequired(true);
             setSyncError('Sign in again to send the rescue cases saved on this device.');
             break;
           }
+
+          const nextRetryCount = Number(report.retryCount || 0) + 1;
+          const backoffMs = Math.min(
+            5 * 60 * 1000,
+            5000 * 2 ** Math.min(nextRetryCount - 1, 6),
+          );
 
           await updateOfflineReport(report.localId, {
             status: 'PENDING',
@@ -202,7 +218,8 @@ export function OfflineSyncProvider({ children }) {
               error.response?.data?.error ||
               error.message ||
               'Temporary upload failure.',
-            retryCount: Number(report.retryCount || 0) + 1,
+            retryCount: nextRetryCount,
+            nextRetryAt: new Date(Date.now() + backoffMs).toISOString(),
           });
 
           setSyncError(
@@ -261,7 +278,7 @@ export function OfflineSyncProvider({ children }) {
       if (navigator.onLine) {
         void syncCases();
       }
-    }, 30000);
+    }, 15000);
 
     return () => {
       cancelled = true;
