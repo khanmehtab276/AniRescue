@@ -1,0 +1,17 @@
+{
+  "test": "R3",
+  "status": "PASS",
+  "test_file": "ai-async-worker/test/test_gemini_contract.py",
+  "tests_run": 9,
+  "tests_passed": 9,
+  "tests_failed": 0,
+  "fallback_exercised": true,
+  "primary_model": "gemini-3.8-flash",
+  "fallback_model": "gemini-3.5-flash-lite",
+  "notes": [
+    "Structured response contract validation passed.",
+    "Invalid enum and type cases were rejected as expected.",
+    "Authentication errors do not trigger model fallback.",
+    "A transient primary-model API error exercised the fallback path successfully."
+  ]
+}
