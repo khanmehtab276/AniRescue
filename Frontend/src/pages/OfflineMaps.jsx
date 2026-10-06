@@ -16,8 +16,11 @@ const MAPLIBRE_CSS_URL =
 const PMTILES_URL =
   "https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/+esm";
 
+const DEFAULT_MAP_BASE_URL =
+  "https://github.com/khanmehtab276/AniRescue/releases/download/offline-maps-v1";
+
 const MAP_BASE_URL = String(
-  import.meta.env.VITE_OFFLINE_MAP_BASE_URL || "",
+  import.meta.env.VITE_OFFLINE_MAP_BASE_URL || DEFAULT_MAP_BASE_URL,
 ).replace(/\/+$/, "");
 
 const ZONES = [
@@ -374,7 +377,7 @@ export default function OfflineMaps() {
                   ? `${formatBytes(saved.sizeBytes)} stored offline`
                   : configured
                     ? "Package available for download"
-                    : "Package URL not configured yet"}
+                    : "Ready to download when the offline-map package is published"}
               </div>
 
               {currentProgress && (
