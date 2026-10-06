@@ -1,0 +1,196 @@
+openapi: 3.0.3
+info:
+  title: AniRescue API
+  version: 1.2.0
+  description: >
+    REST API for the AniRescue distributed AI-driven animal rescue platform.
+    Authentication uses an HttpOnly access cookie plus a rotating persistent session cookie.
+servers:
+  - url: https://anirescue-backend.onrender.com/api
+    description: Render deployment
+tags:
+  - name: Auth
+  - name: Cases
+  - name: Notifications
+  - name: Feedback
+  - name: Admin
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Sign in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated
+        '401':
+          description: Invalid credentials
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current authenticated user
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200':
+          description: Current user
+        '401':
+          description: Authentication required
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revoke current persistent session
+      security: [{ cookieAuth: [], csrfAuth: [] }]
+      responses:
+        '204':
+          description: Logged out
+  /cases/upload-signature:
+    post:
+      tags: [Cases]
+      summary: Get a short-lived signed Cloudinary image upload authorization
+      security: [{ cookieAuth: [], csrfAuth: [] }]
+      responses:
+        '200':
+          description: Upload parameters
+  /cases/report:
+    post:
+      tags: [Cases]
+      summary: Submit an animal rescue case
+      security: [{ cookieAuth: [], csrfAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportRequest'
+      responses:
+        '201':
+          description: Case created
+        '200':
+          description: Idempotent duplicate request
+        '400':
+          description: Validation error
+  /cases/{id}/retry-ai:
+    put:
+      tags: [Cases]
+      summary: Retry a rejected or terminal AI processing case
+      security: [{ cookieAuth: [], csrfAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+      responses:
+        '200':
+          description: AI validation re-queued
+        '409':
+          description: Case is not retryable
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications for the authenticated user
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200':
+          description: Notification list
+  /feedback:
+    post:
+      tags: [Feedback]
+      summary: Submit product/service feedback
+      security: [{ cookieAuth: [], csrfAuth: [] }]
+      responses:
+        '201':
+          description: Feedback created
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List accounts for administrative review
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [PENDING, ACTIVE, REJECTED, SUSPENDED]
+        - in: query
+          name: role
+          schema:
+            type: string
+            enum: [USER, VOLUNTEER, NGO, ADMIN]
+      responses:
+        '200':
+          description: Account list
+        '403':
+          description: Admin access required
+  /admin/users/{id}/status:
+    put:
+      tags: [Admin]
+      summary: Approve, reject, suspend, or reactivate an account
+      security: [{ cookieAuth: [], csrfAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Account status changed
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: __Host-anirescue_session_v2
+    csrfAuth:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+  parameters:
+    CaseId:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    ReportRequest:
+      type: object
+      required: [clientRequestId, imageUrl, location]
+      properties:
+        clientRequestId:
+          type: string
+          format: uuid
+        imageUrl:
+          type: string
+          format: uri
+        description:
+          type: string
+          maxLength: 2000
+        location:
+          type: object
+          properties:
+            lat:
+              type: number
+              minimum: -90
+              maximum: 90
+            lng:
+              type: number
+              minimum: -180
+              maximum: 180
+            address:
+              type: string
+              maxLength: 500
+            isCustom:
+              type: boolean
