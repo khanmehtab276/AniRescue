@@ -1,0 +1,15 @@
+{
+  "test": "R7",
+  "name": "Role-Based Access Control",
+  "status": "PASS",
+  "evaluation_type": "deterministic functional test",
+  "coverage": [
+    "Assigned VOLUNTEER can submit rescue evidence.",
+    "Unassigned VOLUNTEER cannot submit rescue evidence.",
+    "Assigned NGO can submit rescue evidence.",
+    "USER cannot submit rescue evidence.",
+    "Permanent case cancellation is restricted to ADMIN."
+  ],
+  "source_test": "Backend/test/researchEvaluation.test.js",
+  "notes": "The test verifies implemented authorization rules; it is not a security penetration test."
+}
