@@ -76,6 +76,7 @@ export default function App() {
           <Route path="/admin" element={<AdminWorkspace/>}/>
           <Route path="/admin/cases" element={<AdminWorkspace/>}/>
           <Route path="/admin/ai-validation" element={<AdminWorkspace/>}/>
+          <Route path="/admin/accounts" element={<AdminWorkspace/>}/>
         </Route>
 
         <Route path="*" element={<Home/>}/>
