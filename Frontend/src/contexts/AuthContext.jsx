@@ -48,7 +48,16 @@ export function AuthProvider({ children }) {
     }
   });
 
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(() => {
+    // A cached authenticated identity is enough to render the correct
+    // dashboard immediately. The HttpOnly session is still revalidated
+    // in the background below.
+    try {
+      return !localStorage.getItem('anirescue_user');
+    } catch {
+      return true;
+    }
+  });
 
   useEffect(() => {
     /*
