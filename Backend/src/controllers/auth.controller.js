@@ -1,11 +1,16 @@
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
 const { pool } = require("../config/db");
 const {
   setAuthCookies,
   clearAuthCookies,
   ensureCsrfToken,
+  createAccessToken,
+  getRefreshToken,
+  revokeSession,
 } = require("../middleware/auth");
+const {
+  createSession,
+} = require("../services/authSessions");
 const { normalizeEnum } = require("../utils/helpers");
 const {
   notifyVolunteerAboutNearbyCases,
@@ -188,18 +193,17 @@ const register = async (req, res) => {
       await client.query("COMMIT");
 
       if (accountStatus === "ACTIVE") {
-        const token = jwt.sign(
-          {
-            id: user.id,
-            role: user.role,
-            account_status: user.account_status,
-            email: user.email,
-          },
-          process.env.JWT_SECRET,
-          { expiresIn: "3650d" },
-        );
+        const session = await createSession({
+          userId: user.id,
+          req,
+        });
 
-        const csrfToken = setAuthCookies(res, token);
+        const token = createAccessToken(user, session.id);
+        const csrfToken = setAuthCookies(
+          res,
+          token,
+          session.refreshToken,
+        );
 
         return res.status(201).json({
           authenticated: true,
@@ -279,18 +283,19 @@ const login = async (req, res) => {
       });
     }
 
-    const token = jwt.sign(
-      {
-        id: user.id,
-        role: user.role,
-        email: user.email,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "3650d" },
-    );
+    const session = await createSession({
+      userId: user.id,
+      req,
+    });
+
+    const token = createAccessToken(user, session.id);
 
     delete user.password_hash;
-    const csrfToken = setAuthCookies(res, token);
+    const csrfToken = setAuthCookies(
+      res,
+      token,
+      session.refreshToken,
+    );
 
     res.set("Cache-Control", "no-store");
     res.json({ authenticated: true, csrfToken, user });
@@ -304,6 +309,12 @@ const login = async (req, res) => {
 };
 
 const logout = async (req, res) => {
+  try {
+    await revokeSession(getRefreshToken(req));
+  } catch (error) {
+    console.error("Logout session revoke error:", error?.message || error);
+  }
+
   clearAuthCookies(res);
   res.set("Cache-Control", "no-store");
   res.status(204).end();
