@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Download, HardDrive, MapPinned, Trash2 } from "lucide-react";
 import {
+  canResolveOfflineMapUrl,
   createOfflineMapSource,
   downloadOfflineMap,
   getDownloadedMaps,
@@ -15,13 +16,6 @@ const MAPLIBRE_CSS_URL =
   "https://unpkg.com/maplibre-gl@6.12.0/dist/maplibre-gl.css";
 const PMTILES_URL =
   "https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/+esm";
-
-const DEFAULT_MAP_BASE_URL =
-  "https://github.com/khanmehtab276/AniRescue/releases/download/offline-maps-v1";
-
-const MAP_BASE_URL = String(
-  import.meta.env.VITE_OFFLINE_MAP_BASE_URL || DEFAULT_MAP_BASE_URL,
-).replace(/\/+$/, "");
 
 const ZONES = [
   {
@@ -62,7 +56,7 @@ const ZONES = [
   },
 ].map((zone) => ({
   ...zone,
-  url: MAP_BASE_URL ? `${MAP_BASE_URL}/${zone.filename}` : "",
+  storagePath: `offline-maps/${zone.filename}`,
   provider: "OpenStreetMap-derived vector map",
   attribution: "© OpenStreetMap contributors",
 }));
@@ -347,7 +341,7 @@ export default function OfflineMaps() {
         {ZONES.map((zone) => {
           const saved = downloaded.find((item) => item.id === zone.id);
           const currentProgress = progress[zone.id];
-          const configured = Boolean(zone.url);
+          const configured = canResolveOfflineMapUrl();
 
           return (
             <article
@@ -361,6 +355,9 @@ export default function OfflineMaps() {
                   </h2>
                   <p className="mt-1 text-xs leading-5 text-stone-500 dark:text-stone-400">
                     {zone.description}
+                  </p>
+                  <p className="mt-2 text-[10px] font-bold text-stone-400 dark:text-stone-500">
+                    Storage path: {zone.storagePath}
                   </p>
                 </div>
 
