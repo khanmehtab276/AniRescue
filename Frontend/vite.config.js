@@ -23,10 +23,9 @@ export default defineConfig({
         navigateFallback: '/index.html',
         runtimeCaching: [
           {
-            // Keep the pinned MapLibre/PMTiles browser modules available after
-            // they have been loaded once. The map data itself is stored in
-            // IndexedDB by the offline-map manager.
-            urlPattern: /^https:\/\/(?:unpkg\.com|cdn\.jsdelivr\.net)\/.*$/i,
+            // Keep the exact MapLibre browser module available after it has
+            // been loaded once. The map data itself lives in IndexedDB.
+            urlPattern: /^https:\/\/unpkg\.com\/maplibre-gl@6\.12\.0\/dist\/maplibre-gl\.mjs$/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'anirescue-map-runtime',
@@ -34,7 +33,23 @@ export default defineConfig({
                 statuses: [0, 200],
               },
               expiration: {
-                maxEntries: 20,
+                maxEntries: 4,
+                maxAgeSeconds: 30 * 24 * 60 * 60,
+              },
+            },
+          },
+          {
+            // Keep the exact PMTiles ESM runtime available for offline
+            // rendering after it has been loaded once.
+            urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/npm\/pmtiles@4\.5\.0\/\+esm$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'anirescue-map-runtime',
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+              expiration: {
+                maxEntries: 4,
                 maxAgeSeconds: 30 * 24 * 60 * 60,
               },
             },
