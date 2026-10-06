@@ -46,7 +46,8 @@ services:
       - LOCATION_FRESHNESS_MINUTES=${LOCATION_FRESHNESS_MINUTES}
       - NOTIFICATION_RADIUS_KM=${NOTIFICATION_RADIUS_KM}
       - CORS_ORIGIN=${CORS_ORIGIN}
-    command: ["sh", "-c", "npm run db:migrate && npm start"]
+    # server.js owns migrations; keeping one migration owner avoids duplicate startup work.
+    command: ["npm", "start"]
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -106,4 +107,3 @@ networks:
 
 volumes:
   rabbitmq_data:
-  anirescue_uploads: # The shared bridge for your images
