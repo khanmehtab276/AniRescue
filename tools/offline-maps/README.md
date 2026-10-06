@@ -10,7 +10,7 @@ The current verified Protomaps daily source used by the build helper is:
 
 `https://build.protomaps.com/20260925.pmtiles`
 
-The browser must **not** download this planet archive directly. Protomaps documents the planet archive as roughly 120 GB; AniRescue extracts smaller India zones first, then publishes those zone files to CORS-enabled object storage. cite? no citations in repo docs. 
+The browser must **not** download this planet archive directly. Protomaps documents the planet archive as roughly 120 GB; AniRescue extracts smaller India zones first, then publishes those zone files to CORS-enabled object storage.
 
 ~~~text
 Geofabrik OpenStreetMap extract
