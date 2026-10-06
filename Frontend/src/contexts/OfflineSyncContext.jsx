@@ -12,6 +12,7 @@ import {
   createLocalReportId,
   deleteOfflineReport,
   listOfflineReports,
+  migrateLegacyOfflineQueue,
   saveOfflineReport,
   updateOfflineReport,
 } from '../services/offlineReportStore.js';
@@ -78,7 +79,9 @@ export function OfflineSyncProvider({ children }) {
   const refreshQueue = useCallback(async () => {
     try {
       const reports = await listOfflineReports();
-      setPendingCases(reports);
+      setPendingCases(
+        reports.map(({ imageBlob, ...metadata }) => metadata),
+      );
       return reports;
     } catch (error) {
       console.error('Failed to read offline rescue queue:', error);
@@ -217,7 +220,12 @@ export function OfflineSyncProvider({ children }) {
   useEffect(() => {
     let cancelled = false;
 
-    refreshQueue().then(() => {
+    migrateLegacyOfflineQueue()
+      .catch((error) => {
+        console.warn('Legacy offline queue migration failed:', error);
+      })
+      .finally(() => refreshQueue())
+      .then(() => {
       if (!cancelled && navigator.onLine && user?.id) {
         window.setTimeout(() => {
           void syncCases();
