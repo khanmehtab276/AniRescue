@@ -124,6 +124,61 @@ function clearReportDraftFields() {
   localStorage.removeItem(REPORT_DRAFT_KEY);
 }
 
+const OFFLINE_MAP_CACHE = 'anirescue-map-tiles';
+const OFFLINE_MAP_SUBDOMAINS = ['a', 'b', 'c'];
+
+function longitudeToTileX(lng, zoom) {
+  return Math.floor(((lng + 180) / 360) * (2 ** zoom));
+}
+
+function latitudeToTileY(lat, zoom) {
+  const latitude = Math.max(-85.05112878, Math.min(85.05112878, lat));
+  const radians = latitude * Math.PI / 180;
+  return Math.floor(
+    ((1 - Math.asinh(Math.tan(radians)) / Math.PI) / 2) * (2 ** zoom),
+  );
+}
+
+async function prefetchOfflineMapTiles(position) {
+  if (!position || !navigator.onLine || !('caches' in window)) return;
+
+  const cache = await caches.open(OFFLINE_MAP_CACHE);
+  const requests = [];
+  const zooms = [13, 14, 15, 16, 17, 18];
+
+  for (const zoom of zooms) {
+    const centerX = longitudeToTileX(position.lng, zoom);
+    const centerY = latitudeToTileY(position.lat, zoom);
+    const radius = zoom >= 17 ? 1 : 1;
+    const maxTile = (2 ** zoom) - 1;
+
+    for (let dx = -radius; dx <= radius; dx += 1) {
+      for (let dy = -radius; dy <= radius; dy += 1) {
+        const x = centerX + dx;
+        const y = centerY + dy;
+        if (x < 0 || x > maxTile || y < 0 || y > maxTile) continue;
+        const subdomain = OFFLINE_MAP_SUBDOMAINS[(Math.abs(x) + Math.abs(y)) % OFFLINE_MAP_SUBDOMAINS.length];
+        const url = `https://${subdomain}.tile.openstreetmap.org/${zoom}/${x}/${y}.png`;
+        requests.push(new Request(url, { mode: 'no-cors' }));
+      }
+    }
+  }
+
+  await Promise.allSettled(
+    requests.map(async (request) => {
+      if (await cache.match(request)) return;
+      try {
+        const response = await fetch(request);
+        if (response.ok || response.type === 'opaque') {
+          await cache.put(request, response.clone());
+        }
+      } catch {
+        // A single unavailable tile must never break report creation.
+      }
+    }),
+  );
+}
+
 function MapViewportController({ center }) {
   const map = useMap();
   const hasCenteredInitialLocation = useRef(false);
@@ -334,6 +389,18 @@ export default function ReportCase() {
   useEffect(() => {
     getLocation();
   }, []);
+
+  useEffect(() => {
+    const position = pinnedLocation || location;
+    if (!position || isOffline) return;
+
+    // Warm the local map cache around the rescue location while online.
+    // This runs in the background and never blocks the report form.
+    prefetchOfflineMapTiles(position).catch((error) => {
+      console.warn('Could not pre-cache nearby offline map tiles:', error);
+    });
+  }, [pinnedLocation, location, isOffline]);
+
 
   useEffect(() => {
     return () => {
