@@ -80,7 +80,11 @@ export function OfflineSyncProvider({ children }) {
     try {
       const reports = await listOfflineReports();
       setPendingCases(
-        reports.map(({ imageBlob, ...metadata }) => metadata),
+        reports.map((report) => {
+          const metadata = { ...report };
+          delete metadata.imageBlob;
+          return metadata;
+        }),
       );
       return reports;
     } catch (error) {
