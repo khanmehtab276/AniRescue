@@ -26,11 +26,14 @@ async function getOfflineMapDownloadUrl(req, res) {
     });
   }
 
+  const projectId =
+    process.env.FIREBASE_PROJECT_ID ||
+    firebaseAdmin.app()?.options?.projectId ||
+    "";
+
   const bucketName =
     process.env.FIREBASE_STORAGE_BUCKET ||
-    (process.env.FIREBASE_PROJECT_ID
-      ? `${process.env.FIREBASE_PROJECT_ID}.firebasestorage.app`
-      : "");
+    (projectId ? `${projectId}.firebasestorage.app` : "");
 
   if (!bucketName) {
     return res.status(503).json({
