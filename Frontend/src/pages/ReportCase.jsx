@@ -14,7 +14,8 @@ import {
 } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import API from '../utils/api';\nimport OfflinePinnedMap from '../components/OfflinePinnedMap.jsx';
+import API from '../utils/api';
+import OfflinePinnedMap from '../components/OfflinePinnedMap.jsx';
 
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
