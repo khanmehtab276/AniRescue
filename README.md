@@ -1,96 +1,105 @@
 # AniRescue
 
-AniRescue is an AI-assisted animal rescue reporting and volunteer coordination platform.
+AniRescue is an AI-assisted animal rescue reporting and volunteer coordination platform for emergency animal reports, AI-assisted validation, volunteer/NGO coordination, rescue evidence, and notifications.
 
-## Production architecture
+## Architecture
 
-- Frontend: React + Vite + PWA
-- API: Node.js + Express
-- Database: PostgreSQL / Neon
-- Queue: RabbitMQ
-- AI worker: Python + YOLO
-- Images: Cloudinary signed uploads
-- Notifications: Firebase Cloud Messaging
-- Deployment: Docker Compose or equivalent managed services
+The project intentionally uses **two application services**:
 
-## Security model
+- **Frontend:** React + Vite + PWA
+- **Backend:** Node.js + Express
+- **AI worker:** Python async worker consuming RabbitMQ jobs
+- **Database:** PostgreSQL on Neon
+- **Queue:** RabbitMQ
+- **Images:** Cloudinary signed browser uploads
+- **Push notifications:** Firebase Cloud Messaging
+- **AI:** YOLO-World/OpenVINO gatekeeper + Gemini preliminary assessment
 
-Browser authentication uses an HttpOnly session cookie. The browser also receives a separate CSRF token cookie, which is sent in the X-CSRF-Token header for state-changing requests. Production session cookies use Secure, SameSite=None, and the __Host- prefix because the hosted frontend and API may be on different sites. Keep both frontend and API on HTTPS.
+The AI worker is an asynchronous processing worker, not a third application-facing microservice.
 
-Do not put JWTs, Cloudinary API secrets, Firebase service-account credentials, database credentials, or RabbitMQ credentials into frontend environment variables.
+## Authentication
 
-## Required production environment
+Authentication uses secure browser cookies. The long-lived session uses a server-side hashed session token with rotation and revocation; JWT access credentials are not stored in browser localStorage.
 
-Backend:
-- NODE_ENV=production
-- PORT=3000
-- DATABASE_URL
-- RABBITMQ_URL
-- JWT_SECRET — at least 32 random characters
-- CORS_ORIGIN — exact frontend origin(s), comma-separated
-- CLOUDINARY_CLOUD_NAME
-- CLOUDINARY_API_KEY
-- CLOUDINARY_API_SECRET
-- MIGRATIONS_BASELINE_VERSION=5 for an existing database that already contains the original AniRescue schema
-- Firebase Admin credentials through FIREBASE_SERVICE_ACCOUNT_JSON or a protected server-side file path
+State-changing requests use a CSRF token. Production cookies require HTTPS.
 
-Frontend:
-- VITE_API_URL when the API is not served from the same origin
+Never expose database, RabbitMQ, Firebase service-account, JWT signing, Cloudinary API-secret, or Gemini credentials through frontend environment variables.
 
-## Database migration requirement
+## Case processing
 
-The repository contains migrations 001–008, but the original pre-migration AniRescue base schema is not represented as a clean, empty-database bootstrap migration.
+A rescue report follows the durable path:
 
-For an existing AniRescue database:
-1. Set MIGRATIONS_BASELINE_VERSION=5.
-2. Start the backend.
-3. The migration runner verifies the required existing base tables before recording versions 1–5.
-4. Migrations 006–008 are then applied automatically.
+`rescue_cases -> case_processing_jobs -> RabbitMQ -> AI worker -> rescue_cases`
 
-For a brand-new database, provision the original base schema first. Do not point production at an empty PostgreSQL database and expect the baseline setting to create the application schema.
+The database outbox prevents a successful report transaction from losing its AI job when RabbitMQ is temporarily unavailable.
 
-## Image upload flow
+AI outcomes distinguish:
 
-1. Authenticated client asks the API for a short-lived Cloudinary signature.
-2. API signs the upload using the Cloudinary API secret.
-3. Browser uploads directly to Cloudinary over HTTPS.
-4. API accepts only HTTPS Cloudinary URLs belonging to the configured cloud.
-5. AI worker downloads the image with strict redirect, size, and pixel limits.
+- `VALID_ANIMAL` — continue to Gemini/preliminary assessment
+- `NO_ANIMAL` — `REJECTED_JUNK`
+- `MODEL_ERROR` / infrastructure failure — retry, then `AI_PROCESSING_FAILED`
 
-## AI processing reliability
+A watchdog detects stale AI jobs and makes terminal failures recoverable by an administrator.
 
-Case creation and AI processing use a database outbox:
-rescue_cases -> case_processing_jobs -> RabbitMQ -> YOLO worker
+## Database migrations
 
-This prevents a successful database transaction from losing its AI job because RabbitMQ was temporarily unavailable.
+The repository contains migrations **001–016**.
 
-The worker is idempotent: duplicate RabbitMQ delivery cannot create a second AI validation result.
+Migrations **001–005** represent the historical base schema boundary. For an existing database whose original AniRescue schema already exists, set:
 
-## Health endpoints
+`MIGRATIONS_BASELINE_VERSION=5`
 
-- GET /health/live — process liveness
-- GET /health/ready — database + RabbitMQ readiness
-- GET /health — compatibility health endpoint
+The runner verifies the required base tables before recording that baseline, then applies migrations 006 onward.
 
-Production load balancers should use /health/ready for readiness and /health/live for liveness.
+For a genuinely empty database, do not use the baseline shortcut: provision the complete schema through the repository's migration/bootstrap process first.
+
+The migration runner uses a PostgreSQL advisory lock so two backend instances do not apply migrations concurrently.
+
+## Offline reporting
+
+The PWA stores failed/offline reports in IndexedDB and retries while the application is running. Images remain as local Blobs until upload succeeds.
+
+This is **not** claimed as guaranteed background synchronization after the PWA is completely closed; foreground retry is the current supported fallback.
+
+## Health and observability
+
+- `/health/live` — process liveness
+- `/health/ready` — database + RabbitMQ readiness
+- `/health/worker` — informational AI-worker heartbeat
+- `/health/metrics` — in-memory HTTP request metrics
+
+HTTP requests receive correlation IDs and structured request logs.
+
+## Research evidence
+
+The research benchmark is an **image-level gatekeeper benchmark**, not a formal mAP/IoU or clinical-accuracy study.
+
+The controlled 1 CPU / 1 GB result is stored at:
+
+`ai-async-worker/benchmark/results/yolo-world-openvino-1cpu-1gb.json`
+
+The benchmark validator checks that the recorded measurements are internally consistent.
 
 ## Verification
 
 Before release:
 
-    cd Frontend
-    npm ci
-    npm run lint
-    npm run build
+```bash
+cd Frontend
+npm ci
+npm run lint
+npm run build
+npm run e2e
 
-    cd ../Backend
-    npm ci
-    npm test
+cd ../Backend
+npm ci
+npm test
+```
 
-The repository CI runs frontend lint/build, backend tests/syntax checks, and Python worker compilation.
+CI also compiles the Python worker and validates the controlled research benchmark.
 
-## Release rule
+## Deployment
 
-Deploy the frontend and backend changes together. The authentication contract uses browser cookies, so deploying only one side can leave users unable to authenticate.
+The backend is deployed from the `research/experimental-results` branch to Render. The hosted frontend is deployed separately through Firebase Hosting.
 
-Use a staging deployment with production-like HTTPS, CORS, PostgreSQL, RabbitMQ, Cloudinary, and Firebase settings before switching the public production frontend.
+Deploy frontend and backend authentication changes together because the browser/API cookie contract spans both sides.
