@@ -77,6 +77,55 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  useEffect(() => {
+    /*
+     * Revalidate the cached identity in the background. This keeps startup
+     * instant/offline-friendly while allowing the server to refresh role,
+     * availability, jurisdiction, and other account fields without forcing
+     * a login screen on every launch.
+     */
+    let cancelled = false;
+
+    const syncSession = async () => {
+      try {
+        const response = await API.get('/auth/me');
+        if (cancelled) return;
+
+        await refreshCsrfToken();
+
+        const normalizedUser = normalizeUser(
+          response.data?.user || response.data,
+        );
+
+        setUser(normalizedUser);
+        localStorage.setItem(
+          'anirescue_user',
+          JSON.stringify(normalizedUser),
+        );
+      } catch (error) {
+        if (cancelled) return;
+
+        if (error?.response?.status === 401) {
+          setCsrfToken(null);
+          localStorage.removeItem('anirescue_user');
+          setUser(null);
+        } else {
+          // Network/offline failure must not erase a valid cached identity.
+          console.warn(
+            'Background AniRescue session refresh skipped:',
+            error?.message || error,
+          );
+        }
+      }
+    };
+
+    void syncSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const login = (userData) => {
     clearLegacyCredentials();
 
