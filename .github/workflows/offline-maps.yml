@@ -10,10 +10,10 @@ on:
       - ".github/workflows/offline-maps.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: offline-maps-release
+  group: offline-maps-build
   cancel-in-progress: false
 
 jobs:
@@ -32,7 +32,7 @@ jobs:
           docker pull "$PMTILES_IMAGE"
           PMTILES_IMAGE="$PMTILES_IMAGE" tools/offline-maps/build-india-zones.sh
 
-      - name: Publish PMTiles release
+      - name: Store PMTiles build artifact
         uses: actions/upload-artifact@v4
         with:
           name: anirescue-india-pmtiles
