@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import API, { setCsrfToken } from '../utils/api';
 import useLocation from '../hooks/useLocation.js';
@@ -35,18 +35,21 @@ export default function Login() {
 
   const { user, login, isInitializing } = useAuth();
   const navigate = useNavigate();
-  useEffect(() => {
-    if (isInitializing || !user) return;
 
-    const role = (user.role || '').toLowerCase();
-    const dashboardPath =
-      role === 'admin' ? '/admin' :
+  const authenticatedDestination = (() => {
+    const role = (user?.role || '').toLowerCase();
+    return role === 'admin' ? '/admin' :
       role === 'ngo' ? '/ngo' :
       role === 'volunteer' ? '/volunteer' :
       '/dashboard';
+  })();
 
-    navigate(dashboardPath, { replace: true });
-  }, [isInitializing, user, navigate]);
+  // Do not render the login form even for one frame when a cached
+  // authenticated identity already exists. Navigate declaratively so the
+  // browser never paints the wrong screen during startup.
+  if (!isInitializing && user) {
+    return <Navigate to={authenticatedDestination} replace />;
+  }
 
   const handleInputChange = (e) => {
     setFormData({
