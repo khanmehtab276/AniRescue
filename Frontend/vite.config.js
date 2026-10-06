@@ -26,7 +26,7 @@ export default defineConfig({
             // area remains available when the device later loses network.
             // CacheFirst is intentional: tiles are static and an offline
             // rescue report must not depend on a live tile server.
-            urlPattern: /^https:\/\/[abc]\\.tile\\.openstreetmap\\.org\\/\\d+\\/\\d+\\/\\d+\\.png$/i,
+            urlPattern: /^https:\/\/[abc]\.tile\.openstreetmap\.org\/\d+\/\d+\/\d+\.png$/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'anirescue-map-tiles',
