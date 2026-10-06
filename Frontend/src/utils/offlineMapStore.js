@@ -199,7 +199,7 @@ export function resolveOfflineMapUrl(map) {
 
   const customBase = String(
     import.meta.env.VITE_OFFLINE_MAP_BASE_URL || "",
-  ).replace(/\\/+$/, "");
+  ).replace(/\/+$/, "");
 
   const path = getOfflineMapPath(map);
   if (!path) {
