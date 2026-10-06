@@ -1,16 +1,47 @@
-# React + Vite
+# AniRescue Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The AniRescue frontend is a React 19 + Vite progressive web app for animal rescue reporting and role-based rescue coordination.
 
-Currently, two official plugins are available:
+## Roles
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **USER** — submit and track rescue reports
+- **VOLUNTEER** — manage availability, receive nearby rescue notifications, claim/release cases, and submit rescue evidence
+- **NGO** — manage jurisdiction, coordinate volunteers, dispatch cases, and verify rescue completion
+- **ADMIN** — global case oversight, AI retry/review, account management, and administrative controls
 
-## React Compiler
+## Core frontend features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Responsive dark/light rescue-focused UI
+- PWA installation support
+- Browser authentication using secure cookies
+- CSRF protection for state-changing API requests
+- Offline report storage in IndexedDB
+- Automatic foreground retry when connectivity returns
+- Cloudinary direct image upload through short-lived API signatures
+- Firebase Cloud Messaging browser notifications
+- Role-specific dashboards and case views
+- Global volunteer availability/location presence
+- Accessible responsive notifications and confirmation dialogs
 
-## Expanding the ESLint configuration
+## Development
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+npm ci
+npm run dev
+```
+
+## Verification
+
+```bash
+npm run lint
+npm run build
+npm run e2e
+```
+
+The browser E2E suite uses the Playwright CLI pinned by the project configuration. CI installs Chromium and runs the browser smoke tests.
+
+## API configuration
+
+Set `VITE_API_URL` to the backend API base URL when the API is hosted separately.
+
+Do not put backend secrets in Vite environment variables. Frontend environment variables are publicly shipped to the browser.
