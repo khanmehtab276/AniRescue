@@ -50,7 +50,7 @@ function createStatePayload({ provider }) {
 function setStateCookie(res, payload) {
   const encoded = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
 
-  res.setHeader(
+  res.append(
     "Set-Cookie",
     `${STATE_COOKIE}=${encoded}; ${cookieAttributes()}`,
   );
@@ -89,7 +89,7 @@ function readStateCookie(req) {
 }
 
 function clearStateCookie(res) {
-  res.setHeader(
+  res.append(
     "Set-Cookie",
     `${STATE_COOKIE}=; ${cookieAttributes({ maxAge: 0 })}`,
   );
