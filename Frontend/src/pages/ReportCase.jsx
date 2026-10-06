@@ -168,6 +168,7 @@ export default function ReportCase() {
   const [locationMode, setLocationMode] = useState('auto');
   const [manualAddress, setManualAddress] = useState('');
   const [pinnedLocation, setPinnedLocation] = useState(null);
+  const [offlineMapUnavailable, setOfflineMapUnavailable] = useState(false);
   const draftHydratedRef = useRef(false);
 
   const { showToast } = useToast();
