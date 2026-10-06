@@ -13,7 +13,12 @@ const {
   updateAvailability,
   updateLocation,
   registerDeviceToken,
+  startOAuth,
+  handleOAuthCallback,
 } = require("../controllers/auth.controller");
+
+router.get("/oauth/:provider", startOAuth);
+router.get("/oauth/:provider/callback", handleOAuthCallback);
 
 router.post("/register", authLimiter, register);
 router.post("/login", authLimiter, login);
