@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Camera, CheckCircle2, HandHeart, ImagePlus, Map, MapPin, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -14,7 +14,7 @@ import {
 } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import API from '../utils/api';
+import API from '../utils/api';\nimport OfflinePinnedMap from '../components/OfflinePinnedMap.jsx';
 
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -122,61 +122,6 @@ function loadReportDraftFields() {
 
 function clearReportDraftFields() {
   localStorage.removeItem(REPORT_DRAFT_KEY);
-}
-
-const OFFLINE_MAP_CACHE = 'anirescue-map-tiles';
-const OFFLINE_MAP_SUBDOMAINS = ['a', 'b', 'c'];
-
-function longitudeToTileX(lng, zoom) {
-  return Math.floor(((lng + 180) / 360) * (2 ** zoom));
-}
-
-function latitudeToTileY(lat, zoom) {
-  const latitude = Math.max(-85.05112878, Math.min(85.05112878, lat));
-  const radians = latitude * Math.PI / 180;
-  return Math.floor(
-    ((1 - Math.asinh(Math.tan(radians)) / Math.PI) / 2) * (2 ** zoom),
-  );
-}
-
-async function prefetchOfflineMapTiles(position) {
-  if (!position || !navigator.onLine || !('caches' in window)) return;
-
-  const cache = await caches.open(OFFLINE_MAP_CACHE);
-  const requests = [];
-  const zooms = [13, 14, 15, 16, 17, 18];
-
-  for (const zoom of zooms) {
-    const centerX = longitudeToTileX(position.lng, zoom);
-    const centerY = latitudeToTileY(position.lat, zoom);
-    const radius = zoom >= 17 ? 1 : 1;
-    const maxTile = (2 ** zoom) - 1;
-
-    for (let dx = -radius; dx <= radius; dx += 1) {
-      for (let dy = -radius; dy <= radius; dy += 1) {
-        const x = centerX + dx;
-        const y = centerY + dy;
-        if (x < 0 || x > maxTile || y < 0 || y > maxTile) continue;
-        const subdomain = OFFLINE_MAP_SUBDOMAINS[(Math.abs(x) + Math.abs(y)) % OFFLINE_MAP_SUBDOMAINS.length];
-        const url = `https://${subdomain}.tile.openstreetmap.org/${zoom}/${x}/${y}.png`;
-        requests.push(new Request(url, { mode: 'no-cors' }));
-      }
-    }
-  }
-
-  await Promise.allSettled(
-    requests.map(async (request) => {
-      if (await cache.match(request)) return;
-      try {
-        const response = await fetch(request);
-        if (response.ok || response.type === 'opaque') {
-          await cache.put(request, response.clone());
-        }
-      } catch {
-        // A single unavailable tile must never break report creation.
-      }
-    }),
-  );
 }
 
 function MapViewportController({ center }) {
@@ -390,16 +335,15 @@ export default function ReportCase() {
     getLocation();
   }, []);
 
-  useEffect(() => {
-    const position = pinnedLocation || location;
-    if (!position || isOffline) return;
+  const handleOfflineMapUnavailable = useCallback(() => {
+    setOfflineMapUnavailable(true);
+  }, []);
 
-    // Warm the local map cache around the rescue location while online.
-    // This runs in the background and never blocks the report form.
-    prefetchOfflineMapTiles(position).catch((error) => {
-      console.warn('Could not pre-cache nearby offline map tiles:', error);
-    });
-  }, [pinnedLocation, location, isOffline]);
+  useEffect(() => {
+    if (!isOffline) {
+      setOfflineMapUnavailable(false);
+    }
+  }, [isOffline]);
 
 
   useEffect(() => {
@@ -934,50 +878,65 @@ export default function ReportCase() {
                         {isOffline && (
                           <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900/50 dark:bg-amber-950/20">
                             <p className="text-[11px] font-bold text-amber-700 dark:text-amber-300">
-                              Offline mode — your pin and report will stay on this device. Cached map areas remain available without internet.
+                              Offline mode — your pin and report will stay on this device. If you downloaded the matching India offline map, this map can be used fully offline.
                             </p>
+                            <Link
+                              to="/offline-maps"
+                              className="mt-2 inline-flex text-[11px] font-black text-emerald-700 underline underline-offset-2 dark:text-emerald-300"
+                            >
+                              Manage downloaded offline maps
+                            </Link>
                           </div>
                         )}
 
                         <div className="rounded-2xl overflow-hidden h-56 sm:h-48 border border-stone-200 dark:border-stone-800 border border-stone-300/50 dark:border-white/5 relative z-0">
 
-                          <MapContainer
-                            center={
-                              pinnedLocation
-                                ? [pinnedLocation.lat, pinnedLocation.lng]
-                                : location
-                                  ? [location.lat, location.lng]
-                                  : defaultMapCenter
-                            }
-                            zoom={13}
-                            scrollWheelZoom={true}
-                            className="w-full h-full"
-                            maxBounds={[[-85.05112878, -180], [85.05112878, 180]]}
-                            maxBoundsViscosity={1}
-                            worldCopyJump={false}
-                          >
-                            <MapViewportController
+                          {isOffline && !offlineMapUnavailable ? (
+                            <OfflinePinnedMap
+                              position={pinnedLocation || location}
+                              setPosition={setPinnedLocation}
+                              onUnavailable={handleOfflineMapUnavailable}
+                              className="h-full w-full"
+                            />
+                          ) : (
+                            <MapContainer
                               center={
                                 pinnedLocation
                                   ? [pinnedLocation.lat, pinnedLocation.lng]
                                   : location
                                     ? [location.lat, location.lng]
-                                    : null
+                                    : defaultMapCenter
                               }
-                            />
-                            <TileLayer
-                              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            />
+                              zoom={13}
+                              scrollWheelZoom={true}
+                              className="w-full h-full"
+                              maxBounds={[[-85.05112878, -180], [85.05112878, 180]]}
+                              maxBoundsViscosity={1}
+                              worldCopyJump={false}
+                            >
+                              <MapViewportController
+                                center={
+                                  pinnedLocation
+                                    ? [pinnedLocation.lat, pinnedLocation.lng]
+                                    : location
+                                      ? [location.lat, location.lng]
+                                      : null
+                                }
+                              />
+                              <TileLayer
+                                url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                              />
 
-                            <MapPinDropper
-                              position={pinnedLocation}
-                              setPosition={setPinnedLocation}
-                            />
-                          </MapContainer>
+                              <MapPinDropper
+                                position={pinnedLocation}
+                                setPosition={setPinnedLocation}
+                              />
+                            </MapContainer>
+                          )}
 
-                          {!pinnedLocation && (
+                          {!pinnedLocation && !isOffline && (
                             <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-3 py-1.5 rounded-full z-[400] backdrop-blur-sm pointer-events-none">
-                              {isOffline ? 'Tap cached map to drop pin' : 'Tap map to drop pin'}
+                              Tap map to drop pin
                             </div>
                           )}
 
