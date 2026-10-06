@@ -22,6 +22,25 @@ export default defineConfig({
         globIgnores: ['index.html'],
         runtimeCaching: [
           {
+            // Cache OpenStreetMap tiles as they are viewed so the same map
+            // area remains available when the device later loses network.
+            // CacheFirst is intentional: tiles are static and an offline
+            // rescue report must not depend on a live tile server.
+            urlPattern: /^https:\/\/[abc]\\.tile\\.openstreetmap\\.org\\/\\d+\\/\\d+\\/\\d+\\.png$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'anirescue-map-tiles',
+              cacheableResponse: {
+                // 0 covers opaque cross-origin tile responses.
+                statuses: [0, 200],
+              },
+              expiration: {
+                maxEntries: 600,
+                maxAgeSeconds: 30 * 24 * 60 * 60,
+              },
+            },
+          },
+          {
             // Firebase Hosting serves every SPA route from index.html.
             // NetworkFirst makes a normal refresh use the newest deployed
             // app shell whenever the network is available, while retaining
