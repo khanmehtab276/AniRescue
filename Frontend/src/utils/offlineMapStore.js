@@ -184,63 +184,39 @@ export async function removeDownloadedMap(mapId) {
   await deleteMap(mapId);
 }
 
-function getFirebaseStoragePath(map) {
-  if (map?.storagePath) return map.storagePath;
+function getOfflineMapPath(map) {
+  if (map?.path) return map.path;
   if (map?.filename) return `offline-maps/${map.filename}`;
   return "";
 }
 
-export function canResolveOfflineMapUrl() {
-  return Boolean(
-    import.meta.env.VITE_OFFLINE_MAP_BASE_URL || API,
-  );
+export function canResolveOfflineMapUrl(map) {
+  return Boolean(map?.filename || map?.path || map?.url);
 }
 
-export async function resolveOfflineMapUrl(map) {
-  if (map?.url) return map.url;
+export function resolveOfflineMapUrl(map) {
+  if (map?.url) return Promise.resolve(map.url);
 
   const customBase = String(
     import.meta.env.VITE_OFFLINE_MAP_BASE_URL || "",
-  ).replace(/\/+$/, "");
+  ).replace(/\\/+$/, "");
 
-  if (customBase && map?.filename) {
-    return `${customBase}/${map.filename}`;
+  const path = getOfflineMapPath(map);
+  if (!path) {
+    return Promise.reject(new Error("No offline map file was provided."));
   }
 
-  if (!map?.id) {
-    throw new Error("No offline map zone was provided.");
+  if (customBase) {
+    const filename = path.split("/").pop();
+    return Promise.resolve(`${customBase}/${filename}`);
   }
 
-  try {
-    const response = await API.get(`/offline-maps/${encodeURIComponent(map.id)}/url`);
-    const url = response.data?.url;
-
-    if (!url) {
-      throw new Error("Backend did not return an offline map download URL.");
-    }
-
-    return url;
-  } catch (error) {
-    const status = error?.response?.status;
-
-    if (status === 401 || status === 403) {
-      throw new Error(
-        "Sign in again before downloading an AniRescue offline map.",
-      );
-    }
-
-    if (status === 404) {
-      throw new Error(
-        "This offline map package has not been uploaded to Firebase Storage yet.",
-      );
-    }
-
-    throw new Error(
-      error?.response?.data?.error ||
-        error?.message ||
-        "Could not obtain the offline map download URL.",
-    );
-  }
+  // Default to the same Firebase Hosting origin as the PWA. This keeps the
+  // map package public/static and removes Firebase Cloud Storage from the
+  // offline-map download path.
+  return Promise.resolve(
+    new URL(`/${path}`, window.location.origin).toString(),
+  );
 }
 
 function parseTotalBytes(response) {
