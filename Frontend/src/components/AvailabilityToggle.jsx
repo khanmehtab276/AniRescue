@@ -21,7 +21,7 @@ export default function AvailabilityToggle({
 
   let summary = 'Choose whether dispatchers can send you cases.';
   if (onRescue) summary = 'You are on an active rescue.';
-  else if (isAvailable) summary = 'Visible to dispatchers. Your location refreshes while this page is open.';
+  else if (isAvailable) summary = 'Visible to dispatchers. Your field location keeps refreshing while you stay available.';
   else if (isOffline) summary = 'Hidden from dispatchers.';
 
   return (
