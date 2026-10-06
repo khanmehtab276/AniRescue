@@ -19,7 +19,7 @@ router.post("/register", authLimiter, register);
 router.post("/login", authLimiter, login);
 router.get("/me", verifyToken, getCurrentUser);
 router.get("/csrf", verifyToken, getCsrfToken);
-router.post("/logout", verifyToken, logout);
+router.post("/logout", logout);
 
 router.put(
   "/jurisdiction",
