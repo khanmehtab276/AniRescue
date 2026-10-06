@@ -1,4 +1,3 @@
-import process from 'node:process';
 import { test, expect } from '@playwright/test';
 
 test('landing page loads', async ({ page }) => {
@@ -15,8 +14,8 @@ test('login page exposes email and password controls', async ({ page }) => {
 });
 
 test('authenticated session flow can be exercised when CI credentials are configured', async ({ page }) => {
-  const email = process.env.E2E_EMAIL;
-  const password = process.env.E2E_PASSWORD;
+  const email = globalThis.process?.env?.E2E_EMAIL;
+  const password = globalThis.process?.env?.E2E_PASSWORD;
 
   test.skip(!email || !password, 'E2E_EMAIL/E2E_PASSWORD are not configured.');
 
