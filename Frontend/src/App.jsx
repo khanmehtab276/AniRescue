@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from "react-route
 import Navbar from "./components/Navbar.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import { AuthProvider } from "./contexts/AuthContext.jsx";
+import { OfflineSyncProvider } from "./contexts/OfflineSyncContext.jsx";
 import { VolunteerPresenceProvider } from "./contexts/VolunteerPresenceContext.jsx";
 import { ThemeProvider } from "./contexts/ThemeContext.jsx";
 import { ToastProvider } from "./contexts/ToastContext.jsx";
@@ -31,7 +32,7 @@ function RouteTransition({ children }) {
 const ALL = ["user", "volunteer", "ngo", "admin"];
 
 export default function App() {
-  return <ThemeProvider><ToastProvider><AuthProvider><VolunteerPresenceProvider><Router>
+  return <ThemeProvider><ToastProvider><AuthProvider><OfflineSyncProvider><VolunteerPresenceProvider><Router>
     <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-emerald-600 focus:text-white focus:font-bold">Skip to content</a>
     <Navbar /><PushBridge />
     <Suspense fallback={<div role="status" className="min-h-[60vh] flex items-center justify-center"><div className="w-10 h-10 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin" aria-hidden="true"/><span className="sr-only">Loading</span></div>}>
@@ -80,5 +81,5 @@ export default function App() {
         <Route path="*" element={<Home/>}/>
       </Routes></RouteTransition>
     </Suspense>
-  </Router></VolunteerPresenceProvider></AuthProvider></ToastProvider></ThemeProvider>;
+  </Router></VolunteerPresenceProvider></OfflineSyncProvider></AuthProvider></ToastProvider></ThemeProvider>;
 }
