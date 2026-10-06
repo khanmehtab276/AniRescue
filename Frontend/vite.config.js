@@ -17,9 +17,10 @@ export default defineConfig({
         // waiting for every old tab to close.
         skipWaiting: true,
         clientsClaim: true,
-        // index.html is the app shell and must not be pinned in the
-        // precache. It is fetched through NetworkFirst below instead.
-        globIgnores: ['index.html'],
+        // Keep index.html in the precache because it is the offline app
+        // shell. Without it, direct navigation to SPA routes such as
+        // /report can fail when the device has no network connection.
+        navigateFallback: '/index.html',
         runtimeCaching: [
           {
             // Cache OpenStreetMap tiles as they are viewed so the same map
