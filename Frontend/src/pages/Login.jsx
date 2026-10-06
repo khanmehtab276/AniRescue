@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import API, { setCsrfToken } from '../utils/api';
@@ -42,6 +42,7 @@ export default function Login() {
   );
 
   const { user, login, refreshUser, isInitializing } = useAuth();
+  const refreshUserRef = useRef(refreshUser);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -53,7 +54,7 @@ export default function Login() {
       if (oauthStatus === 'success') {
         setIsOAuthProcessing(true);
 
-        const restoredUser = await refreshUser();
+        const restoredUser = await refreshUserRef.current();
 
         if (!cancelled && !restoredUser) {
           setIsOAuthProcessing(false);
@@ -87,7 +88,7 @@ export default function Login() {
     return () => {
       cancelled = true;
     };
-  }, [oauthStatus, refreshUser]);
+  }, [oauthStatus]);
 
   const startOAuth = (provider) => {
     const apiBase = String(API.defaults.baseURL || '/api').replace(/\/+$/, '');
