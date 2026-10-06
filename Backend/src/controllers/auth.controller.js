@@ -16,6 +16,18 @@ const { logAudit } = require("../utils/auditLog");
 const {
   notifyVolunteerAboutNearbyCases,
 } = require("../utils/caseNotifications");
+const {
+  createStatePayload,
+  setStateCookie,
+  readStateCookie,
+  clearStateCookie,
+  constantTimeEqual,
+  getFrontendUrl,
+  getGoogleAuthorizationUrl,
+  getFacebookAuthorizationUrl,
+  exchangeGoogleCode,
+  exchangeFacebookCode,
+} = require("../utils/oauth");
 
 // REGISTER
 const register = async (req, res) => {
@@ -239,6 +251,261 @@ const register = async (req, res) => {
   }
 };
 
+
+function redirectOAuthError(res, message) {
+  const url = new URL("/login", getFrontendUrl());
+  url.searchParams.set("oauth", "error");
+  url.searchParams.set("message", message);
+  return res.redirect(302, url.toString());
+}
+
+async function startOAuth(provider, req, res) {
+  try {
+    const normalizedProvider = String(provider || "").toLowerCase();
+
+    if (!["google", "facebook"].includes(normalizedProvider)) {
+      return res.status(404).json({ error: "OAuth provider not supported." });
+    }
+
+    const statePayload = createStatePayload({
+      provider: normalizedProvider,
+    });
+
+    setStateCookie(res, statePayload);
+
+    const authorizationUrl =
+      normalizedProvider === "google"
+        ? getGoogleAuthorizationUrl(statePayload.state)
+        : getFacebookAuthorizationUrl(statePayload.state);
+
+    return res.redirect(302, authorizationUrl);
+  } catch (error) {
+    console.error("OAuth start error:", error?.message || error);
+    return redirectOAuthError(
+      res,
+      "This sign-in provider is not configured yet.",
+    );
+  }
+}
+
+async function findOrCreateOAuthUser({ profile, req }) {
+  const { provider, subject, email, emailVerified, name } = profile;
+
+  if (!subject || !email || !emailVerified) {
+    throw new Error(
+      "The identity provider did not return a verified email address.",
+    );
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const identityResult = await client.query(
+      `SELECT
+         oi.user_id,
+         u.id,
+         u.full_name,
+         u.email,
+         u.role,
+         u.account_status
+       FROM oauth_identities oi
+       JOIN users u ON u.id = oi.user_id
+       WHERE oi.provider = $1
+         AND oi.provider_subject = $2
+       FOR UPDATE`,
+      [provider, subject],
+    );
+
+    let user;
+    let created = false;
+
+    if (identityResult.rows.length > 0) {
+      user = identityResult.rows[0];
+
+      if (user.account_status !== "ACTIVE") {
+        await client.query("ROLLBACK");
+        return {
+          blocked: true,
+          user,
+        };
+      }
+
+      await client.query(
+        `UPDATE oauth_identities
+         SET provider_email = $1,
+             email_verified = TRUE,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE provider = $2
+           AND provider_subject = $3`,
+        [email, provider, subject],
+      );
+    } else {
+      const existingUserResult = await client.query(
+        `SELECT id, full_name, email, role, account_status
+         FROM users
+         WHERE email = $1
+         FOR UPDATE`,
+        [email],
+      );
+
+      if (existingUserResult.rows.length > 0) {
+        user = existingUserResult.rows[0];
+
+        if (user.account_status !== "ACTIVE") {
+          await client.query("ROLLBACK");
+          return {
+            blocked: true,
+            user,
+          };
+        }
+
+        await client.query(
+          `INSERT INTO oauth_identities
+             (user_id, provider, provider_subject, provider_email, email_verified)
+           VALUES ($1, $2, $3, $4, TRUE)`,
+          [user.id, provider, subject, email],
+        );
+      } else {
+        const insertUserResult = await client.query(
+          `INSERT INTO users
+             (full_name, email, password_hash, role, account_status)
+           VALUES ($1, $2, NULL, 'USER', 'ACTIVE')
+           RETURNING id, full_name, email, role, account_status`,
+          [name || "AniRescue User", email],
+        );
+
+        user = insertUserResult.rows[0];
+        created = true;
+
+        await client.query(
+          `INSERT INTO oauth_identities
+             (user_id, provider, provider_subject, provider_email, email_verified)
+           VALUES ($1, $2, $3, $4, TRUE)`,
+          [user.id, provider, subject, email],
+        );
+      }
+    }
+
+    await client.query("COMMIT");
+
+    return {
+      user,
+      created,
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+
+    if (error?.code === "23505") {
+      throw new Error(
+        "This social account is already linked to another AniRescue account.",
+      );
+    }
+
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function handleOAuthCallback(provider, req, res) {
+  try {
+    const normalizedProvider = String(provider || "").toLowerCase();
+    const stateCookie = readStateCookie(req);
+    const returnedState = String(req.query?.state || "");
+    const code = String(req.query?.code || "");
+
+    if (
+      !stateCookie ||
+      stateCookie.provider !== normalizedProvider ||
+      !constantTimeEqual(stateCookie.state, returnedState)
+    ) {
+      return redirectOAuthError(
+        res,
+        "OAuth verification failed. Please start sign-in again.",
+      );
+    }
+
+    if (!code) {
+      return redirectOAuthError(
+        res,
+        "The identity provider did not return an authorization code.",
+      );
+    }
+
+    const profile =
+      normalizedProvider === "google"
+        ? await exchangeGoogleCode(code)
+        : normalizedProvider === "facebook"
+          ? await exchangeFacebookCode(code)
+          : null;
+
+    if (!profile) {
+      return redirectOAuthError(res, "OAuth provider is not supported.");
+    }
+
+    const result = await findOrCreateOAuthUser({
+      profile,
+      req,
+    });
+
+    if (result.blocked) {
+      clearStateCookie(res);
+      const url = new URL("/login", getFrontendUrl());
+      url.searchParams.set("oauth", "blocked");
+      return res.redirect(302, url.toString());
+    }
+
+    const session = await createSession({
+      userId: result.user.id,
+      req,
+    });
+
+    const token = createAccessToken(result.user, session.id);
+
+    setAuthCookies(
+      res,
+      token,
+      session.refreshToken,
+    );
+
+    clearStateCookie(res);
+
+    await logAudit({
+      actorId: result.user.id,
+      action: result.created ? "OAUTH_REGISTER_SUCCESS" : "OAUTH_LOGIN_SUCCESS",
+      targetType: "USER",
+      targetId: result.user.id,
+      metadata: {
+        provider: profile.provider,
+      },
+      req,
+    });
+
+    const destination =
+      String(result.user.role || "").toUpperCase() === "ADMIN"
+        ? "/admin"
+        : String(result.user.role || "").toUpperCase() === "NGO"
+          ? "/ngo"
+          : String(result.user.role || "").toUpperCase() === "VOLUNTEER"
+            ? "/volunteer"
+            : "/dashboard";
+
+    const frontendUrl = new URL(destination, getFrontendUrl());
+    frontendUrl.searchParams.set("oauth", "success");
+
+    return res.redirect(302, frontendUrl.toString());
+  } catch (error) {
+    console.error("OAuth callback error:", error?.stack || error);
+    clearStateCookie(res);
+    return redirectOAuthError(
+      res,
+      "Social sign-in could not be completed. Please try again.",
+    );
+  }
+}
+
 // LOGIN
 const login = async (req, res) => {
   const { email, password } = req.body;
@@ -276,7 +543,10 @@ const login = async (req, res) => {
 
     const user = result.rows[0];
 
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    const isValidPassword =
+      typeof user.password_hash === "string" &&
+      user.password_hash.length > 0 &&
+      await bcrypt.compare(password, user.password_hash);
 
     if (!isValidPassword) {
       await logAudit({
@@ -679,6 +949,8 @@ const registerDeviceToken = async (req, res) => {
 
 module.exports = {
   register,
+  startOAuth,
+  handleOAuthCallback,
   login,
   logout,
   getCsrfToken,
