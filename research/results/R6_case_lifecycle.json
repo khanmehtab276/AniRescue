@@ -1,0 +1,16 @@
+{
+  "test": "R6",
+  "name": "Case Lifecycle and Rescue Workflow",
+  "status": "PASS",
+  "evaluation_type": "deterministic functional test",
+  "coverage": [
+    "Permanent cancellation is ADMIN-only.",
+    "ADMIN can cancel VALIDATION_PASSED, IN_PROGRESS, and PROCESSING_ANALYSIS cases.",
+    "ADMIN cannot cancel RESOLVED or CANCELLED cases.",
+    "VOLUNTEER, NGO, and USER cannot perform permanent cancellation from IN_PROGRESS.",
+    "Completion verification is only allowed from RESCUE_COMPLETED.",
+    "NGO completion verification requires jurisdiction; ADMIN verification does not."
+  ],
+  "source_test": "Backend/test/researchEvaluation.test.js",
+  "notes": "This is a functional workflow evaluation, not a real-world rescue-time or outcome-improvement measurement."
+}
