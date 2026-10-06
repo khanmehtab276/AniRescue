@@ -118,3 +118,39 @@ The exact ODbL attribution/share-alike requirements must be retained for the der
 PMTiles is a single-file archive for tiled data. It is particularly suitable for static object storage and browser delivery because clients can retrieve byte ranges instead of requiring a traditional tile server.
 
 For AniRescue, the large package is downloaded once and then stored locally in IndexedDB. The local PMTiles source reads only the byte ranges needed by MapLibre, so the browser does not need to keep the entire zone in RAM.
+
+
+## Firebase Storage publishing
+
+AniRescue does not use GitHub Releases as the browser map server. The six generated PMTiles packages are stored under:
+
+`gs://<FIREBASE_STORAGE_BUCKET>/offline-maps/<zone>.pmtiles`
+
+The backend creates a short-lived signed read URL for an authenticated AniRescue user. The frontend downloads the file in HTTP byte ranges and stores those ranges in IndexedDB.
+
+One-time setup:
+
+1. Enable Cloud Storage for the Firebase project. Current Firebase documentation requires the Blaze plan for Cloud Storage.
+2. Set the Render/backend environment variable `FIREBASE_STORAGE_BUCKET` to the actual bucket name. If omitted, the backend can infer a new-style `<project-id>.firebasestorage.app` bucket from the Firebase Admin project.
+3. Authenticate the Google Cloud CLI locally:
+```bash
+gcloud auth login
+```
+4. Set the bucket:
+```export FIREBASE_STORAGE_BUCKET=anirescue-a5fd7.firebasestorage.app```
+5. Build and publish:
+```bash
+./tools/offline-maps/build-india-zones.sh
+./tools/offline-maps/publish-firebase-storage.sh
+```
+
+The publisher applies `tools/offline-maps/cors.json`. Keep the bucket's existing Firebase Security Rules for private application files; the signed URL is used specifically for the offline map objects.
+
+The frontend storage path is deterministic, so there are no fake or hard-coded GitHub Release URLs:
+`offline-maps/western-india.pmtiles`, `offline-maps/central-india.pmtiles`, and so on.
+
+## Runtime flow
+
+**Online:** Login -> Report/Offline Maps -> backend signs the selected map -> Firebase Storage serves byte ranges -> IndexedDB stores 4 MiB chunks.
+
+**Offline:** ReportCase -> OfflinePinnedMap -> IndexedDB -> PMTiles -> MapLibre. No Firebase, backend, OpenStreetMap tile server, or network request is needed for the downloaded map itself.
