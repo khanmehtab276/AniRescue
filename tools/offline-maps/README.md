@@ -120,37 +120,79 @@ PMTiles is a single-file archive for tiled data. It is particularly suitable for
 For AniRescue, the large package is downloaded once and then stored locally in IndexedDB. The local PMTiles source reads only the byte ranges needed by MapLibre, so the browser does not need to keep the entire zone in RAM.
 
 
-## Firebase Storage publishing
+## Firebase Hosting publishing
 
-AniRescue does not use GitHub Releases as the browser map server. The six generated PMTiles packages are stored under:
+AniRescue does **not** use Firebase Cloud Storage for large offline maps. This keeps the offline-map feature independent of the paid Cloud Storage service.
 
-`gs://<FIREBASE_STORAGE_BUCKET>/offline-maps/<zone>.pmtiles`
+The generated PMTiles packages are deployed as ordinary static files on the existing Firebase Hosting site:
 
-The backend creates a short-lived signed read URL for an authenticated AniRescue user. The frontend downloads the file in HTTP byte ranges and stores those ranges in IndexedDB.
-
-One-time setup:
-
-1. Enable Cloud Storage for the Firebase project. Current Firebase documentation requires the Blaze plan for Cloud Storage.
-2. Set the Render/backend environment variable `FIREBASE_STORAGE_BUCKET` to the actual bucket name. If omitted, the backend can infer a new-style `<project-id>.firebasestorage.app` bucket from the Firebase Admin project.
-3. Authenticate the Google Cloud CLI locally:
-```bash
-gcloud auth login
+```text
+Firebase Hosting
+└── /offline-maps/
+    ├── western-india.pmtiles
+    ├── central-india.pmtiles
+    ├── northern-india.pmtiles
+    ├── eastern-india.pmtiles
+    ├── southern-india.pmtiles
+    └── north-eastern-india.pmtiles
 ```
-4. Set the bucket:
-```export FIREBASE_STORAGE_BUCKET=anirescue-a5fd7.firebasestorage.app```
-5. Build and publish:
+
+The PWA downloads a selected package over HTTPS and stores it in the user's browser using IndexedDB. The backend does not participate in map-file delivery and does not sign or proxy PMTiles data.
+
+### Publish the generated packages
+
+1. Build the six zone packages:
+
 ```bash
 ./tools/offline-maps/build-india-zones.sh
-./tools/offline-maps/publish-firebase-storage.sh
 ```
 
-The publisher applies `tools/offline-maps/cors.json`. Keep the bucket's existing Firebase Security Rules for private application files; the signed URL is used specifically for the offline map objects.
+2. Make sure the Firebase CLI is installed and authenticated:
 
-The frontend storage path is deterministic, so there are no fake or hard-coded GitHub Release URLs:
-`offline-maps/western-india.pmtiles`, `offline-maps/central-india.pmtiles`, and so on.
+```bash
+firebase login
+```
 
-## Runtime flow
+3. Publish the packages through the existing AniRescue Firebase Hosting project:
 
-**Online:** Login -> Report/Offline Maps -> backend signs the selected map -> Firebase Storage serves byte ranges -> IndexedDB stores 4 MiB chunks.
+```bash
+./tools/offline-maps/publish-firebase-hosting.sh
+```
 
-**Offline:** ReportCase -> OfflinePinnedMap -> IndexedDB -> PMTiles -> MapLibre. No Firebase, backend, OpenStreetMap tile server, or network request is needed for the downloaded map itself.
+The publisher copies the generated PMTiles into `Frontend/public/offline-maps/`, builds the frontend, and runs:
+
+```bash
+firebase deploy --only hosting
+```
+
+The resulting public package URLs are:
+
+```text
+https://anirescue-a5fd7.web.app/offline-maps/western-india.pmtiles
+https://anirescue-a5fd7.web.app/offline-maps/central-india.pmtiles
+...
+```
+
+Do **not** commit the generated PMTiles files to Git. They are generated deployment artifacts.
+
+### Runtime flow
+
+**Online download:** Login -> Offline Maps/ReportCase -> static Firebase Hosting PMTiles -> IndexedDB 4 MiB chunks.
+
+**Offline use:** ReportCase -> OfflinePinnedMap -> IndexedDB -> PMTiles -> MapLibre.
+
+After a map has been downloaded successfully, opening that map does not require Firebase Hosting, the AniRescue backend, Firebase Cloud Storage, or the OpenStreetMap tile server.
+
+### HTTP range behavior
+
+PMTiles is designed around HTTP byte-range reads. AniRescue first probes the hosted package with a `Range: bytes=0-0` request. If the hosting path returns `206 Partial Content`, the downloader stores fixed 4 MiB ranges directly in IndexedDB. If a first-time download receives a complete `200 OK` response instead, AniRescue can stream that response into IndexedDB without loading the entire file into RAM.
+
+For **resume after an interrupted download**, the hosting endpoint must support byte ranges. Verify this after deployment with:
+
+```bash
+curl -I -H "Range: bytes=0-0" \
+  https://anirescue-a5fd7.web.app/offline-maps/western-india.pmtiles
+```
+
+A range-capable response should report `206 Partial Content` and a `Content-Range` header. Do not claim range support from configuration alone; verify the deployed endpoint.
+
