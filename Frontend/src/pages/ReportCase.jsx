@@ -185,8 +185,7 @@ export default function ReportCase() {
 
   const {
     isOffline,
-    saveForOfflineSync,
-    syncCases
+    saveForOfflineSync
   } = useOfflineSync();
 
   // Neutral world view center as fallback when user location is unavailable
