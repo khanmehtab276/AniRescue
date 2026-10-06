@@ -223,6 +223,16 @@ export default function MapView() {
         ))}
       </div>
 
+      <div className="mb-4 flex justify-end">
+        <Link
+          to="/offline-maps"
+          className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-black text-emerald-800 transition-all hover:-translate-y-0.5 hover:shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300"
+        >
+          <MapPin size={15} />
+          Offline maps
+        </Link>
+      </div>
+
       <section className="overflow-hidden rounded-[1.5rem] border border-stone-200 bg-white p-2 shadow-[0_14px_40px_rgba(41,37,36,0.08)] dark:border-stone-800 dark:bg-stone-900 dark:shadow-black/30 md:p-3">
         <div className="relative h-[62vh] min-h-[480px] overflow-hidden rounded-[1.15rem] bg-emerald-50 dark:bg-stone-950">
           {loading && (
