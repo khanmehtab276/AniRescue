@@ -6,6 +6,12 @@ Do not publish the raw Geofabrik .osm.pbf files as if they were browser maps. A 
 
 ## Recommended pipeline
 
+The current verified Protomaps daily source used by the build helper is:
+
+`https://build.protomaps.com/20260925.pmtiles`
+
+The browser must **not** download this planet archive directly. Protomaps documents the planet archive as roughly 120 GB; AniRescue extracts smaller India zones first, then publishes those zone files to CORS-enabled object storage. cite? no citations in repo docs. 
+
 ~~~text
 Geofabrik OpenStreetMap extract
         |
@@ -88,7 +94,7 @@ Object storage such as S3-compatible storage is a good fit. The browser does not
 
 ## Zone package names expected by the PWA
 
-Configure VITE_OFFLINE_MAP_BASE_URL to the directory containing:
+Configure `VITE_OFFLINE_MAP_BASE_URL` to the directory containing the generated zone files. Do not point this variable at the Protomaps planet URL.
 
 - western-india.pmtiles
 - central-india.pmtiles
