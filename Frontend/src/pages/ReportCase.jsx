@@ -485,6 +485,8 @@ export default function ReportCase() {
         timestamp,
         signature,
         resourceType = 'image',
+        folder = 'anirescue/reports',
+        allowedFormats = 'jpg,jpeg,png,webp',
       } = signatureResponse.data || {};
 
       if (!cloudName || !apiKey || !timestamp || !signature) {
@@ -499,6 +501,8 @@ export default function ReportCase() {
       cloudinaryData.append('api_key', apiKey);
       cloudinaryData.append('timestamp', String(timestamp));
       cloudinaryData.append('signature', signature);
+      cloudinaryData.append('folder', folder);
+      cloudinaryData.append('allowed_formats', allowedFormats);
 
       const cloudRes = await fetch(
         `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`,
