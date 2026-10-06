@@ -204,4 +204,5 @@ const notifyUser = async ({
 module.exports = {
   createNotification,
   notifyUser,
+  notifyUsers,
 };
