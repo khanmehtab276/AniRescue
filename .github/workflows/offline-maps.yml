@@ -1,0 +1,49 @@
+name: Build Offline India PMTiles
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/experimental-results
+    paths:
+      - "tools/offline-maps/build-india-zones.sh"
+      - ".github/workflows/offline-maps.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: offline-maps-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build regional PMTiles
+        env:
+          PMTILES_IMAGE: ghcr.io/protomaps/go-pmtiles:v1.31.2
+        run: |
+          chmod +x tools/offline-maps/build-india-zones.sh
+          docker pull "$PMTILES_IMAGE"
+          PMTILES_IMAGE="$PMTILES_IMAGE" tools/offline-maps/build-india-zones.sh
+
+      - name: Publish PMTiles release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: offline-maps-v1
+          name: AniRescue Offline India Maps v1
+          body: |
+            Regional PMTiles basemaps generated from the Protomaps OpenStreetMap-derived daily basemap.
+
+            The AniRescue web app downloads these files into IndexedDB for offline rescue-case location pinning.
+
+            Data attribution: © OpenStreetMap contributors. The underlying Protomaps basemap is distributed as an ODbL Produced Work; retain attribution and comply with the applicable ODbL requirements.
+          files: tools/offline-maps/output/*.pmtiles
+          fail_on_unmatched_files: true
+          make_latest: false
+          overwrite_files: true
