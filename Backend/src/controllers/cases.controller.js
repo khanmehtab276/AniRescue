@@ -353,7 +353,7 @@ const retryRejectedCase = async (req, res) => {
 
     const failedJob = failedJobResult.rows[0] || null;
     const isTerminalProcessingFailure =
-      currentCase.status === "PENDING_VALIDATION" &&
+      currentCase.status === "AI_PROCESSING_FAILED" &&
       failedJob?.failed_at !== null &&
       failedJob?.failed_at !== undefined;
 
