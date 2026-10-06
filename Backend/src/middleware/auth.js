@@ -99,7 +99,7 @@ function ensureCsrfToken(req, res) {
   res.append(
     "Set-Cookie",
     CSRF_COOKIE + "=" + csrfToken + "; " + cookieOptions({
-      maxAge: SESSION_MAX_AGE_SECONDS,
+      maxAge: 365 * 24 * 60 * 60,
     }),
   );
   return csrfToken;
