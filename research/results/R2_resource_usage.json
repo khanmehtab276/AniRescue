@@ -13,5 +13,5 @@
     "mean_process_cpu_percent": 98.99
   },
   "observation": "The measured run stayed below the 1 GB memory limit. CPU utilization averaged about 99% across the process-level measurements.",
-  "raw_source": "ai-async-worker/benchmark/results/yolo-world-openvino-1.5cpu.json"
+  "raw_source": "ai-async-worker/benchmark/results/yolo-world-openvino-1cpu-1gb.json"
 }
