@@ -341,7 +341,7 @@ export default function OfflineMaps() {
         {ZONES.map((zone) => {
           const saved = downloaded.find((item) => item.id === zone.id);
           const currentProgress = progress[zone.id];
-          const configured = canResolveOfflineMapUrl();
+          const configured = canResolveOfflineMapUrl(zone);
 
           return (
             <article
