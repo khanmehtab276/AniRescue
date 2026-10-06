@@ -1,5 +1,4 @@
-import { getStorage, getDownloadURL, ref as storageRef } from "firebase/storage";
-import { app } from "../services/firebase.js";
+import API from "./api.js";
 
 const DB_NAME = "anirescue_offline_maps";
 const DB_VERSION = 1;
@@ -193,8 +192,7 @@ function getFirebaseStoragePath(map) {
 
 export function canResolveOfflineMapUrl() {
   return Boolean(
-    import.meta.env.VITE_OFFLINE_MAP_BASE_URL ||
-      (app && import.meta.env.VITE_FIREBASE_STORAGE_BUCKET),
+    import.meta.env.VITE_OFFLINE_MAP_BASE_URL || API,
   );
 }
 
@@ -203,44 +201,44 @@ export async function resolveOfflineMapUrl(map) {
 
   const customBase = String(
     import.meta.env.VITE_OFFLINE_MAP_BASE_URL || "",
-  ).replace(/\\/+$/, "");
+  ).replace(/\/+$/, "");
 
   if (customBase && map?.filename) {
     return `${customBase}/${map.filename}`;
   }
 
-  const path = getFirebaseStoragePath(map);
-
-  if (!path) {
-    throw new Error("No offline map storage path is configured.");
-  }
-
-  if (!app) {
-    throw new Error(
-      "Firebase is not configured in this build. Set VITE_FIREBASE_STORAGE_BUCKET or VITE_OFFLINE_MAP_BASE_URL.",
-    );
+  if (!map?.id) {
+    throw new Error("No offline map zone was provided.");
   }
 
   try {
-    const storage = getStorage(app);
-    return await getDownloadURL(storageRef(storage, path));
-  } catch (error) {
-    const code = error?.code || "";
+    const response = await API.get(`/offline-maps/${encodeURIComponent(map.id)}/url`);
+    const url = response.data?.url;
 
-    if (code === "storage/object-not-found") {
+    if (!url) {
+      throw new Error("Backend did not return an offline map download URL.");
+    }
+
+    return url;
+  } catch (error) {
+    const status = error?.response?.status;
+
+    if (status === 401 || status === 403) {
       throw new Error(
-        `Offline map package is not uploaded yet: ${path}`,
+        "Sign in again before downloading an AniRescue offline map.",
       );
     }
 
-    if (code === "storage/unauthorized" || code === "storage/unauthenticated") {
+    if (status === 404) {
       throw new Error(
-        "You must be signed in to download AniRescue offline maps.",
+        "This offline map package has not been uploaded to Firebase Storage yet.",
       );
     }
 
     throw new Error(
-      error?.message || "Could not obtain the offline map download URL.",
+      error?.response?.data?.error ||
+        error?.message ||
+        "Could not obtain the offline map download URL.",
     );
   }
 }
