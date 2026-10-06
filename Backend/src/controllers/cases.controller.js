@@ -39,9 +39,13 @@ const getUploadSignature = async (req, res) => {
   }
 
   const timestamp = Math.floor(Date.now() / 1000);
+  const uploadFolder = "anirescue/reports";
+  const allowedFormats = "jpg,jpeg,png,webp";
   const signature = crypto
     .createHash("sha1")
-    .update(`timestamp=${timestamp}${apiSecret}`)
+    .update(
+      `allowed_formats=${allowedFormats}&folder=${uploadFolder}&timestamp=${timestamp}${apiSecret}`,
+    )
     .digest("hex");
 
   res.set("Cache-Control", "no-store");
@@ -52,6 +56,8 @@ const getUploadSignature = async (req, res) => {
     timestamp,
     signature,
     resourceType: "image",
+    folder: uploadFolder,
+    allowedFormats,
   });
 };
 
@@ -125,7 +131,8 @@ const reportCase = async (req, res) => {
     parsedImageUrl.protocol !== "https:" ||
     parsedImageUrl.hostname !== "res.cloudinary.com" ||
     !cloudName ||
-    !parsedImageUrl.pathname.startsWith(`/${cloudName}/`) ||
+    !parsedImageUrl.pathname.startsWith(`/${cloudName}/image/upload/`) ||
+    !parsedImageUrl.pathname.includes("/anirescue/reports/") ||
     parsedImageUrl.username ||
     parsedImageUrl.password
   ) {
