@@ -5,6 +5,7 @@ import gc
 import time
 import signal
 import io
+import threading
 import tempfile
 import pika
 import psycopg2
@@ -97,6 +98,90 @@ if not CLOUDINARY_CLOUD_NAME:
     raise RuntimeError("CLOUDINARY_CLOUD_NAME is missing from environment variables.")
 
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
+
+WORKER_SERVICE_NAME = "anirescue-ai-worker"
+WORKER_HEARTBEAT_INTERVAL_SECONDS = 30
+
+
+def write_worker_heartbeat(*, last_success=False, error=None):
+    """Write worker health using a short-lived connection separate from job processing."""
+    connection = None
+
+    try:
+        connection = psycopg2.connect(
+            DATABASE_URL,
+            connect_timeout=5,
+        )
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO worker_heartbeats
+                    (service_name, last_seen_at, last_success_at, last_error_at, last_error, processed_count)
+                VALUES (
+                    %s,
+                    CURRENT_TIMESTAMP,
+                    CASE WHEN %s THEN CURRENT_TIMESTAMP ELSE NULL END,
+                    CASE WHEN %s IS NULL THEN NULL ELSE CURRENT_TIMESTAMP END,
+                    %s,
+                    CASE WHEN %s THEN 1 ELSE 0 END
+                )
+                ON CONFLICT (service_name) DO UPDATE
+                SET
+                    last_seen_at = CURRENT_TIMESTAMP,
+                    last_success_at =
+                        CASE
+                            WHEN EXCLUDED.last_success_at IS NOT NULL
+                            THEN CURRENT_TIMESTAMP
+                            ELSE worker_heartbeats.last_success_at
+                        END,
+                    last_error_at =
+                        CASE
+                            WHEN EXCLUDED.last_error_at IS NOT NULL
+                            THEN CURRENT_TIMESTAMP
+                            ELSE worker_heartbeats.last_error_at
+                        END,
+                    last_error =
+                        CASE
+                            WHEN EXCLUDED.last_error IS NOT NULL
+                            THEN LEFT(EXCLUDED.last_error, 2000)
+                            ELSE worker_heartbeats.last_error
+                        END,
+                    processed_count =
+                        worker_heartbeats.processed_count + EXCLUDED.processed_count,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (
+                    WORKER_SERVICE_NAME,
+                    last_success,
+                    error,
+                    error,
+                    last_success,
+                ),
+            )
+
+        connection.commit()
+    except Exception as heartbeat_error:
+        print(
+            f"⚠️ Worker heartbeat update failed: {heartbeat_error}"
+        )
+        if connection:
+            try:
+                connection.rollback()
+            except Exception:
+                pass
+    finally:
+        if connection:
+            try:
+                connection.close()
+            except Exception:
+                pass
+
+
+def worker_heartbeat_loop(stop_event):
+    while not stop_event.wait(WORKER_HEARTBEAT_INTERVAL_SECONDS):
+        write_worker_heartbeat()
+
 
 # --------------------------------------------------
 # DATABASE CONNECTION
@@ -311,6 +396,15 @@ def main():
 
     db_conn = None
     shutdown_requested = False
+    heartbeat_stop_event = threading.Event()
+    heartbeat_thread = threading.Thread(
+        target=worker_heartbeat_loop,
+        args=(heartbeat_stop_event,),
+        daemon=True,
+        name="anirescue-worker-heartbeat",
+    )
+    heartbeat_thread.start()
+    write_worker_heartbeat()
 
     # --------------------------------------------------
     # SIGNAL HANDLING
@@ -406,6 +500,10 @@ def main():
                         "reportId"
                     )
 
+                    job_id = payload.get(
+                        "jobId"
+                    )
+
                     image_url = payload.get(
                         "imageUrl"
                     )
@@ -495,6 +593,22 @@ def main():
                         """,
                         (report_id,)
                     )
+
+                    if job_id:
+                        cursor.execute(
+                            """
+                            UPDATE case_processing_jobs
+                            SET
+                                processing_started_at = COALESCE(
+                                    processing_started_at,
+                                    CURRENT_TIMESTAMP
+                                ),
+                                worker_heartbeat_at = CURRENT_TIMESTAMP
+                            WHERE id = %s
+                              AND case_id = %s
+                            """,
+                            (job_id, report_id),
+                        )
 
                     db_conn.commit()
 
@@ -664,6 +778,8 @@ def main():
                     # SUCCESSFUL MESSAGE
                     # ------------------------------------------
 
+                    write_worker_heartbeat(last_success=True)
+
                     ch.basic_ack(
                         delivery_tag=
                         method.delivery_tag
@@ -675,6 +791,8 @@ def main():
                     )
 
                 except Exception as e:
+
+                    write_worker_heartbeat(error=str(e))
 
                     print(
                         f"⚠️ Error processing "
@@ -1030,6 +1148,8 @@ def main():
     # --------------------------------------------------
     # FINAL DATABASE CLEANUP
     # --------------------------------------------------
+
+    heartbeat_stop_event.set()
 
     if (
         db_conn
