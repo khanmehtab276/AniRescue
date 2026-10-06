@@ -433,21 +433,49 @@ export default function ReportCase() {
     }
 
     /*
-     * A complete offline photo report is not supported by the
-     * current Cloudinary + localStorage architecture.
-     *
-     * The image must first be uploaded to Cloudinary to obtain
-     * a URL that can safely be stored in the offline retry queue.
+     * Create the id before any network operation. The same id is reused if
+     * the request is retried, so the backend idempotency protection prevents
+     * a lost response from creating duplicate rescue cases.
      */
-    if (isOffline) {
-      showToast('You are currently offline. Please reconnect to the internet to submit the rescue report.', 'warning');
-      return;
-    }
+    const clientRequestId = crypto.randomUUID();
+
+    const offlineReport = {
+      localId: clientRequestId,
+      clientRequestId,
+      location: finalLocation,
+      description: description.trim(),
+      imageBlob: imageFile,
+      fileName: imageFile.name || 'rescue-photo.jpg',
+      mimeType: imageFile.type || 'image/jpeg',
+    };
 
     setIsSubmitting(true);
     setSubmissionResult(null);
 
+    /*
+     * Keep this outside the try block so that if Cloudinary succeeds but
+     * the API response is lost, we retain the already-uploaded URL instead
+     * of uploading the photo a second time.
+     */
+    let uploadedImageUrl = null;
+
     try {
+      /*
+       * TRUE OFFLINE MODE:
+       * The photo Blob + location + description are stored in IndexedDB.
+       * Nothing is uploaded until a usable network connection returns.
+       */
+      if (isOffline || !navigator.onLine) {
+        await saveForOfflineSync(offlineReport);
+        clearForm();
+        setSubmissionResult({ queued: true });
+        showToast(
+          'Rescue case saved securely on this device. It will send automatically when the connection returns.',
+          'success',
+        );
+        return;
+      }
+
       // ---------------------------------------------------------
       // 1. Get a short-lived signed Cloudinary upload authorization
       // ---------------------------------------------------------
@@ -490,94 +518,86 @@ export default function ReportCase() {
         );
       }
 
-      const imageUrl = cloudData.secure_url;
+      uploadedImageUrl = cloudData.secure_url;
 
-      if (!imageUrl) {
+      if (!uploadedImageUrl) {
         throw new Error('Cloudinary did not return an image URL.');
       }
 
       // ---------------------------------------------------------
       // 3. Send the lightweight report to Express.
-      // The client request ID makes retries safe and idempotent.
       // ---------------------------------------------------------
-      const clientRequestId = crypto.randomUUID();
-
       const reportData = {
         clientRequestId,
         location: finalLocation,
         description: description.trim(),
-        imageUrl,
+        imageUrl: uploadedImageUrl,
       };
 
-      try {
-        const response = await API.post(
-          '/cases/report',
-          reportData
-        );
+      const response = await API.post('/cases/report', reportData);
 
-        setSubmissionResult({
-          success: true,
-          reportId: response.data?.reportId || response.data?.case?.id || null,
-          status:
-            response.data?.status ||
-            response.data?.case?.status ||
-            'PENDING_VALIDATION'
-        });
+      setSubmissionResult({
+        success: true,
+        reportId: response.data?.reportId || response.data?.case?.id || null,
+        status:
+          response.data?.status ||
+          response.data?.case?.status ||
+          'PENDING_VALIDATION',
+      });
 
-        clearForm();
-      } catch (apiError) {
-        /*
-         * Cloudinary upload succeeded, but backend submission failed.
-         * The report now contains only lightweight serializable data,
-         * so it can safely be placed in the retry queue.
-         *
-         * Two genuinely different situations land here, and they need
-         * different messages:
-         *
-         * - No response at all (apiError.response is undefined): a
-         *   real network failure. The existing "reconnect and it will
-         *   sync" framing is accurate.
-         *
-         * - A response came back (e.g. 503 when the backend's queue
-         *   to the AI worker is down): the user IS online, so the
-         *   offline-sync hook's "retry on the browser's online event"
-         *   will not fire on its own — nothing about connectivity
-         *   changed. Say so plainly, and also attempt an immediate
-         *   retry rather than silently waiting for a reload.
-         */
-        saveForOfflineSync(reportData);
-
-        const isNetworkFailure = !apiError.response;
-
-        if (isNetworkFailure) {
-          throw new Error(
-            'The image was uploaded, but the rescue report could not reach the server. It has been saved and will send automatically once you\'re back online.',
-            { cause: apiError }
-          );
-        }
-
-        setTimeout(() => {
-          syncCases();
-        }, 4000);
-
-        throw new Error(
-          apiError.response?.data?.error ||
-          'The image was uploaded, but the server could not queue the report right now. It has been saved and we\'ll retry automatically in a few seconds \u2014 you can also just try submitting again.',
-          { cause: apiError }
-        );
-      }
+      clearForm();
     } catch (err) {
       console.error('Report submission failed:', err);
 
+      const status = err.response?.status;
+      const retryable =
+        !err.response ||
+        status === 401 ||
+        status === 403 ||
+        status >= 500;
+
+      if (retryable) {
+        try {
+          await saveForOfflineSync({
+            ...offlineReport,
+            imageUrl: uploadedImageUrl,
+            imageBlob: uploadedImageUrl ? undefined : imageFile,
+          });
+          clearForm();
+          setSubmissionResult({ queued: true });
+
+          if (status === 401 || status === 403) {
+            showToast(
+              'Your rescue case is safely stored on this device. Sign in again when connected and it will be sent automatically.',
+              'warning',
+            );
+          } else {
+            showToast(
+              'Connection interrupted. Your rescue case is safely stored and will send automatically when the connection returns.',
+              'warning',
+            );
+          }
+          return;
+        } catch (storageError) {
+          console.error('Could not save failed rescue case offline:', storageError);
+          showToast(
+            'The connection failed and this device could not save the rescue case. Please keep the form open and try again.',
+            'error',
+          );
+          return;
+        }
+      }
+
       showToast(
-        err.message || 'Server error. Case could not be submitted.',
-        'error'
+        err.response?.data?.error ||
+          err.message ||
+          'Server error. Case could not be submitted.',
+        'error',
       );
     } finally {
       setIsSubmitting(false);
     }
   };
-
   const clearForm = () => {
     if (imagePreview) {
       URL.revokeObjectURL(imagePreview);
@@ -967,8 +987,8 @@ export default function ReportCase() {
                 </div>
                 <div className="space-y-3 p-4">
                   <p className={`text-[11px] leading-4 font-medium ${progressState.text}`}>{progressState.message}</p>
-                  <button type="submit" disabled={isSubmitting || isOffline || !reportReady} className={`w-full rounded-xl px-4 py-4 text-sm font-extrabold text-white shadow-lg transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${progressState.bar}`}>
-                    {isSubmitting ? 'Transmitting rescue case…' : isOffline ? 'Waiting for connection…' : 'Transmit rescue case'}
+                  <button type="submit" disabled={isSubmitting || !reportReady} className={`w-full rounded-xl px-4 py-4 text-sm font-extrabold text-white shadow-lg transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${progressState.bar}`}>
+                    {isSubmitting ? 'Saving rescue case…' : isOffline ? 'Save rescue case on device' : 'Transmit rescue case'}
                   </button>
                   <p className="text-center text-[10px] leading-4 text-stone-400 dark:text-stone-500">
                     {reportReady ? (landmarkReady ? 'Everything is ready for rescue coordination.' : 'Ready to transmit. The landmark is optional.') : 'Add the missing report details above to continue.'}
