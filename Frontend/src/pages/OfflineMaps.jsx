@@ -137,14 +137,14 @@ function buildStyle(pmtilesUrl, attribution) {
         id: "buildings",
         type: "fill",
         source: "anirescue",
-        "source-layer": "building",
+        "source-layer": "buildings",
         paint: { "fill-color": "#e7e5e4", "fill-opacity": 0.75 },
       },
       {
         id: "roads",
         type: "line",
         source: "anirescue",
-        "source-layer": "transportation",
+        "source-layer": "roads",
         paint: {
           "line-color": "#a8a29e",
           "line-width": [
