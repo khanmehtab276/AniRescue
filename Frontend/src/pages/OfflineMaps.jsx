@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Download, HardDrive, MapPinned, Trash2 } from "lucide-react";
 import {
   createOfflineMapSource,
@@ -103,7 +103,7 @@ async function loadMapLibraries() {
   };
 }
 
-function buildStyle(maplibre, pmtilesUrl, attribution) {
+function buildStyle(pmtilesUrl, attribution) {
   return {
     version: 8,
     sources: {
@@ -221,7 +221,6 @@ export default function OfflineMaps() {
           center: [header.centerLon || 78.9629, header.centerLat || 22.5937],
           zoom: Math.max(2, Math.min(header.centerZoom || 5, 12)),
           style: buildStyle(
-            maplibre,
             `anirescue-offline://${selectedMap.id}`,
             meta.attribution || "© OpenStreetMap contributors",
           ),
@@ -250,11 +249,6 @@ export default function OfflineMaps() {
       }
     };
   }, [selectedMap]);
-
-  const downloadedIds = useMemo(
-    () => new Set(downloaded.map((item) => item.id)),
-    [downloaded],
-  );
 
   const handleDownload = async (zone) => {
     setError("");
