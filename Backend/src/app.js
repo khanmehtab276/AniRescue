@@ -117,6 +117,42 @@ app.get("/health/ready", async (req, res) => {
   });
 });
 
+app.get("/health/worker", async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT
+         service_name,
+         last_seen_at,
+         last_success_at,
+         last_error_at,
+         last_error,
+         processed_count
+       FROM worker_heartbeats
+       WHERE service_name = 'anirescue-ai-worker'`,
+    );
+
+    const worker = result.rows[0] || null;
+    const healthy = Boolean(
+      worker &&
+      new Date(worker.last_seen_at).getTime() >
+        Date.now() - 90 * 1000,
+    );
+
+    res.status(200).json({
+      status: healthy ? "online" : "offline",
+      worker,
+      note: "Worker health is informational and is not part of backend readiness.",
+    });
+  } catch (error) {
+    console.error("Worker health check failed:", error?.message || error);
+    res.status(200).json({
+      status: "unknown",
+      worker: null,
+      note: "Worker health is informational and is not part of backend readiness.",
+    });
+  }
+});
+
 app.get("/health", (req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({
