@@ -66,11 +66,27 @@ export async function refreshCsrfToken() {
 }
 
 API.interceptors.request.use(
-  (config) => {
+  async (config) => {
     const method = String(config.method || 'get').toLowerCase();
 
     if (!['get', 'head', 'options'].includes(method)) {
-      const csrfToken = getCsrfToken();
+      let csrfToken = getCsrfToken();
+
+      /*
+       * sessionStorage is intentionally cleared when the browser session
+       * ends. Re-create the CSRF token lazily on the first state-changing
+       * request instead of authenticating the whole app on every startup.
+       */
+      if (!csrfToken) {
+        try {
+          csrfToken = await refreshCsrfToken();
+        } catch {
+          // Let the original request fail normally. Offline writes are
+          // queued by the feature that owns them instead of being forced
+          // through this network-only path.
+          csrfToken = null;
+        }
+      }
 
       if (csrfToken) {
         config.headers = config.headers || {};
