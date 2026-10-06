@@ -1,21 +1,25 @@
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const { pool } = require("../config/db");
+const { rotateSession, revokeSession } = require("../services/authSessions");
 
 const isProduction = process.env.NODE_ENV === "production";
 const SESSION_COOKIE = isProduction
   ? "__Host-anirescue_session_v2"
   : "anirescue_session_v2";
 const CSRF_COOKIE = "anirescue_csrf_v2";
+const REFRESH_COOKIE = isProduction
+  ? "__Host-anirescue_refresh_v1"
+  : "anirescue_refresh_v1";
 const LEGACY_SESSION_COOKIE = isProduction
   ? "__Host-anirescue_session"
   : "anirescue_session";
 const LEGACY_CSRF_COOKIE = "anirescue_csrf";
 
-// Keep users signed in for years rather than forcing routine re-login.
-// The HttpOnly cookie remains revocable by logout/account deactivation.
-const PERSISTENT_SESSION_DAYS = 3650; // 10 years
-const SESSION_MAX_AGE_SECONDS = PERSISTENT_SESSION_DAYS * 24 * 60 * 60;
+// Keep users signed in without keeping a powerful JWT valid for years.
+// The access JWT is short-lived; the rotating server-side session is
+// long-lived and revocable.
+const ACCESS_TOKEN_MAX_AGE_SECONDS = 15 * 60;
 
 function parseCookies(header = "") {
   return header.split(";").reduce((cookies, part) => {
@@ -51,16 +55,21 @@ function cookieOptions({ httpOnly = false, maxAge, partitioned = isProduction } 
   return parts.filter(Boolean).join("; ");
 }
 
-function setAuthCookies(res, token) {
-  const csrfToken = crypto.randomBytes(32).toString("hex");
+function setAuthCookies(res, token, refreshToken, existingCsrfToken = null) {
+  const csrfToken =
+    existingCsrfToken || crypto.randomBytes(32).toString("hex");
 
   res.setHeader("Set-Cookie", [
     `${SESSION_COOKIE}=${encodeURIComponent(token)}; ${cookieOptions({
       httpOnly: true,
-      maxAge: SESSION_MAX_AGE_SECONDS,
+      maxAge: ACCESS_TOKEN_MAX_AGE_SECONDS,
+    })}`,
+    `${REFRESH_COOKIE}=${encodeURIComponent(refreshToken)}; ${cookieOptions({
+      httpOnly: true,
+      maxAge: 365 * 24 * 60 * 60,
     })}`,
     `${CSRF_COOKIE}=${csrfToken}; ${cookieOptions({
-      maxAge: SESSION_MAX_AGE_SECONDS,
+      maxAge: 365 * 24 * 60 * 60,
     })}`,
   ]);
 
@@ -70,6 +79,7 @@ function setAuthCookies(res, token) {
 function clearAuthCookies(res) {
   res.setHeader("Set-Cookie", [
     `${SESSION_COOKIE}=; ${cookieOptions({ httpOnly: true, maxAge: 0 })}`,
+    `${REFRESH_COOKIE}=; ${cookieOptions({ httpOnly: true, maxAge: 0 })}`,
     `${CSRF_COOKIE}=; ${cookieOptions({ maxAge: 0 })}`,
     `${LEGACY_SESSION_COOKIE}=; ${cookieOptions({ httpOnly: true, maxAge: 0, partitioned: false })}`,
     `${LEGACY_CSRF_COOKIE}=; ${cookieOptions({ maxAge: 0, partitioned: false })}`,
@@ -100,7 +110,26 @@ function getSessionToken(req) {
   return cookies[SESSION_COOKIE] || null;
 }
 
-function verifyToken(req, res, next) {
+function getRefreshToken(req) {
+  const cookies = parseCookies(req.headers.cookie);
+  return cookies[REFRESH_COOKIE] || null;
+}
+
+function createAccessToken(user, sessionId) {
+  return jwt.sign(
+    {
+      id: user.id,
+      role: user.role,
+      account_status: user.account_status,
+      email: user.email,
+      sid: sessionId,
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "15m" },
+  );
+}
+
+async function verifyToken(req, res, next) {
   const authHeader = req.headers.authorization;
   const cookieToken = getSessionToken(req);
   const token =
@@ -115,8 +144,37 @@ function verifyToken(req, res, next) {
 
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
-    next();
+    req.authSessionId = req.user.sid || null;
+    return next();
   } catch {
+    const refreshToken = getRefreshToken(req);
+
+    if (cookieToken && refreshToken) {
+      try {
+        const rotated = await rotateSession(refreshToken, req);
+
+        if (rotated && rotated.user.account_status === "ACTIVE") {
+          const accessToken = createAccessToken(rotated.user, rotated.id);
+          setAuthCookies(
+            res,
+            accessToken,
+            rotated.refreshToken,
+            getCsrfToken(req),
+          );
+
+          req.user = rotated.user;
+          req.authSessionId = rotated.id;
+          res.set("Cache-Control", "no-store");
+          return next();
+        }
+      } catch (refreshError) {
+        console.error(
+          "Session refresh error:",
+          refreshError?.message || refreshError,
+        );
+      }
+    }
+
     if (cookieToken) clearAuthCookies(res);
 
     return res.status(401).json({
@@ -257,6 +315,9 @@ module.exports = {
   requireCsrf,
   setAuthCookies,
   clearAuthCookies,
+  getRefreshToken,
+  createAccessToken,
+  revokeSession,
   getCsrfToken,
   ensureCsrfToken,
   SESSION_COOKIE,
