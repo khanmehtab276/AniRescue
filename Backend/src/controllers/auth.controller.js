@@ -286,7 +286,7 @@ const login = async (req, res) => {
         email: user.email,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "30d" },
+      { expiresIn: "3650d" },
     );
 
     delete user.password_hash;
