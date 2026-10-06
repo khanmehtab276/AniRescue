@@ -1,8 +1,13 @@
+import { getStorage, getDownloadURL, ref as storageRef } from "firebase/storage";
+import { app } from "../services/firebase.js";
+
 const DB_NAME = "anirescue_offline_maps";
 const DB_VERSION = 1;
 const META_STORE = "maps";
 const CHUNK_STORE = "chunks";
-const CHUNK_SIZE = 1024 * 1024;
+const CHUNK_SIZE = 4 * 1024 * 1024;
+const DOWNLOAD_RETRIES = 3;
+const RETRY_DELAY_MS = 1200;
 
 function openDb() {
   return new Promise((resolve, reject) => {
@@ -39,6 +44,34 @@ function requestToPromise(request) {
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
+}
+
+async function putMeta(meta) {
+  const db = await openDb();
+
+  try {
+    const tx = db.transaction(META_STORE, "readwrite");
+    tx.objectStore(META_STORE).put(meta);
+
+    await new Promise((resolve, reject) => {
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  } finally {
+    db.close();
+  }
+}
+
+async function getMeta(mapId) {
+  const db = await openDb();
+
+  try {
+    const tx = db.transaction(META_STORE, "readonly");
+    return await requestToPromise(tx.objectStore(META_STORE).get(mapId));
+  } finally {
+    db.close();
+  }
 }
 
 async function putChunk(mapId, index, bytes) {
@@ -89,7 +122,6 @@ async function deleteMap(mapId) {
         const cursor = request.result;
 
         if (!cursor) {
-          resolve();
           return;
         }
 
@@ -98,11 +130,6 @@ async function deleteMap(mapId) {
       };
 
       request.onerror = () => reject(request.error);
-      tx.onerror = () => reject(tx.error);
-      tx.onabort = () => reject(tx.error);
-    });
-
-    await new Promise((resolve, reject) => {
       tx.oncomplete = resolve;
       tx.onerror = () => reject(tx.error);
       tx.onabort = () => reject(tx.error);
@@ -158,147 +185,360 @@ export async function removeDownloadedMap(mapId) {
   await deleteMap(mapId);
 }
 
+function getFirebaseStoragePath(map) {
+  if (map?.storagePath) return map.storagePath;
+  if (map?.filename) return `offline-maps/${map.filename}`;
+  return "";
+}
+
+export function canResolveOfflineMapUrl() {
+  return Boolean(
+    import.meta.env.VITE_OFFLINE_MAP_BASE_URL ||
+      (app && import.meta.env.VITE_FIREBASE_STORAGE_BUCKET),
+  );
+}
+
+export async function resolveOfflineMapUrl(map) {
+  if (map?.url) return map.url;
+
+  const customBase = String(
+    import.meta.env.VITE_OFFLINE_MAP_BASE_URL || "",
+  ).replace(/\\/+$/, "");
+
+  if (customBase && map?.filename) {
+    return `${customBase}/${map.filename}`;
+  }
+
+  const path = getFirebaseStoragePath(map);
+
+  if (!path) {
+    throw new Error("No offline map storage path is configured.");
+  }
+
+  if (!app) {
+    throw new Error(
+      "Firebase is not configured in this build. Set VITE_FIREBASE_STORAGE_BUCKET or VITE_OFFLINE_MAP_BASE_URL.",
+    );
+  }
+
+  try {
+    const storage = getStorage(app);
+    return await getDownloadURL(storageRef(storage, path));
+  } catch (error) {
+    const code = error?.code || "";
+
+    if (code === "storage/object-not-found") {
+      throw new Error(
+        `Offline map package is not uploaded yet: ${path}`,
+      );
+    }
+
+    if (code === "storage/unauthorized" || code === "storage/unauthenticated") {
+      throw new Error(
+        "You must be signed in to download AniRescue offline maps.",
+      );
+    }
+
+    throw new Error(
+      error?.message || "Could not obtain the offline map download URL.",
+    );
+  }
+}
+
+function parseTotalBytes(response) {
+  const contentRange = response.headers.get("content-range") || "";
+  const rangeMatch = contentRange.match(/\\/([0-9]+)$/);
+
+  if (rangeMatch) {
+    return Number(rangeMatch[1]);
+  }
+
+  const contentLength = Number(response.headers.get("content-length") || 0);
+  return contentLength > 0 ? contentLength : 0;
+}
+
+async function fetchWithRetry(url, options, label) {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= DOWNLOAD_RETRIES; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        ...options,
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `${label} failed (HTTP ${response.status}).`,
+        );
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error;
+
+      if (attempt < DOWNLOAD_RETRIES) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, RETRY_DELAY_MS * attempt),
+        );
+      }
+    }
+  }
+
+  const message = lastError?.message || "Network request failed.";
+
+  if (/failed to fetch|networkerror|network error/i.test(message)) {
+    throw new Error(
+      "Could not reach the offline map server. Check the Firebase Storage CORS configuration and your internet connection.",
+    );
+  }
+
+  throw lastError || new Error("Offline map download failed.");
+}
+
+async function probeRemoteMap(url) {
+  const response = await fetchWithRetry(
+    url,
+    {
+      method: "GET",
+      headers: { Range: "bytes=0-0" },
+      mode: "cors",
+    },
+    "Offline map connection test",
+  );
+
+  const totalBytes = parseTotalBytes(response);
+
+  return {
+    response,
+    totalBytes,
+    ranged: response.status === 206,
+  };
+}
+
+function mergeMeta(map, totalBytes, existing) {
+  const sameSource =
+    existing &&
+    existing.storagePath === getFirebaseStoragePath(map) &&
+    Number(existing.sizeBytes || 0) === Number(totalBytes || 0) &&
+    existing.chunkSize === CHUNK_SIZE;
+
+  if (sameSource && existing.status === "downloading") {
+    return existing;
+  }
+
+  return {
+    id: map.id,
+    name: map.name,
+    description: map.description,
+    provider: map.provider,
+    attribution: map.attribution,
+    storagePath: getFirebaseStoragePath(map),
+    status: "downloading",
+    sizeBytes: totalBytes || null,
+    downloadedBytes: 0,
+    chunkSize: CHUNK_SIZE,
+    chunkCount: 0,
+    updatedAt: Date.now(),
+  };
+}
+
+async function streamFullResponse(response, meta, onProgress) {
+  if (!response.body) {
+    throw new Error(
+      "This browser cannot stream the offline map download. Try an updated Chrome, Firefox, Safari, or installed PWA.",
+    );
+  }
+
+  const reader = response.body.getReader();
+  let buffer = new Uint8Array(0);
+  let downloadedBytes = meta.downloadedBytes || 0;
+  let chunkIndex = Math.floor(downloadedBytes / CHUNK_SIZE);
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const incoming =
+      value instanceof Uint8Array ? value : new Uint8Array(value);
+    const merged = new Uint8Array(buffer.length + incoming.length);
+    merged.set(buffer);
+    merged.set(incoming, buffer.length);
+    buffer = merged;
+
+    while (buffer.length >= CHUNK_SIZE) {
+      const chunk = buffer.slice(0, CHUNK_SIZE);
+      buffer = buffer.slice(CHUNK_SIZE);
+
+      await putChunk(meta.id, chunkIndex, chunk);
+      chunkIndex += 1;
+      downloadedBytes += chunk.length;
+
+      meta.downloadedBytes = downloadedBytes;
+      meta.chunkCount = chunkIndex;
+      meta.updatedAt = Date.now();
+      await putMeta(meta);
+
+      onProgress?.({
+        downloadedBytes,
+        totalBytes: meta.sizeBytes || 0,
+        percent: meta.sizeBytes
+          ? Math.min(100, Math.round((downloadedBytes / meta.sizeBytes) * 100))
+          : null,
+      });
+    }
+  }
+
+  if (buffer.length > 0) {
+    await putChunk(meta.id, chunkIndex, buffer);
+    chunkIndex += 1;
+    downloadedBytes += buffer.length;
+  }
+
+  return {
+    downloadedBytes,
+    chunkCount: chunkIndex,
+  };
+}
+
 export async function downloadOfflineMap(map, onProgress) {
-  if (!map?.id || !map?.url) {
-    throw new Error("This offline map is not configured for download yet.");
+  if (!map?.id) {
+    throw new Error("This offline map has no valid identifier.");
   }
 
   if (!navigator.onLine) {
     throw new Error("Connect to the internet before downloading an offline map.");
   }
 
-  const response = await fetch(map.url, {
-    method: "GET",
-    mode: "cors",
-    cache: "no-store",
-  });
+  const url = await resolveOfflineMapUrl(map);
+  const { response: probeResponse, totalBytes, ranged } =
+    await probeRemoteMap(url);
 
-  if (!response.ok) {
-    throw new Error(`Offline map download failed (HTTP ${response.status}).`);
+  if (!totalBytes) {
+    throw new Error(
+      "The map server did not provide a usable file size. Configure Firebase Storage CORS and object metadata correctly.",
+    );
   }
 
-  const contentLength = Number(response.headers.get("content-length") || 0);
+  const existing = await getMeta(map.id);
 
-  if (contentLength > 0) {
-    const estimate = await getOfflineStorageEstimate();
-    const requiredWithHeadroom = Math.ceil(contentLength * 1.05);
+  if (existing?.status === "ready" && existing.sizeBytes === totalBytes) {
+    return existing;
+  }
 
-    if (
-      estimate.available > 0 &&
-      requiredWithHeadroom > estimate.available
-    ) {
-      throw new Error(
-        `Not enough browser storage for this map. Required about ${Math.ceil(requiredWithHeadroom / 1024 / 1024)} MB, with only ${Math.floor(estimate.available / 1024 / 1024)} MB estimated available.`,
+  const estimate = await getOfflineStorageEstimate();
+  const alreadyStored = existing?.status === "downloading"
+    ? Number(existing.downloadedBytes || 0)
+    : 0;
+  const remainingBytes = Math.max(0, totalBytes - alreadyStored);
+  const requiredWithHeadroom = Math.ceil(remainingBytes * 1.05);
+
+  if (
+    estimate.available > 0 &&
+    requiredWithHeadroom > estimate.available
+  ) {
+    throw new Error(
+      `Not enough browser storage for this map. About ${Math.ceil(requiredWithHeadroom / 1024 / 1024)} MB is still required, with only ${Math.floor(estimate.available / 1024 / 1024)} MB estimated available.`,
+    );
+  }
+
+  const meta = mergeMeta(map, totalBytes, existing);
+  await putMeta(meta);
+
+  try {
+    let downloadedBytes = meta.downloadedBytes || 0;
+    let chunkCount = meta.chunkCount || 0;
+
+    if (!ranged && downloadedBytes === 0) {
+      const streamed = await streamFullResponse(
+        probeResponse,
+        meta,
+        onProgress,
       );
-    }
-  }
+      downloadedBytes = streamed.downloadedBytes;
+      chunkCount = streamed.chunkCount;
+    } else {
+      // The first request proved that the storage endpoint supports byte
+      // ranges. Download fixed-size ranges so mobile browsers do not need
+      // to keep a multi-hundred-MB response in memory.
+      const totalChunks = Math.ceil(totalBytes / CHUNK_SIZE);
 
-  if (!response.body) {
-    throw new Error("This browser cannot stream the offline map download.");
-  }
+      for (let index = chunkCount; index < totalChunks; index += 1) {
+        const start = index * CHUNK_SIZE;
+        const end = Math.min(totalBytes - 1, start + CHUNK_SIZE - 1);
 
-  const db = await openDb();
+        const response = await fetchWithRetry(
+          url,
+          {
+            method: "GET",
+            headers: { Range: `bytes=${start}-${end}` },
+            mode: "cors",
+          },
+          `Offline map chunk ${index + 1}/${totalChunks}`,
+        );
 
-  try {
-    const metaStore = db.transaction(META_STORE, "readwrite").objectStore(META_STORE);
-    metaStore.put({
-      id: map.id,
-      name: map.name,
-      status: "downloading",
-      sizeBytes: contentLength || null,
-      downloadedBytes: 0,
-      chunkSize: CHUNK_SIZE,
-      updatedAt: Date.now(),
-    });
-  } finally {
-    db.close();
-  }
+        if (response.status !== 206) {
+          throw new Error(
+            "The map server does not support HTTP range downloads. Use the provided Firebase Storage setup.",
+          );
+        }
 
-  const reader = response.body.getReader();
-  let buffer = new Uint8Array(0);
-  let downloadedBytes = 0;
-  let chunkIndex = 0;
+        const bytes = new Uint8Array(await response.arrayBuffer());
 
-  const flushChunk = async (bytes) => {
-    await putChunk(map.id, chunkIndex, bytes);
-    chunkIndex += 1;
-  };
+        if (bytes.length !== end - start + 1) {
+          throw new Error(
+            `Offline map chunk ${index + 1} has an unexpected size.`,
+          );
+        }
 
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
+        await putChunk(map.id, index, bytes);
 
-      if (done) break;
+        downloadedBytes = end + 1;
+        chunkCount = index + 1;
+        meta.downloadedBytes = downloadedBytes;
+        meta.chunkCount = chunkCount;
+        meta.updatedAt = Date.now();
+        await putMeta(meta);
 
-      const incoming = value instanceof Uint8Array
-        ? value
-        : new Uint8Array(value);
-
-      const merged = new Uint8Array(buffer.length + incoming.length);
-      merged.set(buffer);
-      merged.set(incoming, buffer.length);
-      buffer = merged;
-
-      while (buffer.length >= CHUNK_SIZE) {
-        const chunk = buffer.slice(0, CHUNK_SIZE);
-        buffer = buffer.slice(CHUNK_SIZE);
-
-        await flushChunk(chunk);
-
-        downloadedBytes += chunk.length;
         onProgress?.({
           downloadedBytes,
-          totalBytes: contentLength,
-          percent: contentLength
-            ? Math.min(100, Math.round((downloadedBytes / contentLength) * 100))
-            : null,
+          totalBytes,
+          percent: Math.min(
+            100,
+            Math.round((downloadedBytes / totalBytes) * 100),
+          ),
         });
       }
     }
 
-    if (buffer.length > 0) {
-      await flushChunk(buffer);
-      downloadedBytes += buffer.length;
-    }
-
     const finalMeta = {
-      id: map.id,
-      name: map.name,
-      description: map.description,
-      provider: map.provider,
-      attribution: map.attribution,
+      ...meta,
       status: "ready",
-      sizeBytes: downloadedBytes,
+      sizeBytes: totalBytes,
       downloadedBytes,
-      chunkSize: CHUNK_SIZE,
-      chunkCount: chunkIndex,
+      chunkCount,
       updatedAt: Date.now(),
     };
 
-    const finalDb = await openDb();
-
-    try {
-      const tx = finalDb.transaction(META_STORE, "readwrite");
-      tx.objectStore(META_STORE).put(finalMeta);
-
-      await new Promise((resolve, reject) => {
-        tx.oncomplete = resolve;
-        tx.onerror = () => reject(tx.error);
-        tx.onabort = () => reject(tx.error);
-      });
-    } finally {
-      finalDb.close();
-    }
+    await putMeta(finalMeta);
 
     onProgress?.({
-      downloadedBytes,
-      totalBytes: downloadedBytes,
+      downloadedBytes: totalBytes,
+      totalBytes,
       percent: 100,
     });
 
     return finalMeta;
   } catch (error) {
-    await deleteMap(map.id).catch(() => {});
+    // Keep completed chunks and the downloading metadata. A retry can resume
+    // from the last successful chunk instead of starting the large download
+    // again from zero.
+    await putMeta({
+      ...meta,
+      status: "downloading",
+      updatedAt: Date.now(),
+    }).catch(() => {});
+
     throw error;
   }
 }
@@ -335,7 +575,9 @@ export async function createOfflineMapSource(mapId, PMTilesClass) {
         parts.push(new Uint8Array(bytes));
       }
 
-      const combined = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0));
+      const combined = new Uint8Array(
+        parts.reduce((sum, part) => sum + part.length, 0),
+      );
       let cursor = 0;
 
       for (const part of parts) {
