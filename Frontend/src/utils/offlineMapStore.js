@@ -41,18 +41,6 @@ function requestToPromise(request) {
   });
 }
 
-async function putMeta(meta) {
-  const db = await openDb();
-
-  try {
-    const tx = db.transaction(META_STORE, "readwrite");
-    tx.objectStore(META_STORE).put(meta);
-    await requestToPromise(tx.done || tx.objectStore(META_STORE).get(meta.id));
-  } finally {
-    db.close();
-  }
-}
-
 async function putChunk(mapId, index, bytes) {
   const db = await openDb();
 
@@ -190,6 +178,20 @@ export async function downloadOfflineMap(map, onProgress) {
   }
 
   const contentLength = Number(response.headers.get("content-length") || 0);
+
+  if (contentLength > 0) {
+    const estimate = await getOfflineStorageEstimate();
+    const requiredWithHeadroom = Math.ceil(contentLength * 1.05);
+
+    if (
+      estimate.available > 0 &&
+      requiredWithHeadroom > estimate.available
+    ) {
+      throw new Error(
+        `Not enough browser storage for this map. Required about ${Math.ceil(requiredWithHeadroom / 1024 / 1024)} MB, with only ${Math.floor(estimate.available / 1024 / 1024)} MB estimated available.`,
+      );
+    }
+  }
 
   if (!response.body) {
     throw new Error("This browser cannot stream the offline map download.");
