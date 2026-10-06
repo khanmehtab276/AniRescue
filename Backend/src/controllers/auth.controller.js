@@ -259,8 +259,9 @@ function redirectOAuthError(res, message) {
   return res.redirect(302, url.toString());
 }
 
-async function startOAuth(provider, req, res) {
+async function startOAuth(req, res) {
   try {
+    const provider = req.params?.provider;
     const normalizedProvider = String(provider || "").toLowerCase();
 
     if (!["google", "facebook"].includes(normalizedProvider)) {
@@ -409,8 +410,9 @@ async function findOrCreateOAuthUser({ profile, req }) {
   }
 }
 
-async function handleOAuthCallback(provider, req, res) {
+async function handleOAuthCallback(req, res) {
   try {
+    const provider = req.params?.provider;
     const normalizedProvider = String(provider || "").toLowerCase();
     const stateCookie = readStateCookie(req);
     const returnedState = String(req.query?.state || "");
