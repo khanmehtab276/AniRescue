@@ -8,7 +8,8 @@
     "start": "node ./node_modules/vite/bin/vite.js --host 0.0.0.0",
     "build": "node ./node_modules/vite/bin/vite.js build",
     "lint": "eslint .",
-    "preview": "node ./node_modules/vite/bin/vite.js preview --host 0.0.0.0"
+    "preview": "node ./node_modules/vite/bin/vite.js preview --host 0.0.0.0",
+    "e2e": "npx --yes playwright@1.56.1 test"
   },
   "dependencies": {
     "axios": "^1.18.1",
