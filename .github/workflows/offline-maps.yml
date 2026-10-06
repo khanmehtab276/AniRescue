@@ -33,17 +33,8 @@ jobs:
           PMTILES_IMAGE="$PMTILES_IMAGE" tools/offline-maps/build-india-zones.sh
 
       - name: Publish PMTiles release
-        uses: softprops/action-gh-release@v2
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: offline-maps-v1
-          name: AniRescue Offline India Maps v1
-          body: |
-            Regional PMTiles basemaps generated from the Protomaps OpenStreetMap-derived daily basemap.
-
-            The AniRescue web app downloads these files into IndexedDB for offline rescue-case location pinning.
-
-            Data attribution: © OpenStreetMap contributors. The underlying Protomaps basemap is distributed as an ODbL Produced Work; retain attribution and comply with the applicable ODbL requirements.
-          files: tools/offline-maps/output/*.pmtiles
-          fail_on_unmatched_files: true
-          make_latest: false
-          overwrite_files: true
+          name: anirescue-india-pmtiles
+          path: tools/offline-maps/output/*.pmtiles
+          if-no-files-found: error
