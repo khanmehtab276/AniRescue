@@ -174,6 +174,7 @@ export default function OfflinePinnedMap({
           center,
           zoom: position ? 13 : Math.max(5, Math.min(header.centerZoom || 6, 12)),
           style: buildOfflineStyle(
+            `anirescue-offline://${selected.id}`,
             meta.attribution || "© OpenStreetMap contributors",
           ),
           attributionControl: true,
