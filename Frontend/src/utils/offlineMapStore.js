@@ -245,7 +245,7 @@ export async function resolveOfflineMapUrl(map) {
 
 function parseTotalBytes(response) {
   const contentRange = response.headers.get("content-range") || "";
-  const rangeMatch = contentRange.match(/\\/([0-9]+)$/);
+  const rangeMatch = contentRange.match(/\/([0-9]+)$/);
 
   if (rangeMatch) {
     return Number(rangeMatch[1]);
