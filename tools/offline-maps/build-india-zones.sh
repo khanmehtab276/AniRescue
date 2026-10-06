@@ -1,26 +1,31 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Verified Protomaps daily basemap source used to build AniRescue's
-# region-specific offline packages. Update this date when a newer daily
-# build has been selected and verified.
-SOURCE_URL="https://build.protomaps.com/20260925.pmtiles"
-
-OUT_DIR="${1:-dist}"
+SOURCE_URL="${PROTOMAPS_SOURCE_URL:-https://build.protomaps.com/20260925.pmtiles}"
+PMTILES_IMAGE="${PMTILES_IMAGE:-ghcr.io/protomaps/go-pmtiles:v1.31.2}"
+OUT_DIR="${OUT_DIR:-tools/offline-maps/output}"
 
 mkdir -p "$OUT_DIR"
+rm -f "$OUT_DIR"/*.pmtiles
 
 extract() {
   local name="$1"
   local bbox="$2"
 
-  echo "==> Building $name from $SOURCE_URL"
-  pmtiles extract "$SOURCE_URL" "$OUT_DIR/$name.pmtiles" --bbox="$bbox"
-  pmtiles verify "$OUT_DIR/$name.pmtiles"
+  echo "Extracting $name from $SOURCE_URL with bbox=$bbox maxzoom=12"
+  docker run --rm \
+    -v "$PWD/$OUT_DIR:/out" \
+    "$PMTILES_IMAGE" \
+    extract "$SOURCE_URL" "/out/$name.pmtiles" \
+    --bbox="$bbox" \
+    --maxzoom=12
+
+  docker run --rm \
+    -v "$PWD/$OUT_DIR:/out" \
+    "$PMTILES_IMAGE" \
+    verify "/out/$name.pmtiles"
 }
 
-# Bounding boxes are intentionally broad so each rescue zone has map context.
-# Format: minLon,minLat,maxLon,maxLat
 extract "western-india" "68,8,78,29"
 extract "central-india" "73,16,86,28"
 extract "northern-india" "68,23,83,37"
@@ -28,6 +33,5 @@ extract "eastern-india" "80,17,90,29"
 extract "southern-india" "73,7,87,21"
 extract "north-eastern-india" "88,20,98,30"
 
-echo
-echo "Packages created in $OUT_DIR/"
+echo "Offline PMTiles generated in $OUT_DIR"
 ls -lh "$OUT_DIR"/*.pmtiles
