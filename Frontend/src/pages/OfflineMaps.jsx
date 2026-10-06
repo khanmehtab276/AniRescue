@@ -186,6 +186,14 @@ export default function OfflineMaps() {
 
   useEffect(() => {
     void refresh();
+    // Load the renderer while online so the PWA service worker can cache the
+    // exact MapLibre/PMTiles runtime before the user later goes offline.
+    loadMapLibraries().catch((libraryError) => {
+      console.warn(
+        "Offline map renderer could not be warmed yet:",
+        libraryError?.message || libraryError,
+      );
+    });
   }, []);
 
   useEffect(() => {
