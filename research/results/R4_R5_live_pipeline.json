@@ -1,0 +1,18 @@
+{
+  "test": "R4/R5",
+  "status": "PASS",
+  "case_id": 9,
+  "api_base": "https://anirescue-backend.onrender.com",
+  "http_submission_ms": 169.89,
+  "ai_completion_ms": 12817.22,
+  "final_status": "VALIDATION_PASSED",
+  "gemini_status": "COMPLETED",
+  "gemini_analysis_present": true,
+  "ai_confidence": 0.7196905612945557,
+  "notes": [
+    "Live controlled research run completed with the local AI worker running.",
+    "HTTP submission timing represents the case-report request only.",
+    "AI completion timing is the live harness polling interval from submission completion until a terminal AI validation state.",
+    "This measurement is an end-to-end pipeline observation, not a YOLO-only or Gemini-only latency measurement."
+  ]
+}
