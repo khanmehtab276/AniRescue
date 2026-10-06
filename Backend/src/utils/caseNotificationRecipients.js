@@ -1,5 +1,5 @@
 const { pool } = require("../config/db");
-const { notifyUser } = require("./notifications");
+const { notifyUsers } = require("./notifications");
 
 const getCaseRecipients = async ({
   caseId,
@@ -156,21 +156,13 @@ const notifyCaseRecipients = async ({
       includeAdmins,
     });
 
-    let notified = 0;
-
-    for (const userId of userIds) {
-      const notification = await notifyUser({
-        userId,
-        caseId,
-        notificationType,
-        title,
-        message,
-      });
-
-      if (notification) notified += 1;
-    }
-
-    return { notified, recipients: userIds.length };
+    return await notifyUsers({
+      userIds,
+      caseId,
+      notificationType,
+      title,
+      message,
+    });
   } catch (error) {
     console.error(
       "Case stakeholder notification failed (non-fatal):",
