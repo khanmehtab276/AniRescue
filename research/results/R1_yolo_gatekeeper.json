@@ -23,5 +23,5 @@
     "p95_inference_ms": 2001.49
   },
   "interpretation": "Image-level gatekeeper correctness on the 100-image research manifest. This is not a formal mAP, IoU, precision/recall, or clinical-accuracy evaluation.",
-  "raw_source": "ai-async-worker/benchmark/results/yolo-world-openvino-1.5cpu.json"
+  "raw_source": "ai-async-worker/benchmark/results/yolo-world-openvino-1cpu-1gb.json"
 }
