@@ -26,6 +26,10 @@ const {
   startCaseProcessingDispatcher,
   stopCaseProcessingDispatcher,
 } = require("./src/services/caseProcessingDispatcher");
+const {
+  startAiProcessingWatchdog,
+  stopAiProcessingWatchdog,
+} = require("./src/services/aiProcessingWatchdog");
 const { runMigrations } = require("./src/services/migrations");
 
 const port = process.env.PORT || 3000;
@@ -42,6 +46,7 @@ async function start() {
 
     await connectRabbitMQ();
     startCaseProcessingDispatcher();
+    startAiProcessingWatchdog();
     await startCaseNotificationConsumer();
 
     notificationConsumerTimer = setInterval(() => {
@@ -79,6 +84,7 @@ const gracefulShutdown = async (signal) => {
 
     if (notificationConsumerTimer) clearInterval(notificationConsumerTimer);
     stopCaseProcessingDispatcher();
+    stopAiProcessingWatchdog();
     await closeRabbitMQ();
 
     if (pool) {
