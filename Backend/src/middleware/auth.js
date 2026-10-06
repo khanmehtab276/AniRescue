@@ -11,7 +11,7 @@ const LEGACY_SESSION_COOKIE = isProduction
   ? "__Host-anirescue_session"
   : "anirescue_session";
 const LEGACY_CSRF_COOKIE = "anirescue_csrf";
-const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
+// Keep users signed in for years rather than forcing routine re-login.\n// The HttpOnly cookie remains revocable by logout/account deactivation.\nconst PERSISTENT_SESSION_DAYS = 3650; // 10 years\nconst SESSION_MAX_AGE_SECONDS = PERSISTENT_SESSION_DAYS * 24 * 60 * 60;
 
 function parseCookies(header = "") {
   return header.split(";").reduce((cookies, part) => {
