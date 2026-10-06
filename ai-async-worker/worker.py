@@ -155,12 +155,14 @@ def publish_case_notification(
     channel,
     report_id,
     is_valid,
-    species=None
+    species=None,
+    processing_failed=False,
 ):
     payload = {
         "reportId": report_id,
         "validationPassed": is_valid,
         "species": species,
+        "processingFailed": processing_failed,
     }
 
     channel.queue_declare(
@@ -506,11 +508,20 @@ def main():
                         f"Case {report_id}..."
                     )
 
-                    is_valid, species, confidence = (
+                    validation_status, species, confidence = (
                         gatekeeper.validate_image(
                             image_input
                         )
                     )
+
+                    # A model/infrastructure failure must never be treated
+                    # as "no animal". Raise it into the bounded retry path.
+                    if validation_status == "MODEL_ERROR":
+                        raise RuntimeError(
+                            "YOLO_MODEL_ERROR: animal validation could not be completed."
+                        )
+
+                    is_valid = validation_status == "VALID_ANIMAL"
 
                     # ------------------------------------------
                     # STEP 3:
@@ -810,6 +821,21 @@ def main():
                                 with db_conn.cursor() as failure_cursor:
                                     failure_cursor.execute(
                                         """
+                                        UPDATE rescue_cases
+                                        SET
+                                            status = 'AI_PROCESSING_FAILED',
+                                            rejection_reason = LEFT(%s, 2000)
+                                        WHERE id = %s
+                                          AND ai_validated_at IS NULL
+                                        """,
+                                        (
+                                            f"AI processing failed after {MAX_RETRIES} retries: {e}",
+                                            report_id,
+                                        ),
+                                    )
+
+                                    failure_cursor.execute(
+                                        """
                                         UPDATE case_processing_jobs
                                         SET
                                             failed_at = CURRENT_TIMESTAMP,
@@ -834,6 +860,22 @@ def main():
                                     db_conn.rollback()
                                 except Exception:
                                     pass
+
+                        # Publish a distinct event so users/admins are not
+                        # told that the report was rejected as junk.
+                        try:
+                            publish_case_notification(
+                                channel=ch,
+                                report_id=report_id,
+                                is_valid=False,
+                                species=None,
+                                processing_failed=True,
+                            )
+                        except Exception as notify_err:
+                            print(
+                                f"⚠️ AI failure notification failed for Case {report_id}: "
+                                f"{notify_err}"
+                            )
 
                         # Acknowledge the message so it cannot loop forever.
                         # The durable job failure is the recovery signal for
