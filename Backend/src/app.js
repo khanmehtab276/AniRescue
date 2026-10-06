@@ -10,6 +10,8 @@ const notificationsRoutes = require("./routes/notifications.routes");
 const feedbackRoutes = require("./routes/feedback.routes");
 const adminRoutes = require("./routes/admin.routes");
 const { requireCsrf } = require("./middleware/auth");
+const { requestLogger } = require("./middleware/requestLogger");
+const { snapshotMetrics } = require("./utils/metrics");
 const { apiLimiter } = require("./middleware/rateLimiter");
 const { pool } = require("./config/db");
 const { getChannel } = require("./config/rabbitmq");
@@ -58,6 +60,7 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use(requestLogger);
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
 
@@ -151,6 +154,14 @@ app.get("/health/worker", async (req, res) => {
       note: "Worker health is informational and is not part of backend readiness.",
     });
   }
+});
+
+app.get("/health/metrics", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({
+    status: "ok",
+    metrics: snapshotMetrics(),
+  });
 });
 
 app.get("/health", (req, res) => {
