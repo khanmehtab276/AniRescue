@@ -9,6 +9,7 @@ const casesRoutes = require("./routes/cases.routes");
 const notificationsRoutes = require("./routes/notifications.routes");
 const feedbackRoutes = require("./routes/feedback.routes");
 const adminRoutes = require("./routes/admin.routes");
+const offlineMapRoutes = require("./routes/offlineMap.routes");
 const { requireCsrf } = require("./middleware/auth");
 const { requestLogger } = require("./middleware/requestLogger");
 const { snapshotMetrics } = require("./utils/metrics");
@@ -83,6 +84,7 @@ app.use("/api/cases", casesRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/offline-maps", offlineMapRoutes);
 
 app.get("/", (req, res) => {
   res.json({
