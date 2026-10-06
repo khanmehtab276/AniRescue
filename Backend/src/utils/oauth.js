@@ -107,16 +107,20 @@ function constantTimeEqual(left, right) {
 }
 
 function getFrontendUrl() {
-  const configured = String(
-    process.env.OAUTH_FRONTEND_URL ||
-      process.env.CORS_ORIGIN ||
-      "http://localhost:5173",
-  )
-    .split(",")
-    .map((value) => value.trim())
-    .find(Boolean);
+  const explicit = String(process.env.OAUTH_FRONTEND_URL || "").trim();
 
-  return configured || "http://localhost:5173";
+  if (explicit) return explicit;
+
+  if (isProduction()) {
+    throw new Error("OAUTH_FRONTEND_URL must be configured in production.");
+  }
+
+  return (
+    String(process.env.CORS_ORIGIN || "http://localhost:5173")
+      .split(",")
+      .map((value) => value.trim())
+      .find(Boolean) || "http://localhost:5173"
+  );
 }
 
 function getGoogleConfig() {
