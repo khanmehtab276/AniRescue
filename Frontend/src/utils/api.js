@@ -69,7 +69,12 @@ API.interceptors.request.use(
   async (config) => {
     const method = String(config.method || 'get').toLowerCase();
 
-    if (!['get', 'head', 'options'].includes(method)) {
+    if (
+      !['get', 'head', 'options'].includes(method) &&
+      !['/auth/login', '/auth/register'].some((path) =>
+        String(config.url || '').includes(path),
+      )
+    ) {
       let csrfToken = getCsrfToken();
 
       /*
