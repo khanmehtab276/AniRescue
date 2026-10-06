@@ -876,9 +876,11 @@ export default function ReportCase() {
 
                           <MapContainer
                             center={
-                              location
-                                ? [location.lat, location.lng]
-                                : defaultMapCenter
+                              pinnedLocation
+                                ? [pinnedLocation.lat, pinnedLocation.lng]
+                                : location
+                                  ? [location.lat, location.lng]
+                                  : defaultMapCenter
                             }
                             zoom={13}
                             scrollWheelZoom={true}
@@ -888,7 +890,13 @@ export default function ReportCase() {
                             worldCopyJump={false}
                           >
                             <MapViewportController
-                              center={location ? [location.lat, location.lng] : null}
+                              center={
+                                pinnedLocation
+                                  ? [pinnedLocation.lat, pinnedLocation.lng]
+                                  : location
+                                    ? [location.lat, location.lng]
+                                    : null
+                              }
                             />
                             <TileLayer
                               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -922,6 +930,8 @@ export default function ReportCase() {
                           className="w-full rounded-xl border border-stone-200 bg-white p-4 text-sm font-medium text-stone-700 outline-none transition-all duration-300 placeholder:text-stone-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/10 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:placeholder:text-stone-500 dark:focus:border-emerald-700"
                         />
                       </div>
+
+                    </div>
 
                     </div>
                   )}
