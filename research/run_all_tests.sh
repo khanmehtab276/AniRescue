@@ -32,7 +32,7 @@ echo "Commit: $(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 run_step "Backend — R6/R7/R8 lifecycle, RBAC and geospatial tests"   bash -c 'cd Backend && npm test'
 
 # R1/R2: existing controlled AI benchmark and resource metrics.
-run_step "AI Worker — R1/R2 benchmark artifact validation"   python3 ai-async-worker/benchmark/validate_research_result.py   ai-async-worker/benchmark/results/yolo-world-openvino.json
+run_step "AI Worker — R1/R2 benchmark artifact validation"   python3 ai-async-worker/benchmark/validate_research_result.py   ai-async-worker/benchmark/results/yolo-world-openvino-1.5cpu.json
 
 # R3: Gemini contract tests run inside the real Docker worker environment.
 if docker image inspect anirescue-ai-worker:latest >/dev/null 2>&1; then
