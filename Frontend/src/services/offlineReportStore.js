@@ -87,6 +87,51 @@ export async function saveOfflineReport(report) {
   return record;
 }
 
+export async function migrateLegacyOfflineQueue() {
+  const legacyKey = 'anirescue_offline_queue';
+
+  let legacyQueue = null;
+
+  try {
+    const raw = localStorage.getItem(legacyKey);
+    if (!raw) return 0;
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      localStorage.removeItem(legacyKey);
+      return 0;
+    }
+
+    legacyQueue = parsed;
+  } catch (error) {
+    console.warn('Could not read the legacy offline rescue queue:', error);
+    return 0;
+  }
+
+  let migrated = 0;
+
+  for (const item of legacyQueue) {
+    if (!item?.localId) continue;
+
+    try {
+      await saveOfflineReport({
+        ...item,
+        status: 'PENDING',
+        lastError: null,
+      });
+      migrated += 1;
+    } catch (error) {
+      console.error('Could not migrate a legacy offline rescue case:', error);
+    }
+  }
+
+  if (migrated === legacyQueue.length) {
+    localStorage.removeItem(legacyKey);
+  }
+
+  return migrated;
+}
+
 export async function listOfflineReports() {
   const db = await openDb();
 
