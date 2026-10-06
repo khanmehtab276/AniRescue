@@ -1,14 +1,25 @@
 {
   "test_group": "R9/R10",
   "status": "PASS",
-  "case_id": 9,
-  "notification_persisted": true,
-  "fcm_send_path_exercised": false,
+  "case_id": 12,
+  "recipient_role": "VOLUNTEER",
+  "recipient_email": "testvolunteer@gmail.com",
+  "volunteer_availability": "AVAILABLE",
+  "volunteer_location": {
+    "latitude": 19.14673,
+    "longitude": 73.0385253,
+    "location_updated_at": "2026-10-06T12:39:38.357Z"
+  },
+  "notification_persisted_for_volunteer": true,
+  "browser_fcm_delivery_observed": true,
   "feedback_created": true,
-  "feedback_id": 4,
+  "feedback_id": 7,
   "notes": [
-    "Reporter notification persistence was observed through the authenticated notification feed.",
-    "No FCM device token was supplied, so actual FCM send-path/device delivery was not exercised.",
+    "USER test case 12 was processed through the live AI pipeline and reached VALIDATION_PASSED.",
+    "The nearby AVAILABLE VOLUNTEER account testvolunteer@gmail.com was selected as the notification recipient.",
+    "The notification was observed in the volunteer authenticated notification feed.",
+    "The FCM push was visibly received as a Chrome browser notification on the volunteer device.",
+    "This is a single controlled delivery observation, not an FCM delivery-rate or reliability measurement.",
     "Feedback persistence was successfully created for the live research case."
   ]
 }
