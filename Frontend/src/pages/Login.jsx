@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import API, { setCsrfToken } from '../utils/api';
@@ -33,8 +33,20 @@ export default function Login() {
   const [notice, setNotice] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const { login } = useAuth();
+  const { user, login, isInitializing } = useAuth();
   const navigate = useNavigate();
+  useEffect(() => {
+    if (isInitializing || !user) return;
+
+    const role = (user.role || '').toLowerCase();
+    const dashboardPath =
+      role === 'admin' ? '/admin' :
+      role === 'ngo' ? '/ngo' :
+      role === 'volunteer' ? '/volunteer' :
+      '/dashboard';
+
+    navigate(dashboardPath, { replace: true });
+  }, [isInitializing, user, navigate]);
 
   const handleInputChange = (e) => {
     setFormData({
