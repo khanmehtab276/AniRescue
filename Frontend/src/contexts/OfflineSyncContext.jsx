@@ -31,6 +31,8 @@ async function uploadImageToCloudinary(imageBlob) {
     timestamp,
     signature,
     resourceType = 'image',
+    folder = 'anirescue/reports',
+    allowedFormats = 'jpg,jpeg,png,webp',
   } = signatureResponse.data || {};
 
   if (!cloudName || !apiKey || !timestamp || !signature) {
@@ -42,6 +44,8 @@ async function uploadImageToCloudinary(imageBlob) {
   formData.append('api_key', apiKey);
   formData.append('timestamp', String(timestamp));
   formData.append('signature', signature);
+  formData.append('folder', folder);
+  formData.append('allowed_formats', allowedFormats);
 
   const response = await fetch(
     `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`,
