@@ -281,6 +281,18 @@ async function probeRemoteMap(url) {
     "Offline map connection test",
   );
 
+  const contentType = String(
+    response.headers.get("content-type") || "",
+  ).toLowerCase();
+
+  // Firebase Hosting's SPA fallback can return index.html with HTTP 200 for
+  // a missing package. Never mistake that HTML shell for a PMTiles archive.
+  if (contentType.includes("text/html")) {
+    throw new Error(
+      "This offline map package is not published at the expected Hosting URL yet.",
+    );
+  }
+
   const totalBytes = parseTotalBytes(response);
 
   return {
