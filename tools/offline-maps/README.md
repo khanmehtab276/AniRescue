@@ -28,7 +28,7 @@ Mapbox Vector Tiles
 pmtiles verify
         |
         v
-HTTPS object storage with CORS + byte-range support
+Firebase Hosting static files over HTTPS
         |
         v
 AniRescue PWA
@@ -82,19 +82,15 @@ This is useful when a suitable clustered PMTiles source is available.
 
 ## Hosting requirements
 
-The PMTiles URL used by the browser must support:
+The PMTiles URL used by the browser must be a stable HTTPS static-file URL. AniRescue uses the existing Firebase Hosting site by default, so no separate map server or Firebase Cloud Storage bucket is required.
 
-- HTTPS
-- CORS for the AniRescue origin
-- HTTP byte-range requests
-- stable object URLs
-- enough storage/egress for the expected download volume
+The browser reads PMTiles directly; the backend does not proxy map bytes. Same-origin delivery also means the default Firebase Hosting path does not need a separate CORS configuration.
 
-Object storage such as S3-compatible storage is a good fit. The browser does not need a custom tile backend when it reads PMTiles directly.
+For interrupted downloads to resume efficiently, verify that the deployed hosting endpoint honors HTTP byte-range requests and returns `206 Partial Content` with `Content-Range`. The downloader can handle a first-time complete `200 OK` stream, but reliable resume requires range support.
 
 ## Zone package names expected by the PWA
 
-Configure `VITE_OFFLINE_MAP_BASE_URL` to the directory containing the generated zone files. Do not point this variable at the Protomaps planet URL.
+By default the PWA uses the same Firebase Hosting origin at `/offline-maps/`. Configure `VITE_OFFLINE_MAP_BASE_URL` only when intentionally hosting the generated zone files somewhere else. Do not point it at the Protomaps planet URL.
 
 - western-india.pmtiles
 - central-india.pmtiles
