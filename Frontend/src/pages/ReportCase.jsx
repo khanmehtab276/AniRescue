@@ -647,7 +647,7 @@ export default function ReportCase() {
 
             <div>
               <h3 className="font-extrabold text-xl text-stone-800 dark:text-stone-100">
-                Report received
+                {submissionResult.queued ? 'Saved for automatic delivery' : 'Report received'}
               </h3>
 
               {submissionResult.reportId && (
@@ -665,13 +665,13 @@ export default function ReportCase() {
               <li className="flex items-start gap-3">
                 <Search size={18} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
                 <span className="text-sm text-stone-600 dark:text-stone-300">
-                  <strong className="text-stone-800 dark:text-stone-100">AI check</strong> — we confirm the photo shows an animal that needs help.
+                  <strong className="text-stone-800 dark:text-stone-100">{submissionResult.queued ? 'Waiting to send' : 'AI check'}</strong> — {submissionResult.queued ? 'the saved report will be uploaded automatically when connectivity returns.' : 'we confirm the photo shows an animal that needs help.'}
                 </span>
               </li>
               <li className="flex items-start gap-3">
                 <HandHeart size={18} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
                 <span className="text-sm text-stone-600 dark:text-stone-300">
-                  <strong className="text-stone-800 dark:text-stone-100">Rescuer</strong> — once verified, a volunteer or partner organization can take the case.
+                  <strong className="text-stone-800 dark:text-stone-100">{submissionResult.queued ? 'Stored offline' : 'Rescuer'}</strong> — {submissionResult.queued ? 'the rescue workflow will begin after the case reaches the server.' : 'once verified, a volunteer or partner organization can take the case.'}
                 </span>
               </li>
             </ol>
