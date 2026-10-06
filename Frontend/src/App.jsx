@@ -80,5 +80,5 @@ export default function App() {
         <Route path="*" element={<Home/>}/>
       </Routes></RouteTransition>
     </Suspense>
-  </Router></AuthProvider></ToastProvider></ThemeProvider>;
+  </Router></VolunteerPresenceProvider></AuthProvider></ToastProvider></ThemeProvider>;
 }
