@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SOURCE_URL="${PROTOMAPS_SOURCE_URL:-https://build.protomaps.com/20260925.pmtiles}"
+BUILD_DATE="${PROTOMAPS_BUILD_DATE:-$(date -u +%Y%m%d)}"
+SOURCE_URL="${PROTOMAPS_SOURCE_URL:-https://build.protomaps.com/${BUILD_DATE}.pmtiles}"
 PMTILES_IMAGE="${PMTILES_IMAGE:-ghcr.io/protomaps/go-pmtiles:v1.31.2}"
 OUT_DIR="${OUT_DIR:-tools/offline-maps/output}"
 
