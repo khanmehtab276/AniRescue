@@ -245,12 +245,6 @@ export default function OfflinePinnedMap({
       }
 
       maplibreRef.current = null;
-
-      if (protocolRef.current) {
-        // MapLibre owns the protocol registration lifecycle; removing the
-        // map is sufficient for this short-lived report-page instance.
-        protocolRef.current = null;
-      }
     };
   }, [positionZoneId]);
 

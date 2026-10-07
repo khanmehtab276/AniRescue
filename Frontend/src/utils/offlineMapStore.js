@@ -440,7 +440,6 @@ async function streamFullResponse(response, meta, onProgress) {
   let buffer = new Uint8Array(0);
   let downloadedBytes = meta.downloadedBytes || 0;
   let chunkIndex = Math.floor(downloadedBytes / CHUNK_SIZE);
-  let headerBuffer = new Uint8Array(0);
   let headerValidated = downloadedBytes >= PMTILES_HEADER_SIZE;
 
   while (true) {
@@ -460,10 +459,10 @@ async function streamFullResponse(response, meta, onProgress) {
         buffer.length,
       );
 
-      headerBuffer = buffer.slice(0, headerLength);
+      const headerBytes = buffer.slice(0, headerLength);
 
-      if (headerBuffer.length === PMTILES_HEADER_SIZE) {
-        validatePmtilesHeader(headerBuffer);
+      if (headerBytes.length === PMTILES_HEADER_SIZE) {
+        validatePmtilesHeader(headerBytes);
         headerValidated = true;
       }
     }
