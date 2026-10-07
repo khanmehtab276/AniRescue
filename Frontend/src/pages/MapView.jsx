@@ -289,6 +289,9 @@ export default function MapView() {
   const mapReadyRef = useRef(false);
   const firstSnapshotRef = useRef(true);
   const selectedCaseRef = useRef(null);
+  const casesRef = useRef([]);
+  const filterRef = useRef("all");
+  const refreshTimerRef = useRef(null);
 
   const [mapCases, setMapCases] = useState([]);
   const [selectedCase, setSelectedCase] = useState(null);
@@ -298,6 +301,10 @@ export default function MapView() {
   const [error, setError] = useState("");
   const [liveStatus, setLiveStatus] = useState("connecting");
   const [mapError, setMapError] = useState("");
+
+  useEffect(() => {
+    filterRef.current = filter;
+  }, [filter]);
 
   const visibleCases = useMemo(
     () => mapCases.filter((item) => matchesFilter(item, filter)),
@@ -318,8 +325,8 @@ export default function MapView() {
 
   const applyCases = useCallback((rows) => {
     const normalized = normalizeCases(rows);
+    casesRef.current = normalized;
     setMapCases(normalized);
-    updateCaseSource(normalized);
 
     if (
       selectedCaseRef.current &&
@@ -370,8 +377,8 @@ export default function MapView() {
         // Socket events contain no case data. The REST endpoint remains the
         // authoritative, RBAC-filtered snapshot. Debounce rapid backend
         // changes so multiple updates do not create request storms.
-        window.clearTimeout(window.__anirescueMapRefreshTimer);
-        window.__anirescueMapRefreshTimer = window.setTimeout(() => {
+        window.clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = window.setTimeout(() => {
           loadMapCases(true);
         }, 180);
       },
@@ -382,7 +389,8 @@ export default function MapView() {
 
     return () => {
       unsubscribe?.();
-      window.clearTimeout(window.__anirescueMapRefreshTimer);
+      window.clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = null;
     };
   }, [loadMapCases]);
 
@@ -420,7 +428,10 @@ export default function MapView() {
 
           addCaseLayers(map);
           mapReadyRef.current = true;
-          updateCaseSource(mapCases);
+          const initialVisibleCases = casesRef.current.filter((item) =>
+            matchesFilter(item, filterRef.current),
+          );
+          updateCaseSource(initialVisibleCases);
           setSelectedFilter(map, selectedCaseRef.current?.id || null);
 
           if (location) {
@@ -461,7 +472,7 @@ export default function MapView() {
 
           if (!feature) return;
 
-          const item = mapCases.find(
+          const item = casesRef.current.find(
             (candidate) => candidate.id === String(feature.properties?.id),
           );
 
@@ -505,6 +516,8 @@ export default function MapView() {
     return () => {
       cancelled = true;
       mapReadyRef.current = false;
+      window.clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = null;
 
       if (mapRef.current) {
         mapRef.current.remove();

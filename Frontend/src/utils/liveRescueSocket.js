@@ -172,19 +172,23 @@ async function ensureSocket() {
   return connectionPromise;
 }
 
-export async function subscribeToLiveRescueMap(onChange, onStatus) {
+export function subscribeToLiveRescueMap(onChange, onStatus) {
+  let active = true;
+
   if (typeof onChange === "function") listeners.add(onChange);
   if (typeof onStatus === "function") statusListeners.add(onStatus);
 
   notifyStatus("connecting");
 
-  try {
-    await ensureSocket();
-  } catch (error) {
-    console.error("Live rescue socket unavailable:", error);
-  }
+  ensureSocket().catch((error) => {
+    if (active) {
+      console.error("Live rescue socket unavailable:", error);
+    }
+  });
 
   return () => {
+    active = false;
+
     if (typeof onChange === "function") listeners.delete(onChange);
     if (typeof onStatus === "function") statusListeners.delete(onStatus);
 
