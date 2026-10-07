@@ -5,30 +5,104 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import useLocation from '../hooks/useLocation';
 import useOfflineSync from '../hooks/useOfflineSync';
 import { useToast } from '../contexts/ToastContext.jsx';
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  useMapEvents,
-  useMap
-} from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
 import API from '../utils/api';
-import OfflinePinnedMap from '../components/OfflinePinnedMap.jsx';
+import PinnedLocationMap from '../components/PinnedLocationMap.jsx';
 
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
-delete L.Icon.Default.prototype._getIconUrl;
+const REPORT_DRAFT_KEY = 'anirescue_report_draft_v1';
+const REPORT_DRAFT_DB = 'anirescue_report_drafts';
+const REPORT_DRAFT_STORE = 'images';
+const REPORT_DRAFT_IMAGE_KEY = 'current';
 
-L.Icon.Default.mergeOptions({
-  iconUrl: markerIcon,
-  iconRetinaUrl: markerIcon2x,
-  shadowUrl: markerShadow
-});
+function openReportDraftDb() {
+  return new Promise((resolve, reject) => {
+    if (!('indexedDB' in window)) {
+      reject(new Error('IndexedDB is not available.'));
+      return;
+    }
 
+    const request = indexedDB.open(REPORT_DRAFT_DB, 1);
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(REPORT_DRAFT_STORE)) {
+        db.createObjectStore(REPORT_DRAFT_STORE);
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('Could not open draft storage.'));
+  });
+}
+
+async function saveReportDraftImage(file) {
+  const db = await openReportDraftDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(REPORT_DRAFT_STORE, 'readwrite');
+    transaction.objectStore(REPORT_DRAFT_STORE).put(file, REPORT_DRAFT_IMAGE_KEY);
+    transaction.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    transaction.onerror = () => {
+      db.close();
+      reject(transaction.error || new Error('Could not save the draft image.'));
+    };
+  });
+}
+
+async function loadReportDraftImage() {
+  const db = await openReportDraftDb();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(REPORT_DRAFT_STORE, 'readonly');
+    const request = transaction.objectStore(REPORT_DRAFT_STORE).get(REPORT_DRAFT_IMAGE_KEY);
+    request.onsuccess = () => {
+      db.close();
+      resolve(request.result || null);
+    };
+    request.onerror = () => {
+      db.close();
+      reject(request.error || new Error('Could not load the draft image.'));
+    };
+  });
+}
+
+async function clearReportDraftImage() {
+  try {
+    const db = await openReportDraftDb();
+    await new Promise((resolve, reject) => {
+      const transaction = db.transaction(REPORT_DRAFT_STORE, 'readwrite');
+      transaction.objectStore(REPORT_DRAFT_STORE).delete(REPORT_DRAFT_IMAGE_KEY);
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+    });
+    db.close();
+  } catch (error) {
+    console.warn('Could not clear the saved draft image:', error);
+  }
+}
+
+function saveReportDraftFields(fields) {
+  try {
+    localStorage.setItem(REPORT_DRAFT_KEY, JSON.stringify(fields));
+  } catch (error) {
+    console.warn('Could not save the rescue report draft:', error);
+  }
+}
+
+function loadReportDraftFields() {
+  try {
+    const stored = localStorage.getItem(REPORT_DRAFT_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch (error) {
+    console.warn('Could not load the rescue report draft:', error);
+    return null;
+  }
+}
+
+function clearReportDraftFields() {
+  localStorage.removeItem(REPORT_DRAFT_KEY);
+}
 
 const REPORT_DRAFT_KEY = 'anirescue_report_draft_v1';
 const REPORT_DRAFT_DB = 'anirescue_report_drafts';
@@ -189,9 +263,6 @@ export default function ReportCase() {
     isOffline,
     saveForOfflineSync
   } = useOfflineSync();
-
-  // Neutral world view center as fallback when user location is unavailable
-  const defaultMapCenter = [0, 0];
 
   const photoReady = Boolean(imageFile);
   // A landmark can help the rescue team find the animal, but it is not the
@@ -625,6 +696,7 @@ export default function ReportCase() {
     setDetailsSkipped(false);
     setManualAddress('');
     setPinnedLocation(null);
+    setOfflineMapUnavailable(false);
     setLocationMode('auto');
 
     clearReportDraftFields();
@@ -894,9 +966,10 @@ export default function ReportCase() {
                         <div className="rounded-2xl overflow-hidden h-56 sm:h-48 border border-stone-200 dark:border-stone-800 border border-stone-300/50 dark:border-white/5 relative z-0">
 
                           {isOffline && !offlineMapUnavailable ? (
-                            <OfflinePinnedMap
+                            <PinnedLocationMap
                               position={pinnedLocation || location}
                               setPosition={setPinnedLocation}
+                              isOffline
                               onUnavailable={handleOfflineMapUnavailable}
                               className="h-full w-full"
                             />
@@ -919,45 +992,12 @@ export default function ReportCase() {
                               </div>
                             </div>
                           ) : (
-                            <MapContainer
-                              center={
-                                pinnedLocation
-                                  ? [pinnedLocation.lat, pinnedLocation.lng]
-                                  : location
-                                    ? [location.lat, location.lng]
-                                    : defaultMapCenter
-                              }
-                              zoom={13}
-                              scrollWheelZoom={true}
-                              className="w-full h-full"
-                              maxBounds={[[-85.05112878, -180], [85.05112878, 180]]}
-                              maxBoundsViscosity={1}
-                              worldCopyJump={false}
-                            >
-                              <MapViewportController
-                                center={
-                                  pinnedLocation
-                                    ? [pinnedLocation.lat, pinnedLocation.lng]
-                                    : location
-                                      ? [location.lat, location.lng]
-                                      : null
-                                }
-                              />
-                              <TileLayer
-                                url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-                              />
-
-                              <MapPinDropper
-                                position={pinnedLocation}
-                                setPosition={setPinnedLocation}
-                              />
-                            </MapContainer>
-                          )}
-
-                          {!pinnedLocation && !isOffline && (
-                            <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-3 py-1.5 rounded-full z-[400] backdrop-blur-sm pointer-events-none">
-                              Tap map to drop pin
-                            </div>
+                            <PinnedLocationMap
+                              position={pinnedLocation || location}
+                              setPosition={setPinnedLocation}
+                              isOffline={false}
+                              className="h-full w-full"
+                            />
                           )}
 
                         </div>
