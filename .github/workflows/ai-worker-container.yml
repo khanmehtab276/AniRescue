@@ -1,0 +1,38 @@
+name: AniRescue AI Worker Container
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/experimental-results
+    paths:
+      - "ai-async-worker/**"
+      - "docker-compose.yml"
+      - ".github/workflows/ai-worker-container.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build production AI worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./ai-async-worker
+          file: ./ai-async-worker/Dockerfile.worker
+          tags: anirescue-ai-worker:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run worker research tests inside the production image
+        run: |
+          docker run --rm             -e RABBITMQ_URL=amqp://research             -e DATABASE_URL=postgresql://research             -e CLOUDINARY_CLOUD_NAME=research             anirescue-ai-worker:ci             python -m unittest discover -s test -p 'test_worker_research.py'
