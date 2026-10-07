@@ -76,7 +76,12 @@ extract() {
   fi
 
   echo "Primary Protomaps build did not produce a valid $name package. Retrying with fallback build $FALLBACK_BUILD_DATE."
-  extract_from_source "$name" "$bbox" "$FALLBACK_SOURCE_URL"
+  if extract_from_source "$name" "$bbox" "$FALLBACK_SOURCE_URL"; then
+    return 0
+  fi
+
+  echo "ERROR: fallback Protomaps build also failed validation for $name."
+  return 1
 }
 
 extract "western-india" "68,8,78,29"
