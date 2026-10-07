@@ -4,13 +4,10 @@ import {
   createOfflineMapSource,
   getDownloadedMaps,
 } from "../utils/offlineMapStore.js";
-
-const MAPLIBRE_URL =
-  "https://unpkg.com/maplibre-gl@6.12.0/dist/maplibre-gl.mjs";
-const PMTILES_URL =
-  "https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/+esm";
-const MAPLIBRE_CSS_URL =
-  "https://unpkg.com/maplibre-gl@6.12.0/dist/maplibre-gl.css";
+import {
+  addOfflineArchive,
+  loadOfflineMapRenderer,
+} from "../utils/offlineMapRenderer.js";
 
 const ZONE_BOUNDS = {
   "western-india": [68, 8, 78, 29],
@@ -127,7 +124,6 @@ export default function OfflinePinnedMap({
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
-  const protocolRef = useRef(null);
   const maplibreRef = useRef(null);
   const [state, setState] = useState({
     loading: true,
@@ -161,35 +157,17 @@ export default function OfflinePinnedMap({
           );
         }
 
-        const cssAlreadyLoaded = document.querySelector(
-          'link[data-anirescue-maplibre="true"]',
-        );
-
-        if (!cssAlreadyLoaded) {
-          const link = document.createElement("link");
-          link.rel = "stylesheet";
-          link.href = MAPLIBRE_CSS_URL;
-          link.dataset.anirescueMaplibre = "true";
-          document.head.appendChild(link);
-        }
-
-        const [{ default: maplibre }, pmtiles] = await Promise.all([
-          import(/* @vite-ignore */ MAPLIBRE_URL),
-          import(/* @vite-ignore */ PMTILES_URL),
-        ]);
+        const { maplibre, pmtiles } = await loadOfflineMapRenderer();
 
         if (cancelled || !containerRef.current) return;
 
-        const protocol = new pmtiles.Protocol();
         const { meta, pmtiles: archive } = await createOfflineMapSource(
           selected.id,
           pmtiles.PMTiles,
         );
 
-        protocol.add(archive);
-        maplibre.addProtocol("pmtiles", protocol.tile);
+        addOfflineArchive(archive);
         maplibreRef.current = maplibre;
-        protocolRef.current = protocol;
 
         const header = await archive.getHeader();
         if (cancelled || !containerRef.current) return;
