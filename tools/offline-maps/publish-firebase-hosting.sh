@@ -50,7 +50,7 @@ done
 
 TOTAL_BYTES="$(du -bc "$OUT_DIR"/*.pmtiles | tail -n 1 | awk '{print $1}')"
 MAX_FILE_BYTES=$((2 * 1024 * 1024 * 1024))
-MAX_HOSTING_BYTES=$((9 * 1024 * 1024 * 1024))
+MAX_HOSTING_BYTES=$((8 * 1024 * 1024 * 1024))
 
 for file in "$OUT_DIR"/*.pmtiles; do
   size="$(stat -c '%s' "$file")"
@@ -61,8 +61,8 @@ for file in "$OUT_DIR"/*.pmtiles; do
 done
 
 if (( TOTAL_BYTES > MAX_HOSTING_BYTES )); then
-  echo "ERROR: generated PMTiles total more than 9 GiB."
-  echo "Firebase Hosting has a 10 GB no-cost storage quota; keep headroom for the app and retained releases."
+  echo "ERROR: generated PMTiles total more than 8 GiB."
+  echo "Firebase Hosting has a 10 GB no-cost storage quota; keep at least 2 GiB of headroom for the app and retained releases."
   exit 1
 fi
 
