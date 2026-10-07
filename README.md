@@ -28,21 +28,25 @@ make help
 
 ### First-time setup
 
-`bash
-make setup
-`
-
 Check the machine without changing it:
 
 `bash
 make doctor
 `
 
+Then bootstrap normal development dependencies:
+
+`bash
+make setup
+`
+
+Docker is not required for normal frontend/backend development. It is required only for AI/Docker/offline-map workflows.
+
 ### AI/ML dependencies
 
 **Do not install YOLO-World, PyTorch, or OpenVINO directly into the host Python environment.**
 
-The authoritative AI runtime is the production Docker image:
+The authoritative AI runtime is the production Docker image. The host Python environment does not need the heavy ML stack:
 
 `bash
 make ai-setup
