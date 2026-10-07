@@ -5,6 +5,10 @@ const CHUNK_STORE = "chunks";
 const CHUNK_SIZE = 4 * 1024 * 1024;
 const DOWNLOAD_RETRIES = 3;
 const RETRY_DELAY_MS = 1200;
+const PMTILES_HEADER_SIZE = 127;
+const PMTILES_MAGIC = "PMTiles";
+const PMTILES_SPEC_VERSION = 3;
+const PMTILES_MVT_TILE_TYPE = 1;
 
 function openDb() {
   return new Promise((resolve, reject) => {
@@ -104,7 +108,39 @@ async function getChunk(mapId, index) {
   }
 }
 
+async function deleteChunks(mapId) {
+  const db = await openDb();
+
+  try {
+    const tx = db.transaction(CHUNK_STORE, "readwrite");
+    const index = tx.objectStore(CHUNK_STORE).index("mapId");
+    const request = index.openCursor(IDBKeyRange.only(mapId));
+
+    await new Promise((resolve, reject) => {
+      request.onsuccess = () => {
+        const cursor = request.result;
+
+        if (!cursor) {
+          resolve();
+          return;
+        }
+
+        cursor.delete();
+        cursor.continue();
+      };
+
+      request.onerror = () => reject(request.error);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  } finally {
+    db.close();
+  }
+}
+
 async function deleteMap(mapId) {
+
   const db = await openDb();
 
   try {
@@ -221,6 +257,29 @@ export function resolveOfflineMapUrl(map) {
   );
 }
 
+function validatePmtilesHeader(bytes) {
+  if (!(bytes instanceof Uint8Array) || bytes.length < PMTILES_HEADER_SIZE) {
+    throw new Error("The downloaded map package is too small to be a PMTiles v3 archive.");
+  }
+
+  const magic = new TextDecoder().decode(bytes.slice(0, 7));
+  if (magic !== PMTILES_MAGIC) {
+    throw new Error("The downloaded map package is not a PMTiles archive.");
+  }
+
+  if (bytes[7] !== PMTILES_SPEC_VERSION) {
+    throw new Error(
+      `Unsupported PMTiles specification version: ${bytes[7]}. AniRescue requires PMTiles v3.`,
+    );
+  }
+
+  if (bytes[99] !== PMTILES_MVT_TILE_TYPE) {
+    throw new Error(
+      "The downloaded PMTiles package is not an MVT vector-tile archive.",
+    );
+  }
+}
+
 function parseContentRange(response) {
   const value = response.headers.get("content-range") || "";
   const match = value.match(/^bytes (\d+)-(\d+)\/(\d+)$/);
@@ -289,7 +348,7 @@ async function probeRemoteMap(url) {
     url,
     {
       method: "GET",
-      headers: { Range: "bytes=0-0" },
+      headers: { Range: `bytes=0-${PMTILES_HEADER_SIZE - 1}` },
       mode: "cors",
     },
     "Offline map connection test",
@@ -309,10 +368,26 @@ async function probeRemoteMap(url) {
 
   const range = parseContentRange(response);
 
-  if (response.status === 206 && (!range || range.start !== 0 || range.end !== 0)) {
+  if (
+    response.status === 206 &&
+    (!range ||
+      range.start !== 0 ||
+      range.end !== PMTILES_HEADER_SIZE - 1 ||
+      range.total < PMTILES_HEADER_SIZE)
+  ) {
     throw new Error(
-      "The offline map server returned an invalid byte-range response.",
+      "The offline map server returned an invalid PMTiles header range.",
     );
+  }
+
+  if (response.status === 206) {
+    const headerBytes = new Uint8Array(await response.arrayBuffer());
+
+    if (headerBytes.length !== PMTILES_HEADER_SIZE) {
+      throw new Error("The hosted PMTiles header has an unexpected size.");
+    }
+
+    validatePmtilesHeader(headerBytes);
   }
 
   const totalBytes = parseTotalBytes(response);
@@ -365,6 +440,8 @@ async function streamFullResponse(response, meta, onProgress) {
   let buffer = new Uint8Array(0);
   let downloadedBytes = meta.downloadedBytes || 0;
   let chunkIndex = Math.floor(downloadedBytes / CHUNK_SIZE);
+  let headerBuffer = new Uint8Array(0);
+  let headerValidated = downloadedBytes >= PMTILES_HEADER_SIZE;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -376,6 +453,20 @@ async function streamFullResponse(response, meta, onProgress) {
     merged.set(buffer);
     merged.set(incoming, buffer.length);
     buffer = merged;
+
+    if (!headerValidated) {
+      const headerLength = Math.min(
+        PMTILES_HEADER_SIZE,
+        buffer.length,
+      );
+
+      headerBuffer = buffer.slice(0, headerLength);
+
+      if (headerBuffer.length === PMTILES_HEADER_SIZE) {
+        validatePmtilesHeader(headerBuffer);
+        headerValidated = true;
+      }
+    }
 
     while (buffer.length >= CHUNK_SIZE) {
       const chunk = buffer.slice(0, CHUNK_SIZE);
@@ -398,6 +489,10 @@ async function streamFullResponse(response, meta, onProgress) {
           : null,
       });
     }
+  }
+
+  if (!headerValidated) {
+    throw new Error("The downloaded response ended before a complete PMTiles v3 header was received.");
   }
 
   if (buffer.length > 0) {
@@ -460,7 +555,23 @@ export async function downloadOfflineMap(map, onProgress) {
     );
   }
 
-  const meta = mergeMeta(map, url, totalBytes, existing);
+  const sourceChanged =
+    existing &&
+    (existing.sourceKey !== sourceKey ||
+      existing.sourceUrl !== url ||
+      Number(existing.sizeBytes || 0) !== Number(totalBytes || 0) ||
+      existing.chunkSize !== CHUNK_SIZE);
+
+  if (sourceChanged) {
+    await deleteChunks(map.id);
+  }
+
+  const meta = mergeMeta(
+    map,
+    url,
+    totalBytes,
+    sourceChanged ? undefined : existing,
+  );
   await putMeta(meta);
 
   try {
