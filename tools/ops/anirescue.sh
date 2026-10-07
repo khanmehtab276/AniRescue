@@ -207,7 +207,7 @@ stack_status() {
 }
 
 stack_logs() {
-  local service="${2:-}"
+  local service="${SERVICE:-}"
   if [[ -n "$service" ]]; then
     docker_compose logs --tail=200 -f "$service"
   else
