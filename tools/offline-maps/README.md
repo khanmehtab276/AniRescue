@@ -183,7 +183,7 @@ After a map has been downloaded successfully, opening that map does not require 
 
 ### HTTP range behavior
 
-PMTiles is designed around HTTP byte-range reads. AniRescue first probes the hosted package with a `Range: bytes=0-0` request. If the hosting path returns `206 Partial Content`, the downloader stores fixed 4 MiB ranges directly in IndexedDB. If a first-time download receives a complete `200 OK` response instead, AniRescue can stream that response into IndexedDB without loading the entire file into RAM.
+PMTiles is designed around HTTP byte-range reads. AniRescue first probes the hosted package with a `Range: bytes=0-126` request. If the hosting path returns `206 Partial Content`, the downloader stores fixed 4 MiB ranges directly in IndexedDB. If a first-time download receives a complete `200 OK` response instead, AniRescue can stream that response into IndexedDB without loading the entire file into RAM.
 
 For **resume after an interrupted download**, the hosting endpoint must support byte ranges. Verify this after deployment with:
 
