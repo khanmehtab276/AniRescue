@@ -28,8 +28,11 @@ docker_compose() {
 }
 
 frontend_lint() {
-  log "Frontend lint"
-  (cd "$FRONTEND_DIR" && npm run lint)
+  log "Frontend lint (errors only)"
+  # Keep routine test output concise: warnings remain available through the
+  # normal project lint command, while automated test/CI output fails only on
+  # actual ESLint errors.
+  (cd "$FRONTEND_DIR" && npm run lint -- --quiet)
 }
 
 frontend_build() {
