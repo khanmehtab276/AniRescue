@@ -1,6 +1,7 @@
 const { pool } = require("../config/db");
 const { notifyCaseRecipients } = require("../utils/caseNotificationRecipients");
 const { logAudit } = require("../utils/auditLog");
+const { publishCaseMapChange } = require("./caseRealtime");
 
 const WATCHDOG_INTERVAL_MS = 60 * 1000;
 const STALE_AFTER_MINUTES = 10;
@@ -98,6 +99,8 @@ async function checkStaleProcessingJobs() {
           includeReporter: true,
           includeAdmins: true,
         });
+
+        publishCaseMapChange();
 
         console.warn(
           `AI watchdog marked case #${stale.case_id} as AI_PROCESSING_FAILED.`,

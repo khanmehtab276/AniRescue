@@ -1,6 +1,7 @@
 const { getChannel, CASE_NOTIFICATION_QUEUE } = require("../config/rabbitmq");
 const { pool } = require("../config/db");
 const { notifyCaseRecipients } = require("../utils/caseNotificationRecipients");
+const { publishCaseMapChange } = require("./caseRealtime");
 
 let activeConsumerChannel = null;
 
@@ -113,6 +114,11 @@ const startCaseNotificationConsumer = async () => {
             `📨 Case #${reportId} review notifications sent to ${result.notified} recipient(s).`,
           );
         }
+
+        // The notification queue is also the durable bridge from the
+        // separate AI worker to the live map. The socket payload contains
+        // no case data; clients re-fetch the RBAC-filtered REST snapshot.
+        publishCaseMapChange();
 
         channel.ack(message);
 
