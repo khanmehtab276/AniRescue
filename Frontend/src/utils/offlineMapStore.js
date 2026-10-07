@@ -221,12 +221,24 @@ export function resolveOfflineMapUrl(map) {
   );
 }
 
-function parseTotalBytes(response) {
-  const contentRange = response.headers.get("content-range") || "";
-  const rangeMatch = contentRange.match(/\/([0-9]+)$/);
+function parseContentRange(response) {
+  const value = response.headers.get("content-range") || "";
+  const match = value.match(/^bytes (\\d+)-(\\d+)\\/(\\d+)$/);
 
-  if (rangeMatch) {
-    return Number(rangeMatch[1]);
+  if (!match) return null;
+
+  return {
+    start: Number(match[1]),
+    end: Number(match[2]),
+    total: Number(match[3]),
+  };
+}
+
+function parseTotalBytes(response) {
+  const range = parseContentRange(response);
+
+  if (range) {
+    return range.total;
   }
 
   const contentLength = Number(response.headers.get("content-length") || 0);
@@ -295,12 +307,20 @@ async function probeRemoteMap(url) {
     );
   }
 
+  const range = parseContentRange(response);
+
+  if (response.status === 206 && (!range || range.start !== 0 || range.end !== 0)) {
+    throw new Error(
+      "The offline map server returned an invalid byte-range response.",
+    );
+  }
+
   const totalBytes = parseTotalBytes(response);
 
   return {
     response,
     totalBytes,
-    ranged: response.status === 206,
+    ranged: response.status === 206 && Boolean(range),
   };
 }
 
@@ -413,7 +433,14 @@ export async function downloadOfflineMap(map, onProgress) {
 
   const existing = await getMeta(map.id);
 
-  if (existing?.status === "ready" && existing.sizeBytes === totalBytes) {
+  const sourceKey = getOfflineMapSourceKey(map);
+
+  if (
+    existing?.status === "ready" &&
+    existing.sizeBytes === totalBytes &&
+    existing.sourceKey === sourceKey &&
+    existing.sourceUrl === url
+  ) {
     return existing;
   }
 
@@ -471,6 +498,19 @@ export async function downloadOfflineMap(map, onProgress) {
         if (response.status !== 206) {
           throw new Error(
             "The map server does not support HTTP range downloads. The published Firebase Hosting PMTiles file must support byte ranges.",
+          );
+        }
+
+        const range = parseContentRange(response);
+
+        if (
+          !range ||
+          range.start !== start ||
+          range.end !== end ||
+          range.total !== totalBytes
+        ) {
+          throw new Error(
+            `Offline map chunk ${index + 1} returned an invalid Content-Range.`,
           );
         }
 
