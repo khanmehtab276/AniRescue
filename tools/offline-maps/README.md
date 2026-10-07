@@ -188,9 +188,10 @@ PMTiles is designed around HTTP byte-range reads. AniRescue first probes the hos
 For **resume after an interrupted download**, the hosting endpoint must support byte ranges. Verify this after deployment with:
 
 ```bash
-curl -I -H "Range: bytes=0-0" \
+curl -sS -D - -o /tmp/western-header.pmtiles \
+  -H "Range: bytes=0-126" \
   https://anirescue-a5fd7.web.app/offline-maps/western-india.pmtiles
 ```
 
-A range-capable response should report `206 Partial Content`, `Content-Range`, and a one-byte response for the `0-0` probe. The production publisher also refuses PMTiles packages that are empty/tiny or contain no MVT tile contents.
+A range-capable response should report `206 Partial Content` and `Content-Range: bytes 0-126/<total-size>`. The returned 127 bytes should begin with the PMTiles v3 magic bytes `PMTiles`. The production publisher also refuses PMTiles packages that are empty/tiny or contain no MVT tile contents.
 
