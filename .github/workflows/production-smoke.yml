@@ -1,0 +1,38 @@
+name: AniRescue Production Smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check production frontend
+        run: curl -fsS --retry 3 --retry-delay 2 https://anirescue-a5fd7.web.app/ >/dev/null
+      - name: Check backend liveness
+        run: curl -fsS --retry 3 --retry-delay 2 https://anirescue-backend.onrender.com/health/live >/dev/null
+      - name: Check backend readiness
+        run: curl -fsS --retry 3 --retry-delay 2 https://anirescue-backend.onrender.com/health/ready >/dev/null
+      - name: Check hosted PMTiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          zones="western-india central-india northern-india eastern-india southern-india north-eastern-india"
+          for zone in $zones; do
+            headers="$(mktemp)"
+            body="$(mktemp)"
+            curl -fsS --retry 3 --retry-delay 2 -D "$headers" -o "$body" -H "Range: bytes=0-126" "https://anirescue-a5fd7.web.app/offline-maps/$zone.pmtiles"
+            status="$(awk 'NR==1 {print $2}' "$headers")"
+            range="$(awk 'BEGIN{IGNORECASE=1} /^content-range:/ {sub(/^content-range:[[:space:]]*/, ""); print}' "$headers" | tr -d '\r')"
+            test "$status" = "206"
+            [[ "$range" == bytes\ 0-126/* ]]
+            test "$(wc -c < "$body")" -eq 127
+            head -c 7 "$body" | cmp -s - <(printf 'PMTiles')
+            rm -f "$headers" "$body"
+            echo "✓ $zone.pmtiles"
+          done
