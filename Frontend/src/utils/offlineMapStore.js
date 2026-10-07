@@ -1,5 +1,3 @@
-import API from "./api.js";
-
 const DB_NAME = "anirescue_offline_maps";
 const DB_VERSION = 1;
 const META_STORE = "maps";
@@ -190,6 +188,10 @@ function getOfflineMapPath(map) {
   return "";
 }
 
+function getOfflineMapSourceKey(map) {
+  return getOfflineMapPath(map) || map?.url || map?.id || "";
+}
+
 export function canResolveOfflineMapUrl(map) {
   return Boolean(map?.filename || map?.path || map?.url);
 }
@@ -263,7 +265,7 @@ async function fetchWithRetry(url, options, label) {
 
   if (/failed to fetch|networkerror|network error/i.test(message)) {
     throw new Error(
-      "Could not reach the offline map server. Check the Firebase Storage CORS configuration and your internet connection.",
+      "Could not reach the offline map server. Check the Firebase Hosting connection and your internet connection.",
     );
   }
 
@@ -302,10 +304,12 @@ async function probeRemoteMap(url) {
   };
 }
 
-function mergeMeta(map, totalBytes, existing) {
+function mergeMeta(map, sourceUrl, totalBytes, existing) {
+  const sourceKey = getOfflineMapSourceKey(map);
   const sameSource =
     existing &&
-    existing.storagePath === getFirebaseStoragePath(map) &&
+    existing.sourceKey === sourceKey &&
+    existing.sourceUrl === sourceUrl &&
     Number(existing.sizeBytes || 0) === Number(totalBytes || 0) &&
     existing.chunkSize === CHUNK_SIZE;
 
@@ -319,7 +323,8 @@ function mergeMeta(map, totalBytes, existing) {
     description: map.description,
     provider: map.provider,
     attribution: map.attribution,
-    storagePath: getFirebaseStoragePath(map),
+    sourceKey,
+    sourceUrl,
     status: "downloading",
     sizeBytes: totalBytes || null,
     downloadedBytes: 0,
@@ -402,7 +407,7 @@ export async function downloadOfflineMap(map, onProgress) {
 
   if (!totalBytes) {
     throw new Error(
-      "The map server did not provide a usable file size. Configure Firebase Storage CORS and object metadata correctly.",
+      "The map server did not provide a usable file size. Configure the Firebase Hosting PMTiles package and response headers correctly.",
     );
   }
 
@@ -428,7 +433,7 @@ export async function downloadOfflineMap(map, onProgress) {
     );
   }
 
-  const meta = mergeMeta(map, totalBytes, existing);
+  const meta = mergeMeta(map, url, totalBytes, existing);
   await putMeta(meta);
 
   try {
@@ -465,7 +470,7 @@ export async function downloadOfflineMap(map, onProgress) {
 
         if (response.status !== 206) {
           throw new Error(
-            "The map server does not support HTTP range downloads. Use the provided Firebase Storage setup.",
+            "The map server does not support HTTP range downloads. The published Firebase Hosting PMTiles file must support byte ranges.",
           );
         }
 
