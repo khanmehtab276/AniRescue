@@ -8,6 +8,7 @@ const { haversineKm } = require("../utils/geo");
 const { createNotification } = require("../utils/notifications");
 const { notifyCaseRecipients } = require("../utils/caseNotificationRecipients");
 const { sendPushNotification } = require("../utils/pushNotifications");
+const { publishCaseMapChange } = require("../services/caseRealtime");
 const {
   canCancel,
   canSubmitEvidence,
@@ -200,6 +201,7 @@ const reportCase = async (req, res) => {
     await client.query("COMMIT");
 
     apiCache.flushAll();
+    publishCaseMapChange();
 
     await logCaseHistory({
       caseId: savedCase.id,
@@ -427,6 +429,7 @@ const retryRejectedCase = async (req, res) => {
     await client.query("COMMIT");
 
     apiCache.flushAll();
+    publishCaseMapChange();
 
     await logCaseHistory({
       caseId: id,
@@ -546,6 +549,7 @@ const verifyJunkCase = async (req, res) => {
     }
 
     apiCache.flushAll();
+    publishCaseMapChange();
 
     await logCaseHistory({
       caseId: id,
@@ -861,6 +865,7 @@ const claimCase = async (req, res) => {
     }
 
     apiCache.flushAll();
+    publishCaseMapChange();
 
     await logCaseHistory({
       caseId,
@@ -942,6 +947,7 @@ const cancelCase = async (req, res) => {
     }
 
     apiCache.flushAll();
+    publishCaseMapChange();
 
     await logCaseHistory({
       caseId: id,
@@ -1079,6 +1085,7 @@ const submitRescueEvidence = async (req, res) => {
     }
 
     apiCache.flushAll();
+    publishCaseMapChange();
 
     await logCaseHistory({
       caseId: id,
@@ -1326,6 +1333,7 @@ const assignCase = async (req, res) => {
     }
 
     apiCache.flushAll();
+    publishCaseMapChange();
 
     await logCaseHistory({
       caseId,
@@ -1416,6 +1424,7 @@ const releaseCase = async (req, res) => {
     }
 
     apiCache.flushAll();
+    publishCaseMapChange();
 
     await logCaseHistory({
       caseId: id,
@@ -1634,6 +1643,7 @@ const verifyCompletion = async (req, res) => {
     });
 
     apiCache.flushAll();
+    publishCaseMapChange();
 
     await logCaseHistory({
       caseId: id,
@@ -1700,6 +1710,7 @@ const setPriority = async (req, res) => {
     );
 
     apiCache.flushAll();
+    publishCaseMapChange();
 
     await logCaseHistory({
       caseId: id,
