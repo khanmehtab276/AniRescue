@@ -31,7 +31,7 @@ validate_archive() {
   local summary
   summary="$(run_pmtiles show "/out/$path")"
 
-  grep -Eq "^tile type: MVT$" <<<"$summary" || {
+  grep -Eiq "^tile type: mvt$" <<<"$summary" || {
     echo "Generated archive $path is not an MVT PMTiles archive."
     return 1
   }
