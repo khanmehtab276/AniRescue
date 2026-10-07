@@ -39,6 +39,10 @@ Thumbs.db
 logs/
 .firebase/
 
+# Generated offline map deployment artifacts
+tools/offline-maps/output/*.pmtiles
+Frontend/public/offline-maps/*.pmtiles
+
 # Firebase service account keys
 *-firebase-adminsdk-*.json
 
