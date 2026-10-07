@@ -1,21 +1,121 @@
 # AniRescue
 
-AniRescue is an AI-assisted animal rescue reporting and volunteer coordination platform for emergency animal reports, AI-assisted validation, volunteer/NGO coordination, rescue evidence, and notifications.
+AniRescue is an AI-assisted animal rescue reporting and volunteer coordination platform for emergency animal reports, AI-assisted validation, volunteer/NGO coordination, rescue evidence, realtime rescue maps, offline reporting, and notifications.
 
 ## Architecture
 
 The project intentionally uses **two application services**:
 
 - **Frontend:** React + Vite + PWA
-- **Backend:** Node.js + Express
+- **Backend:** Node.js + Express + REST + Socket.IO
 - **AI worker:** Python async worker consuming RabbitMQ jobs
 - **Database:** PostgreSQL on Neon
 - **Queue:** RabbitMQ
 - **Images:** Cloudinary signed browser uploads
 - **Push notifications:** Firebase Cloud Messaging
 - **AI:** YOLO-World/OpenVINO gatekeeper + Gemini preliminary assessment
+- **Offline maps:** MapLibre + PMTiles + IndexedDB
 
 The AI worker is an asynchronous processing worker, not a third application-facing microservice.
+
+## Development and operations
+
+Use one command surface for development, testing, Docker, offline maps, and production gates:
+
+`bash
+make help
+`
+
+### First-time setup
+
+`bash
+make setup
+`
+
+Check the machine without changing it:
+
+`bash
+make doctor
+`
+
+### AI/ML dependencies
+
+**Do not install YOLO-World, PyTorch, or OpenVINO directly into the host Python environment.**
+
+The authoritative AI runtime is the production Docker image:
+
+`bash
+make ai-setup
+`
+
+Run AI tests inside that same image:
+
+`bash
+make ai-test
+`
+
+This keeps the multi-GB ML dependency stack isolated and reproducible.
+
+### Local full stack
+
+`bash
+make stack-up
+make stack-status
+make stack-logs
+`
+
+Stop it with:
+
+`bash
+make stack-down
+`
+
+### Testing
+
+`bash
+make test
+make ci
+`
+
+Individual checks:
+
+`bash
+make frontend-lint
+make frontend-build
+make frontend-e2e
+make backend-test
+make worker-test
+make research-test
+`
+
+### Offline maps
+
+`bash
+make offline-build
+make offline-publish
+`
+
+PMTiles are generated/validated with temporary Docker tooling and are intentionally **not committed to GitHub**.
+
+### Production
+
+`bash
+make smoke
+make preflight
+make deploy
+`
+
+Production smoke checks cover the frontend, backend liveness/readiness, AI worker heartbeat, and hosted PMTiles HTTP Range support.
+
+The production AI worker is defined in:
+
+`
+render.ai-worker.yaml
+`
+
+It uses the same `ai-async-worker/Dockerfile.worker` used for local containerized AI testing.
+
+> **Important:** the current Render account has the AniRescue backend web service. The dedicated AI Docker worker must be provisioned from `render.ai-worker.yaml` before the production smoke gate can pass. The automation intentionally fails closed instead of declaring production healthy while the asynchronous AI worker is offline.
 
 ## Authentication
 
@@ -27,7 +127,7 @@ Never expose database, RabbitMQ, Firebase service-account, JWT signing, Cloudina
 
 ## Case processing
 
-A rescue report follows the durable path:
+A rescue report follows:
 
 `rescue_cases -> case_processing_jobs -> RabbitMQ -> AI worker -> rescue_cases`
 
@@ -61,11 +161,30 @@ The PWA stores failed/offline reports in IndexedDB and retries while the applica
 
 This is **not** claimed as guaranteed background synchronization after the PWA is completely closed; foreground retry is the current supported fallback.
 
+## Realtime rescue map
+
+The rescue map uses a unified MapLibre renderer.
+
+- REST `/api/cases/map` provides the initial RBAC-filtered snapshot.
+- Socket.IO provides lightweight invalidation events.
+- After an invalidation, the client re-fetches the REST snapshot.
+- PostgreSQL remains the source of truth.
+- Socket events intentionally do not contain case coordinates or other case data.
+
+Role visibility remains enforced by the backend:
+
+- USER — own active rescue cases
+- VOLUNTEER — eligible unassigned cases plus assigned cases
+- NGO — cases within its configured jurisdiction plus assigned cases
+- ADMIN — global active case visibility
+
+Offline reporting uses downloaded PMTiles when network connectivity is unavailable. Online reporting uses the online cached basemap.
+
 ## Health and observability
 
 - `/health/live` — process liveness
 - `/health/ready` — database + RabbitMQ readiness
-- `/health/worker` — informational AI-worker heartbeat
+- `/health/worker` — AI-worker heartbeat
 - `/health/metrics` — in-memory HTTP request metrics
 
 HTTP requests receive correlation IDs and structured request logs.
@@ -80,26 +199,12 @@ The controlled 1 CPU / 1 GB result is stored at:
 
 The benchmark validator checks that the recorded measurements are internally consistent.
 
-## Verification
+## Detailed operations guide
 
-Before release:
+See:
 
-```bash
-cd Frontend
-npm ci
-npm run lint
-npm run build
-npm run e2e
+`
+docs/OPERATIONS.md
+`
 
-cd ../Backend
-npm ci
-npm test
-```
-
-CI also compiles the Python worker and validates the controlled research benchmark.
-
-## Deployment
-
-The backend is deployed from the `research/experimental-results` branch to Render. The hosted frontend is deployed separately through Firebase Hosting.
-
-Deploy frontend and backend authentication changes together because the browser/API cookie contract spans both sides.
+for the complete development, Docker, AI worker, offline map, release, production, and incident runbook.
