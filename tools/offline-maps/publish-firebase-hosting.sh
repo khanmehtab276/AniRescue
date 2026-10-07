@@ -35,7 +35,7 @@ for file in "${FILES[@]}"; do
   fi
 
   summary="$(run_pmtiles show "/out/$(basename "$file")")"
-  if ! grep -Eq "^tile type: MVT$" <<<"$summary"; then
+  if ! grep -Eiq "^tile type: mvt$" <<<"$summary"; then
     echo "ERROR: $(basename "$file") is not an MVT PMTiles archive."
     exit 1
   fi
