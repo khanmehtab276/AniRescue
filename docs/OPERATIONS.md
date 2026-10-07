@@ -26,13 +26,15 @@ The AI worker is intentionally containerized because its ML runtime is large and
 
 ### Host machine
 
-Install only development tooling and normal application dependencies:
+Normal frontend/backend development requires only the core tooling:
 
 - Node.js / npm
 - Python 3
 - Git
-- Docker + Docker Compose
 - curl
+- Make
+
+Docker + Docker Compose are **optional for normal frontend/backend editing**. They are required only for AI image work, the full local Compose stack, and offline PMTiles tooling.
 
 Node dependencies are installed from committed lockfiles:
 
@@ -65,16 +67,21 @@ This can download multiple GB of dependencies and model data. It is expected to 
 From the repository root:
 
 `bash
+make doctor
 make setup
 `
 
-`make setup` checks required tools, installs Backend/Frontend dependencies with `npm ci`, creates a local `.env` template when absent, and prepares the pinned Playwright browser.
+`make doctor` checks core development tooling, repository dependency files, and reports Docker/Compose separately as optional infrastructure.
 
-Check the environment without changing it:
+`make setup` checks the core prerequisites, installs Backend/Frontend dependencies with `npm ci`, creates a local `.env` template when absent, and prepares the pinned Playwright Chromium browser. It does **not** build the multi-GB AI image and does not require Docker.
+
+If Docker is needed later:
 
 `bash
-make doctor
+make ai-setup
 `
+
+The heavy YOLO-World/PyTorch/OpenVINO runtime remains inside Docker rather than being installed into the host Python environment.
 
 ## 4. Normal testing
 
