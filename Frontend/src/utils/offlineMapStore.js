@@ -223,7 +223,7 @@ export function resolveOfflineMapUrl(map) {
 
 function parseContentRange(response) {
   const value = response.headers.get("content-range") || "";
-  const match = value.match(/^bytes (\\d+)-(\\d+)\\/(\\d+)$/);
+  const match = value.match(/^bytes (\d+)-(\d+)\/(\d+)$/);
 
   if (!match) return null;
 
