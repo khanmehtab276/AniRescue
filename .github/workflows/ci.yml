@@ -26,6 +26,20 @@ jobs:
           cache: npm
           cache-dependency-path: Frontend/package-lock.json
       - run: npm ci
+      - name: Verify MapLibre migration has no legacy Leaflet code
+        run: |
+          if grep -RInE 'leaflet|react-leaflet|MapContainer|TileLayer|useMapEvents' src --exclude-dir=node_modules; then
+            echo "Legacy Leaflet map code detected."
+            exit 1
+          fi
+          if grep -nE '"(leaflet|react-leaflet)"' package.json package-lock.json; then
+            echo "Legacy Leaflet dependency detected."
+            exit 1
+          fi
+          if test -e src/components/OfflinePinnedMap.jsx; then
+            echo "Obsolete OfflinePinnedMap.jsx still exists."
+            exit 1
+          fi
       - run: npm run lint
       - run: npm run build
       - name: Install Chromium for E2E
