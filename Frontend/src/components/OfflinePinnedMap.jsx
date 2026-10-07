@@ -32,14 +32,23 @@ function contains(bounds, position) {
   );
 }
 
-function selectDownloadedZone(maps, position) {
-  const ready = maps.filter((map) => map.status === "ready");
-  if (!position) return ready[0] || null;
+function getZoneIdForPosition(position) {
+  if (!position) return null;
 
   return (
-    ready.find((map) => contains(ZONE_BOUNDS[map.id], position)) ||
-    null
+    Object.entries(ZONE_BOUNDS).find(([, bounds]) =>
+      contains(bounds, position),
+    )?.[0] || null
   );
+}
+
+function selectDownloadedZone(maps, position) {
+  const ready = maps.filter((map) => map.status === "ready");
+  const zoneId = getZoneIdForPosition(position);
+
+  if (!zoneId) return null;
+
+  return ready.find((map) => map.id === zoneId) || null;
 }
 
 function buildOfflineStyle(pmtilesUrl, attribution) {
@@ -133,12 +142,21 @@ export default function OfflinePinnedMap({
       try {
         setState({ loading: true, map: null, error: "" });
 
+        if (!position) {
+          setState({
+            loading: true,
+            map: null,
+            error: "Waiting for your device location…",
+          });
+          return;
+        }
+
         const maps = await getDownloadedMaps();
         const selected = selectDownloadedZone(maps, position);
 
         if (!selected) {
           throw new Error(
-            "No large offline map covering this location is downloaded.",
+            "No downloaded offline map covers your current location.",
           );
         }
 
@@ -255,7 +273,7 @@ export default function OfflinePinnedMap({
         protocolRef.current = null;
       }
     };
-  }, []);
+  }, [position?.lat, position?.lng]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -275,6 +293,22 @@ export default function OfflinePinnedMap({
       duration: 350,
     });
   }, [position]);
+
+  if (state.error && state.error === "Waiting for your device location…") {
+    return (
+      <div className={`${className} grid place-items-center bg-stone-100 p-5 text-center dark:bg-stone-900`}>
+        <div className="max-w-sm">
+          <MapPin size={24} className="mx-auto mb-2 text-stone-400" />
+          <p className="text-xs font-bold text-stone-600 dark:text-stone-300">
+            Waiting for your location…
+          </p>
+          <p className="mt-1 text-[11px] leading-4 text-stone-500 dark:text-stone-400">
+            AniRescue will open the matching downloaded India zone as soon as the device location is available.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (state.error) {
     return (
