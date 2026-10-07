@@ -6,11 +6,13 @@ Do not publish the raw Geofabrik .osm.pbf files as if they were browser maps. A 
 
 ## Recommended pipeline
 
-The current verified Protomaps daily source used by the build helper is:
+The build helper normally targets the current UTC Protomaps daily build:
 
-`https://build.protomaps.com/20260925.pmtiles`
+`https://build.protomaps.com/YYYYMMDD.pmtiles`
 
-The browser must **not** download this planet archive directly. Protomaps documents the planet archive as roughly 120 GB; AniRescue extracts smaller India zones first, then publishes those zone files to CORS-enabled object storage.
+It validates every extracted package before it can be published. If the current daily build is unavailable or produces an empty/tiny archive, the helper automatically retries the fallback build date `20260925`. Set `PROTOMAPS_BUILD_DATE`, `PROTOMAPS_SOURCE_URL`, or `PROTOMAPS_FALLBACK_BUILD_DATE` explicitly when a controlled source snapshot is required.
+
+The browser must **not** download the planet archive directly. AniRescue extracts smaller India zones first, then publishes those zone files as static Firebase Hosting assets.
 
 ~~~text
 Geofabrik OpenStreetMap extract
@@ -190,5 +192,5 @@ curl -I -H "Range: bytes=0-0" \
   https://anirescue-a5fd7.web.app/offline-maps/western-india.pmtiles
 ```
 
-A range-capable response should report `206 Partial Content` and a `Content-Range` header. Do not claim range support from configuration alone; verify the deployed endpoint.
+A range-capable response should report `206 Partial Content`, `Content-Range`, and a one-byte response for the `0-0` probe. The production publisher also refuses PMTiles packages that are empty/tiny or contain no MVT tile contents.
 
