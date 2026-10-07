@@ -900,6 +900,24 @@ export default function ReportCase() {
                               onUnavailable={handleOfflineMapUnavailable}
                               className="h-full w-full"
                             />
+                          ) : isOffline ? (
+                            <div className="grid h-full place-items-center bg-stone-100 p-5 text-center dark:bg-stone-900">
+                              <div className="max-w-sm">
+                                <MapPin size={24} className="mx-auto mb-2 text-stone-400" />
+                                <p className="text-xs font-bold text-stone-600 dark:text-stone-300">
+                                  Offline map not downloaded for this area
+                                </p>
+                                <p className="mt-1 text-[11px] leading-4 text-stone-500 dark:text-stone-400">
+                                  Your saved GPS location can still be submitted. Download the matching India zone before going offline if you need map-based pinning.
+                                </p>
+                                <Link
+                                  to="/offline-maps"
+                                  className="mt-3 inline-flex rounded-lg bg-emerald-700 px-3 py-2 text-[11px] font-black text-white"
+                                >
+                                  Manage offline maps
+                                </Link>
+                              </div>
+                            </div>
                           ) : (
                             <MapContainer
                               center={
