@@ -14,6 +14,70 @@ import {
   loadOfflineMapRenderer,
 } from "../utils/offlineMapRenderer.js";
 
+const ZONES = [
+  {
+    id: "western-india",
+    name: "Western India",
+    filename: "western-india.pmtiles",
+    storagePath: "offline-maps/western-india.pmtiles",
+    description: "Large offline basemap for western-region field operations.",
+  },
+  {
+    id: "central-india",
+    name: "Central India",
+    filename: "central-india.pmtiles",
+    storagePath: "offline-maps/central-india.pmtiles",
+    description: "Large offline basemap for central-region field operations.",
+  },
+  {
+    id: "northern-india",
+    name: "Northern India",
+    filename: "northern-india.pmtiles",
+    storagePath: "offline-maps/northern-india.pmtiles",
+    description: "Large offline basemap for northern-region field operations.",
+  },
+  {
+    id: "eastern-india",
+    name: "Eastern India",
+    filename: "eastern-india.pmtiles",
+    storagePath: "offline-maps/eastern-india.pmtiles",
+    description: "Large offline basemap for eastern-region field operations.",
+  },
+  {
+    id: "southern-india",
+    name: "Southern India",
+    filename: "southern-india.pmtiles",
+    storagePath: "offline-maps/southern-india.pmtiles",
+    description: "Large offline basemap for southern-region field operations.",
+  },
+  {
+    id: "north-eastern-india",
+    name: "North-Eastern India",
+    filename: "north-eastern-india.pmtiles",
+    storagePath: "offline-maps/north-eastern-india.pmtiles",
+    description: "Large offline basemap for north-eastern field operations.",
+  },
+].map((zone) => ({
+  ...zone,
+  provider: "OpenStreetMap-derived vector map",
+  attribution: "© OpenStreetMap contributors",
+}));
+
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "Size not measured yet";
+
+  const units = ["B", "MB", "GB", "TB"];
+  let value = bytes;
+  let unit = 0;
+
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+
+  return `${value.toFixed(value >= 100 ? 0 : value >= 10 ? 1 : 2)} ${units[unit]}`;
+}
+
 function buildStyle(pmtilesUrl, attribution) {
   return {
     version: 8,

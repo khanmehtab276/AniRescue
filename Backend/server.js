@@ -16,6 +16,7 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
+const http = require("http");
 const app = require("./src/app");
 const { pool, ensureDbConnection, startKeepalive } = require("./src/config/db");
 const { connectRabbitMQ, closeRabbitMQ } = require("./src/config/rabbitmq");
@@ -31,6 +32,7 @@ const {
   stopAiProcessingWatchdog,
 } = require("./src/services/aiProcessingWatchdog");
 const { runMigrations } = require("./src/services/migrations");
+const { initializeCaseRealtime, closeCaseRealtime } = require("./src/services/caseRealtime");
 
 const port = process.env.PORT || 3000;
 
@@ -59,8 +61,10 @@ async function start() {
     }, 5000);
     notificationConsumerTimer.unref?.();
 
-    server = app.listen(port, "0.0.0.0", () =>
-      console.log(`🚀 AniRescue API server listening on port ${port}`),
+    server = http.createServer(app);
+    initializeCaseRealtime(server);
+    server.listen(port, "0.0.0.0", () =>
+      console.log(`🚀 AniRescue API + Socket.IO server listening on port ${port}`),
     );
   } catch (error) {
     console.error("❌ AniRescue startup failed:", error?.stack || error);
@@ -78,8 +82,9 @@ const gracefulShutdown = async (signal) => {
   console.log(`\nReceived ${signal}. Shutting down services cleanly...`);
 
   try {
+    closeCaseRealtime();
     if (server?.close) {
-      server.close(() => console.log("HTTP server terminated."));
+      server.close(() => console.log("HTTP + Socket.IO server terminated."));
     }
 
     if (notificationConsumerTimer) clearInterval(notificationConsumerTimer);
