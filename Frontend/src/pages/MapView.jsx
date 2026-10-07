@@ -372,7 +372,7 @@ export default function MapView() {
   useEffect(() => {
     let unsubscribe;
 
-    subscribeToLiveRescueMap(
+    unsubscribe = subscribeToLiveRescueMap(
       () => {
         // Socket events contain no case data. The REST endpoint remains the
         // authoritative, RBAC-filtered snapshot. Debounce rapid backend
@@ -383,9 +383,7 @@ export default function MapView() {
         }, 180);
       },
       setLiveStatus,
-    ).then((cleanup) => {
-      unsubscribe = cleanup;
-    });
+    );
 
     return () => {
       unsubscribe?.();
