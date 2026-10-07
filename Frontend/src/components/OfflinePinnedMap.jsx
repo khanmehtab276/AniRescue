@@ -134,6 +134,7 @@ export default function OfflinePinnedMap({
     map: null,
     error: "",
   });
+  const positionZoneId = getZoneIdForPosition(position);
 
   useEffect(() => {
     let cancelled = false;
@@ -273,7 +274,7 @@ export default function OfflinePinnedMap({
         protocolRef.current = null;
       }
     };
-  }, [position?.lat, position?.lng]);
+  }, [positionZoneId]);
 
   useEffect(() => {
     const map = mapRef.current;
