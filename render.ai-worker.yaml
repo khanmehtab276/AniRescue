@@ -1,0 +1,55 @@
+# AniRescue production AI worker
+#
+# Separate from the existing backend Render service.
+# Applying this Blueprint creates the dedicated background worker required
+# to consume RabbitMQ AI jobs.
+#
+# The worker uses the repository Dockerfile that bakes the YOLO-World/OpenVINO
+# model into the image. A 2 GB / 1 CPU class is used because the ML runtime
+# should not be placed on a tiny/free worker in production.
+
+services:
+  - type: worker
+    name: AniRescue-AI-Worker
+    runtime: docker
+    plan: standard
+    region: singapore
+    branch: research/experimental-results
+    autoDeploy: true
+    dockerfilePath: ./ai-async-worker/Dockerfile.worker
+    dockerContext: ./ai-async-worker
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: RABBITMQ_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.8-flash
+      - key: GEMINI_FALLBACK_MODEL
+        value: gemini-3.5-flash-lite
+      - key: GEMINI_THINKING_LEVEL
+        value: low
+      - key: GEMINI_TIMEOUT_MS
+        value: "120000"
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: MKL_NUM_THREADS
+        value: "1"
+      - key: OPENBLAS_NUM_THREADS
+        value: "1"
+      - key: YOLO_WORLD_OPENVINO_MODEL
+        value: /opt/yolo-world/yolo-world-anirescue_openvino_model
+      - key: YOLO_WORLD_IMGSZ
+        value: "512"
+      - key: YOLO_WORLD_CONF
+        value: "0.20"
+      - key: YOLO_WORLD_MAX_DET
+        value: "1"
+      - key: YOLO_WORLD_OPENVINO_THREADS
+        value: "1"
