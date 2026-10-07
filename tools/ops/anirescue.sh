@@ -27,6 +27,24 @@ docker_compose() {
   docker compose -f "$COMPOSE_FILE" "$@"
 }
 
+frontend_map_guard() {
+  log "Frontend map architecture guard"
+  if grep -RInE 'leaflet|react-leaflet|MapContainer|TileLayer|useMapEvents' "$FRONTEND_DIR/src" --exclude-dir=node_modules; then
+    echo "Legacy Leaflet map code detected in the frontend."
+    return 1
+  fi
+
+  if grep -nE '"(leaflet|react-leaflet)"' "$FRONTEND_DIR/package.json" "$FRONTEND_DIR/package-lock.json"; then
+    echo "Legacy Leaflet dependency detected in the frontend."
+    return 1
+  fi
+
+  if [[ -e "$FRONTEND_DIR/src/components/OfflinePinnedMap.jsx" ]]; then
+    echo "Obsolete OfflinePinnedMap.jsx still exists."
+    return 1
+  fi
+}
+
 frontend_lint() {
   log "Frontend lint (errors only)"
   # Keep routine test output concise: warnings remain available through the
@@ -79,6 +97,7 @@ research_validate() {
 }
 
 unit() {
+  frontend_map_guard
   frontend_lint
   backend_test
   backend_syntax
