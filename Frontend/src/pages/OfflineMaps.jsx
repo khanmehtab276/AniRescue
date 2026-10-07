@@ -9,7 +9,10 @@ import {
   removeDownloadedMap,
   requestPersistentOfflineStorage,
 } from "../utils/offlineMapStore.js";
-import { loadOfflineMapRenderer } from "../utils/offlineMapRenderer.js";
+import {
+  addOfflineArchive,
+  loadOfflineMapRenderer,
+} from "../utils/offlineMapRenderer.js";
 
 function buildStyle(pmtilesUrl, attribution) {
   return {
@@ -96,7 +99,7 @@ export default function OfflineMaps() {
     void refresh();
     // Load the renderer while online so the PWA service worker can cache the
     // exact MapLibre/PMTiles runtime before the user later goes offline.
-    loadMapLibraries().catch((libraryError) => {
+    loadOfflineMapRenderer().catch((libraryError) => {
       console.warn(
         "Offline map renderer could not be warmed yet:",
         libraryError?.message || libraryError,
@@ -118,16 +121,13 @@ export default function OfflineMaps() {
           mapRef.current = null;
         }
 
-        const { maplibre, pmtiles } = await loadMapLibraries();
+        const { maplibre, pmtiles } = await loadOfflineMapRenderer();
         if (cancelled) return;
-
-        const protocol = new pmtiles.Protocol();
-        maplibre.addProtocol("pmtiles", protocol.tile);
 
         const { meta, pmtiles: archive } =
           await createOfflineMapSource(selectedMap.id, pmtiles.PMTiles);
 
-        protocol.add(archive);
+        addOfflineArchive(archive);
 
         const header = await archive.getHeader();
         if (cancelled) return;
