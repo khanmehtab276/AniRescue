@@ -14,10 +14,27 @@ jobs:
     steps:
       - name: Check production frontend
         run: curl -fsS --retry 3 --retry-delay 2 https://anirescue-a5fd7.web.app/ >/dev/null
+
       - name: Check backend liveness
         run: curl -fsS --retry 3 --retry-delay 2 https://anirescue-backend.onrender.com/health/live >/dev/null
+
       - name: Check backend readiness
         run: curl -fsS --retry 3 --retry-delay 2 https://anirescue-backend.onrender.com/health/ready >/dev/null
+
+      - name: Check AI worker heartbeat
+        shell: bash
+        run: |
+          set -euo pipefail
+          payload="$(curl -fsS --retry 3 --retry-delay 2 https://anirescue-backend.onrender.com/health/worker)"
+          python3 - "$payload" <<'PY'
+          import json
+          import sys
+          payload = json.loads(sys.argv[1])
+          if payload.get("status") != "online":
+              raise SystemExit(f"AI worker is not online: {payload.get('status')}")
+          print("AI worker heartbeat is online")
+          PY
+
       - name: Check hosted PMTiles
         shell: bash
         run: |
@@ -26,13 +43,18 @@ jobs:
           for zone in $zones; do
             headers="$(mktemp)"
             body="$(mktemp)"
-            curl -fsS --retry 3 --retry-delay 2 -D "$headers" -o "$body" -H "Range: bytes=0-126" "https://anirescue-a5fd7.web.app/offline-maps/$zone.pmtiles"
+            trap 'rm -f "$headers" "$body"' EXIT
+            curl -fsS --retry 3 --retry-delay 2               -D "$headers"               -o "$body"               -H "Range: bytes=0-126"               "https://anirescue-a5fd7.web.app/offline-maps/$zone.pmtiles"
+
             status="$(awk 'NR==1 {print $2}' "$headers")"
-            range="$(awk 'BEGIN{IGNORECASE=1} /^content-range:/ {sub(/^content-range:[[:space:]]*/, ""); print}' "$headers" | tr -d '\r')"
+            range="$(awk 'BEGIN{IGNORECASE=1} /^content-range:/ {sub(/^content-range:[[:space:]]*/, ""); print}' "$headers" | tr -d '')"
+
             test "$status" = "206"
-            [[ "$range" == bytes\ 0-126/* ]]
+            [[ "$range" == bytes 0-126/* ]]
             test "$(wc -c < "$body")" -eq 127
             head -c 7 "$body" | cmp -s - <(printf 'PMTiles')
+
             rm -f "$headers" "$body"
+            trap - EXIT
             echo "✓ $zone.pmtiles"
           done
