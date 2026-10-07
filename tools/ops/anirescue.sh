@@ -141,6 +141,11 @@ preflight         Clean/synchronized production branch + tests + smoke checks
 deploy            Preflight, publish offline maps, then verify production
 EOF
 }
+if [ "$#" -eq 0 ]; then
+  help
+  exit 0
+fi
+
 case "$1" in
   test) unit; frontend_build ;;
   ci) ci ;;
