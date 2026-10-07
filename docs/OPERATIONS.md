@@ -152,7 +152,7 @@ Logs:
 
 `bash
 make stack-logs
-make stack-logs yolo_worker
+make stack-logs SERVICE=yolo_worker
 `
 
 Stop:
