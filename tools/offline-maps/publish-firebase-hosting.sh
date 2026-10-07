@@ -7,10 +7,8 @@ PUBLIC_DIR="$ROOT_DIR/Frontend/public/offline-maps"
 PMTILES_IMAGE="${PMTILES_IMAGE:-ghcr.io/protomaps/go-pmtiles:v1.31.2}"
 MIN_ARCHIVE_BYTES="${MIN_ARCHIVE_BYTES:-1048576}"
 
-if ! command -v firebase >/dev/null 2>&1; then
-  echo "Firebase CLI is required. Install/login to Firebase CLI first."
-  exit 1
-fi
+FIREBASE_CLI_VERSION="${FIREBASE_CLI_VERSION:-15.30.1}"
+FIREBASE_CMD=(npx --yes "firebase-tools@${FIREBASE_CLI_VERSION}")
 
 shopt -s nullglob
 FILES=( "$OUT_DIR"/*.pmtiles )
@@ -107,7 +105,7 @@ done
 ls -lh "$DIST_DIR"/*.pmtiles
 
 echo "Deploying Firebase Hosting only..."
-firebase deploy --only hosting
+"${FIREBASE_CMD[@]}" deploy --only hosting
 
 if ! command -v curl >/dev/null 2>&1; then
   echo "ERROR: curl is required for the post-deploy PMTiles smoke test."
