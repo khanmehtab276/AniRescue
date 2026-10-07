@@ -301,18 +301,6 @@ export default function PinnedLocationMap({
           });
         });
 
-        map.on("error", (event) => {
-          if (cancelled) return;
-          const message =
-            event?.error?.message || "The map could not finish loading.";
-          console.warn("Pinned location map error:", event?.error || event);
-          setState((current) => ({
-            ...current,
-            loading: false,
-            error: message,
-          }));
-          onUnavailable?.(message);
-        });
       } catch (error) {
         if (!cancelled) {
           const message =
