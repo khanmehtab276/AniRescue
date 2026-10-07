@@ -1,6 +1,6 @@
 .PHONY: help test ci frontend-lint frontend-build frontend-e2e backend-test worker-test research-test offline-build offline-publish smoke preflight deploy
 
-OPS := ./tools/ops/anirescue.sh
+OPS := bash ./tools/ops/anirescue.sh
 
 help:
 	@$(OPS) help
