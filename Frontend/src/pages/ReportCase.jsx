@@ -199,37 +199,6 @@ function clearReportDraftFields() {
   localStorage.removeItem(REPORT_DRAFT_KEY);
 }
 
-function MapViewportController({ center }) {
-  const map = useMap();
-  const hasCenteredInitialLocation = useRef(false);
-
-  useEffect(() => {
-    if (!center || hasCenteredInitialLocation.current) return;
-    hasCenteredInitialLocation.current = true;
-    map.setView(center, map.getZoom(), { animate: true });
-  }, [map, center]);
-
-  return null;
-}
-
-function MapPinDropper({ position, setPosition }) {
-  const map = useMap();
-
-  useMapEvents({
-    click(e) {
-      const nextPosition = { lat: e.latlng.lat, lng: e.latlng.lng };
-      setPosition(nextPosition);
-      map.panTo([nextPosition.lat, nextPosition.lng], {
-        animate: true,
-        duration: 0.45,
-      });
-    }
-  });
-
-  return position === null ? null : (
-    <Marker position={[position.lat, position.lng]} />
-  );
-}
 
 export default function ReportCase() {
   const [description, setDescription] = useState('');
