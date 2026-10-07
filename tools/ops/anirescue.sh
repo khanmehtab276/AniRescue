@@ -37,14 +37,19 @@ frontend_build() {
   (cd "$FRONTEND_DIR" && npm run build)
 }
 
-frontend_e2e() {
-  log "Frontend browser smoke tests"
+playwright_setup() {
+  log "Preparing pinned Playwright Chromium"
   (
     cd "$FRONTEND_DIR"
-    npx --yes "playwright@$PLAYWRIGHT_VERSION" install --with-deps chromium >/dev/null
     npm install --no-save --no-package-lock --ignore-scripts "playwright@$PLAYWRIGHT_VERSION" >/dev/null
-    npm run e2e
+    npx --yes "playwright@$PLAYWRIGHT_VERSION" install --with-deps chromium >/dev/null
   )
+}
+
+frontend_e2e() {
+  log "Frontend browser smoke tests"
+  playwright_setup
+  (cd "$FRONTEND_DIR" && npm run e2e)
 }
 
 backend_test() {
@@ -101,8 +106,8 @@ setup() {
     echo "Created .env from .env.example. Edit it before starting Docker Compose."
   fi
 
-  log "Installing browser used by E2E tests"
-  frontend_e2e >/dev/null
+  log "Preparing browser used by E2E tests"
+  playwright_setup >/dev/null
 
   cat <<'EOF'
 
@@ -132,7 +137,8 @@ doctor() {
   log "AniRescue development environment"
   local failed=0
 
-  for cmd in git node npm python3 curl; do
+  echo "Core development tools (required for normal frontend/backend work):"
+  for cmd in git node npm python3 curl make; do
     if have "$cmd"; then
       printf '✓ %-10s %s\n' "$cmd" "$($cmd --version 2>&1 | head -n1)"
     else
@@ -141,17 +147,17 @@ doctor() {
     fi
   done
 
+  echo
+  echo "Optional infrastructure tools:"
   if have docker; then
     printf '✓ %-10s %s\n' docker "$(docker --version)"
     if docker compose version >/dev/null 2>&1; then
       printf '✓ %-10s %s\n' "compose" "$(docker compose version)"
     else
-      echo "✗ Docker Compose plugin is missing"
-      failed=1
+      echo "! compose    Docker is installed, but the Compose plugin is missing"
     fi
   else
-    echo "✗ docker      missing (required for AI image/Compose stack)"
-    failed=1
+    echo "! docker     not installed (only required for AI/Docker/offline-map workflows)"
   fi
 
   if have npx; then
@@ -159,12 +165,31 @@ doctor() {
   fi
 
   echo
-  echo "Project dependency policy:"
+  echo "Repository checks:"
+  for path in \
+    "$BACKEND_DIR/package.json" "$BACKEND_DIR/package-lock.json" \
+    "$FRONTEND_DIR/package.json" "$FRONTEND_DIR/package-lock.json" \
+    "$ROOT_DIR/.env.example" "$ROOT_DIR/docker-compose.yml"; do
+    if [[ -f "$path" ]]; then
+      rel="${path#"$ROOT_DIR"/}"
+      printf '✓ %s\n' "$rel"
+    else
+      rel="${path#"$ROOT_DIR"/}"
+      printf '✗ %s missing\n' "$rel"
+      failed=1
+    fi
+  done
+
+  echo
+  echo "Dependency/runtime policy:"
   echo "  - Backend/Frontend: npm ci from committed lockfiles."
+  echo "  - Host Python: no ML environment is required; AI/ML runtime is Docker-managed."
   echo "  - AI/ML: Docker image only; do not install YOLO-World/PyTorch/OpenVINO on the host."
   echo "  - Offline PMTiles tooling: temporary Docker CLI container."
   echo "  - Firebase CLI: npx firebase-tools@$FIREBASE_CLI_VERSION."
   echo
+  echo "Docker is intentionally optional for normal frontend/backend development."
+  echo "AI, full-stack Compose, and offline-map commands will fail clearly if Docker is unavailable."
 
   return "$failed"
 }
