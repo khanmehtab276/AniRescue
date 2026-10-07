@@ -25,4 +25,10 @@ test('authenticated session flow can be exercised when CI credentials are config
   await page.locator('button[type="submit"]').click();
 
   await expect(page).not.toHaveURL(/\/login$/);
+
+  // MapView is a lazy-loaded production route. Visiting it here catches
+  // runtime contract errors that lint/build checks cannot detect.
+  await page.goto('/map');
+  await expect(page.getByText(/AniRescue needs a quick refresh/i)).toHaveCount(0);
+  await expect(page.getByText(/rescue map|dispatch|operations/i).first()).toBeVisible();
 });
