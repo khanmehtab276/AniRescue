@@ -30,6 +30,8 @@ jobs:
       - run: npm run build
       - name: Install Chromium for E2E
         run: npx --yes playwright@1.56.1 install --with-deps chromium
+      - name: Install pinned Playwright test runner
+        run: npm install --no-save --no-package-lock --ignore-scripts playwright@1.56.1
       - name: Run browser smoke tests
         run: npm run e2e
 
