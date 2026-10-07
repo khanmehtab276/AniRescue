@@ -115,7 +115,11 @@ fi
 echo "Running post-deploy PMTiles smoke test..."
 for file in "$OUT_DIR"/*.pmtiles; do
   name="$(basename "$file")"
-  url="https://anirescue-a5fd7.web.app/offline-maps/$name"
+  # Use a unique query string so the post-deploy smoke test cannot validate a stale
+  # CDN object from an earlier release. Firebase Hosting includes the query string
+  # in its cache key.
+  smoke_token="$(date +%s%N)"
+  url="https://anirescue-a5fd7.web.app/offline-maps/$name?smoke_test=$smoke_token"
   headers_file="$(mktemp)"
   body_file="$(mktemp)"
   trap 'rm -f "$headers_file" "$body_file"' RETURN
@@ -143,8 +147,12 @@ for file in "$OUT_DIR"/*.pmtiles; do
     exit 1
   fi
 
-  if ! head -c 7 "$body_file" | cmp -s - <(printf 'PMTiles'); then
-    echo "ERROR: $name does not start with the PMTiles v3 magic bytes."
+  magic="$(LC_ALL=C head -c 7 "$body_file")"
+  version_byte="$(LC_ALL=C od -An -tu1 -N1 -j7 "$body_file" | tr -d '[:space:]')"
+
+  if [[ "$magic" != "PMTiles" || "$version_byte" != "3" ]]; then
+    echo "ERROR: $name does not start with a valid PMTiles v3 header."
+    echo "       magic='$magic' version='$version_byte'"
     exit 1
   fi
 
